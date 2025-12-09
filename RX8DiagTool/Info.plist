@@ -25,9 +25,12 @@
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>
-        <true/>
+        <false/>
         <key>UISceneConfigurations</key>
         <dict>
+            <!-- CarPlay configuration - requires Apple MFi approval -->
+            <!-- Uncomment when you receive CarPlay entitlement from Apple -->
+            <!--
             <key>CPTemplateApplicationSceneSessionRoleApplication</key>
             <array>
                 <dict>
@@ -39,6 +42,7 @@
                     <string>$(PRODUCT_MODULE_NAME).CarPlaySceneDelegate</string>
                 </dict>
             </array>
+            -->
             <key>UIWindowSceneSessionRoleApplication</key>
             <array>
                 <dict>
