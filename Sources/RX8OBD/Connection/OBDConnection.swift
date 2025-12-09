@@ -665,27 +665,3 @@ public enum OBDError: Error, LocalizedError, Sendable {
         }
     }
 }
-
-public struct DTCParser {
-    public static func parseDTCResponse(_ data: Data) -> [String] {
-        var dtcs: [String] = []
-        let bytes = Array(data)
-        var i = 0
-        while i + 1 < bytes.count {
-            let byte1 = bytes[i]
-            let byte2 = bytes[i + 1]
-            if byte1 == 0 && byte2 == 0 { i += 2; continue }
-            let firstChar: String
-            switch (byte1 >> 6) & 0x03 {
-            case 0: firstChar = "P"
-            case 1: firstChar = "C"
-            case 2: firstChar = "B"
-            default: firstChar = "U"
-            }
-            let dtc = "\(firstChar)\(String(format: "%X%X%X%X", (byte1 >> 4) & 0x03, byte1 & 0x0F, (byte2 >> 4) & 0x0F, byte2 & 0x0F))"
-            if dtc != "P0000" { dtcs.append(dtc) }
-            i += 2
-        }
-        return dtcs
-    }
-}
