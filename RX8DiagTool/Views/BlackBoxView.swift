@@ -119,65 +119,121 @@ struct RecordingStatusHeader: View {
     let isConnected: Bool
 
     var body: some View {
-        HStack {
-            // Indicador de grabación
-            Circle()
-                .fill(statusColor)
-                .frame(width: 12, height: 12)
-                .overlay(
+        VStack(spacing: 12) {
+            HStack {
+                // Indicador de grabación
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 12, height: 12)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.red.opacity(blackBoxRecorder.isRecording ? 0.5 : 0), lineWidth: 3)
+                            .scaleEffect(blackBoxRecorder.isRecording ? 1.5 : 1)
+                            .opacity(blackBoxRecorder.isRecording ? 0 : 1)
+                            .animation(blackBoxRecorder.isRecording ?
+                                Animation.easeOut(duration: 1).repeatForever(autoreverses: false) : .default,
+                                value: blackBoxRecorder.isRecording)
+                    )
+
+                if blackBoxRecorder.isRecording {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text("GRABANDO")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.red)
+                            if blackBoxRecorder.isManualMode {
+                                Text("(MANUAL)")
+                                    .font(.caption2)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        Text(formatDuration(blackBoxRecorder.recordingDuration))
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(blackBoxRecorder.snapshotCount)")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Text("muestras")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                } else if isConnected {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Conectado")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.green)
+                        Text(blackBoxRecorder.engineRunning ? "Motor en marcha" : "Esperando motor...")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sin conexión OBD")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text("Consulta sesiones anteriores abajo")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+                    Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                        .foregroundColor(.gray)
+                }
+            }
+
+            // Botón de control manual
+            HStack(spacing: 12) {
+                if blackBoxRecorder.isRecording {
+                    // Botón STOP
+                    Button(action: { blackBoxRecorder.manualStop() }) {
+                        HStack {
+                            Image(systemName: "stop.fill")
+                            Text("DETENER")
+                                .fontWeight(.bold)
+                        }
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.red)
+                        .cornerRadius(8)
+                    }
+                } else {
+                    // Botón START manual
+                    Button(action: { blackBoxRecorder.manualStart() }) {
+                        HStack {
+                            Image(systemName: "record.circle")
+                            Text("GRABAR MANUAL")
+                                .fontWeight(.medium)
+                        }
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.orange)
+                        .cornerRadius(8)
+                    }
+                }
+
+                Spacer()
+
+                // Indicador de motor
+                HStack(spacing: 4) {
                     Circle()
-                        .stroke(Color.red.opacity(blackBoxRecorder.isRecording ? 0.5 : 0), lineWidth: 3)
-                        .scaleEffect(blackBoxRecorder.isRecording ? 1.5 : 1)
-                        .opacity(blackBoxRecorder.isRecording ? 0 : 1)
-                        .animation(blackBoxRecorder.isRecording ?
-                            Animation.easeOut(duration: 1).repeatForever(autoreverses: false) : .default,
-                            value: blackBoxRecorder.isRecording)
-                )
-
-            if blackBoxRecorder.isRecording {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("GRABANDO")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(.red)
-                    Text(formatDuration(blackBoxRecorder.recordingDuration))
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.white)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(blackBoxRecorder.snapshotCount)")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Text("muestras")
+                        .fill(blackBoxRecorder.engineRunning ? Color.green : Color.gray)
+                        .frame(width: 8, height: 8)
+                    Text(blackBoxRecorder.engineRunning ? "Motor ON" : "Motor OFF")
                         .font(.caption2)
                         .foregroundColor(.gray)
                 }
-            } else if isConnected {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Conectado")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.green)
-                    Text("Esperando motor en marcha...")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                }
-                Spacer()
-            } else {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Sin conexión OBD")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("Consulta sesiones anteriores abajo")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                }
-                Spacer()
-                Image(systemName: "antenna.radiowaves.left.and.right.slash")
-                    .foregroundColor(.gray)
             }
         }
         .padding()

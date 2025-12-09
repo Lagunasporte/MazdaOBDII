@@ -12,6 +12,8 @@ public class BlackBoxRecorder: ObservableObject {
     @Published public var recordingDuration: TimeInterval = 0
     @Published public var snapshotCount: Int = 0
     @Published public var lastAlert: BlackBoxAlert?
+    @Published public var isManualMode = false // Control manual activado
+    @Published public var engineRunning = false // Estado real del motor
 
     // MARK: - Private Properties
     private let database = BlackBoxDatabase()
@@ -26,27 +28,76 @@ public class BlackBoxRecorder: ObservableObject {
 
     private var lastRPMTime: Date?
     private var engineWasRunning = false
+    private var lastVoltage: Double = 0
 
     public init() {
         loadSessions()
     }
 
+    // MARK: - Manual Control
+
+    /// Inicia grabación manual (ignora estado del motor)
+    public func manualStart() {
+        isManualMode = true
+        if !isRecording {
+            startRecording()
+        }
+        print("BlackBox: Modo manual activado - grabación forzada")
+    }
+
+    /// Detiene grabación manual
+    public func manualStop() {
+        isManualMode = false
+        if isRecording {
+            stopRecording()
+        }
+        print("BlackBox: Grabación detenida manualmente")
+    }
+
+    /// Toggle para control rápido
+    public func toggleManualRecording() {
+        if isRecording {
+            manualStop()
+        } else {
+            manualStart()
+        }
+    }
+
     // MARK: - Session Control
 
-    /// Llamar esto desde el monitor de motor con cada lectura de RPM
-    public func checkEngineState(rpm: Int) {
+    /// Llamar esto desde el monitor de motor con cada lectura de RPM y voltaje
+    public func checkEngineState(rpm: Int, voltage: Double = 0) {
         let now = Date()
+        lastVoltage = voltage
+
+        // Actualizar estado visible del motor
+        engineRunning = rpm >= minRPMToStart
+
+        // Si voltaje = 0 y no hay RPM, probablemente desconectado del OBD
+        // No parar automáticamente en este caso si está en modo manual
+        let isDisconnected = voltage == 0 && rpm == 0
 
         if rpm >= minRPMToStart {
             lastRPMTime = now
 
-            if !isRecording {
-                // Motor acaba de arrancar - iniciar grabación
+            if !isRecording && !isManualMode {
+                // Motor acaba de arrancar - iniciar grabación automática
                 startRecording()
             }
             engineWasRunning = true
-        } else if engineWasRunning && isRecording {
+        } else if engineWasRunning && isRecording && !isManualMode {
             // Motor parado - verificar si ha pasado suficiente tiempo
+            // Solo parar automáticamente si no estamos en modo manual
+            if let lastTime = lastRPMTime,
+               now.timeIntervalSince(lastTime) > maxIdleTimeToStop {
+                stopRecording()
+                engineWasRunning = false
+            }
+        }
+
+        // Si estamos desconectados y en modo manual, no parar
+        // pero si no estamos en modo manual y desconectados mucho tiempo, parar
+        if isDisconnected && !isManualMode && isRecording {
             if let lastTime = lastRPMTime,
                now.timeIntervalSince(lastTime) > maxIdleTimeToStop {
                 stopRecording()
@@ -94,7 +145,7 @@ public class BlackBoxRecorder: ObservableObject {
         let now = Date()
 
         // PRIMERO verificar estado del motor (puede iniciar la grabación)
-        checkEngineState(rpm: state.rpm)
+        checkEngineState(rpm: state.rpm, voltage: state.batteryVoltage)
 
         // Si no está grabando después de verificar, salir
         guard isRecording, let sessionId = currentSessionId else { return }

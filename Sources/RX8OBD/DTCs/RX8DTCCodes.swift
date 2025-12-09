@@ -1141,6 +1141,182 @@ public struct RX8DTCDatabase {
         affectsApexSeals: true
     )
 
+    // MARK: - Códigos de Sensores de Posición
+
+    public static let p0335 = DTCCode(
+        code: "P0335",
+        name: "Sensor CKP Sin Señal",
+        description: "El sensor de posición del cigüeñal (CKP) no envía señal a la ECU",
+        category: .powertrain,
+        severity: .critical,
+        causes: [
+            "Sensor CKP defectuoso",
+            "Cableado del sensor dañado o desconectado",
+            "Conector corroído",
+            "Anillo reluctor dañado o desalineado",
+            "Espacio de aire incorrecto entre sensor y reluctor",
+            "Problema en PCM (raro)"
+        ],
+        symptoms: [
+            "Motor no arranca",
+            "Motor se para inesperadamente",
+            "Tirones o funcionamiento irregular",
+            "Tacómetro no funciona",
+            "Luz Check Engine encendida/parpadeando"
+        ],
+        solutions: [
+            "Verificar conexión del sensor CKP (ubicado cerca del volante motor)",
+            "Inspeccionar cableado por daños",
+            "Medir resistencia del sensor (típicamente 1000-2000 ohms)",
+            "Verificar señal con osciloscopio",
+            "Limpiar área del sensor de suciedad metálica",
+            "Reemplazar sensor CKP si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p0336 = DTCCode(
+        code: "P0336",
+        name: "Sensor CKP Rango/Rendimiento",
+        description: "El sensor de posición del cigüeñal reporta señal fuera de rango",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sensor CKP deteriorándose",
+            "Espacio de aire incorrecto",
+            "Anillo reluctor dañado o con dientes faltantes",
+            "Interferencia electromagnética",
+            "Cableado con resistencia alta"
+        ],
+        symptoms: [
+            "Arranque difícil",
+            "Tirones ocasionales",
+            "RPM erráticas",
+            "Posible calado del motor"
+        ],
+        solutions: [
+            "Verificar espacio de aire del sensor (consultar especificaciones)",
+            "Inspeccionar anillo reluctor por daños",
+            "Verificar cableado por resistencia alta",
+            "Reemplazar sensor CKP"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p0340 = DTCCode(
+        code: "P0340",
+        name: "Sensor CMP Sin Señal",
+        description: "El sensor de posición del árbol de levas (CMP) no envía señal",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sensor CMP defectuoso",
+            "Cableado dañado",
+            "Conector con corrosión",
+            "Problema de sincronización"
+        ],
+        symptoms: [
+            "Arranque difícil o motor no arranca",
+            "Pérdida de potencia",
+            "Consumo elevado",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar conexión del sensor CMP",
+            "Medir resistencia del sensor",
+            "Verificar señal con osciloscopio",
+            "Reemplazar sensor CMP"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0341 = DTCCode(
+        code: "P0341",
+        name: "Sensor CMP Rango/Rendimiento",
+        description: "Señal del sensor CMP fuera de los parámetros esperados",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor CMP deteriorado",
+            "Rueda fónica dañada",
+            "Problema de alineación",
+            "Cableado con alta resistencia"
+        ],
+        symptoms: [
+            "Rendimiento reducido",
+            "Consumo irregular",
+            "Posibles tirones"
+        ],
+        solutions: [
+            "Inspeccionar sensor y rueda fónica",
+            "Verificar cableado",
+            "Reemplazar sensor si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de MAP/BARO
+
+    public static let p0105 = DTCCode(
+        code: "P0105",
+        name: "MAP/BARO Circuito",
+        description: "Problema en el circuito del sensor de presión del colector de admisión",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor MAP defectuoso",
+            "Manguera de vacío rota o desconectada",
+            "Cableado dañado",
+            "Conector con corrosión"
+        ],
+        symptoms: [
+            "Ralentí irregular",
+            "Pérdida de potencia",
+            "Consumo elevado",
+            "Motor se ahoga"
+        ],
+        solutions: [
+            "Verificar manguera de vacío al sensor MAP",
+            "Inspeccionar conexiones eléctricas",
+            "Medir voltaje del sensor (típicamente 1-4.5V)",
+            "Reemplazar sensor MAP"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0106 = DTCCode(
+        code: "P0106",
+        name: "MAP Rango/Rendimiento",
+        description: "El sensor MAP reporta valores fuera del rango esperado para las condiciones actuales",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Fuga de vacío",
+            "Sensor MAP defectuoso",
+            "Manguera MAP obstruida",
+            "Filtro de aire muy sucio",
+            "Problema de EGR"
+        ],
+        symptoms: [
+            "Aceleración pobre",
+            "Ralentí inestable",
+            "Mayor consumo"
+        ],
+        solutions: [
+            "Buscar fugas de vacío",
+            "Verificar manguera del MAP",
+            "Limpiar o reemplazar filtro de aire",
+            "Verificar funcionamiento del sensor"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
     // MARK: - Códigos de Presión de Aceite
 
     public static let p0520 = DTCCode(
@@ -1694,6 +1870,8 @@ public struct RX8DTCDatabase {
     public static let allCodes: [DTCCode] = [
         // Misfire
         p0300, p0301, p0302,
+        // MAP/BARO
+        p0105, p0106,
         // Sensores
         p0101, p0107, p0113,
         // O2/Catalizador
@@ -1702,6 +1880,8 @@ public struct RX8DTCDatabase {
         p1520, p0661, p0662,
         // Combustible
         p0171, p0172,
+        // Sensores de Posición (CKP/CMP)
+        p0335, p0336, p0340, p0341,
         // Bobinas
         p0351, p0352, p0353, p0354,
         // Temperatura
