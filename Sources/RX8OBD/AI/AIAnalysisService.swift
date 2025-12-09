@@ -491,7 +491,7 @@ public class AIAnalysisService: ObservableObject {
     private func saveAnalysisHistory() {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        if let data = try? encoder.encode(analysisHistory.prefix(50)) {
+        if let data = try? encoder.encode(Array(analysisHistory.prefix(50))) {
             UserDefaults.standard.set(data, forKey: "analysis_history")
         }
     }

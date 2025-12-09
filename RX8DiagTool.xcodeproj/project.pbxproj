@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		/* App Sources */
 		A1000001001 /* RX8DiagApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RX8DiagApp.swift */; };
 		A1000002001 /* DiagnosticView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* DiagnosticView.swift */; };
 		A1000003001 /* DTCView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003000 /* DTCView.swift */; };
@@ -17,8 +16,6 @@
 		A1000007001 /* GaugeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* GaugeViews.swift */; };
 		A1000008001 /* ProceduresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* ProceduresView.swift */; };
 		A1000009001 /* BlackBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* BlackBoxView.swift */; };
-
-		/* Library Sources */
 		A1000010001 /* RX8OBD.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010000 /* RX8OBD.swift */; };
 		A1000011001 /* OBDConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000 /* OBDConnection.swift */; };
 		A1000012001 /* RX8PIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012000 /* RX8PIDs.swift */; };
@@ -31,18 +28,13 @@
 		A1000019001 /* WorkshopProcedures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000019000 /* WorkshopProcedures.swift */; };
 		A100001A001 /* BlackBoxRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001A000 /* BlackBoxRecorder.swift */; };
 		A100001B001 /* AIAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001B000 /* AIAnalysisService.swift */; };
-
-		/* Resources */
 		A1000020001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000020000 /* Assets.xcassets */; };
 		A1000021001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000021000 /* Preview Assets.xcassets */; };
-
-		/* Frameworks */
 		A1000030001 /* CarPlay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000030000 /* CarPlay.framework */; };
 		A1000031001 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000031000 /* CoreBluetooth.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		/* App Sources */
 		A1000001000 /* RX8DiagApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RX8DiagApp.swift; sourceTree = "<group>"; };
 		A1000002000 /* DiagnosticView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticView.swift; sourceTree = "<group>"; };
 		A1000003000 /* DTCView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTCView.swift; sourceTree = "<group>"; };
@@ -52,8 +44,6 @@
 		A1000007000 /* GaugeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeViews.swift; sourceTree = "<group>"; };
 		A1000008000 /* ProceduresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProceduresView.swift; sourceTree = "<group>"; };
 		A1000009000 /* BlackBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackBoxView.swift; sourceTree = "<group>"; };
-
-		/* Library Sources */
 		A1000010000 /* RX8OBD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RX8OBD.swift; sourceTree = "<group>"; };
 		A1000011000 /* OBDConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OBDConnection.swift; sourceTree = "<group>"; };
 		A1000012000 /* RX8PIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RX8PIDs.swift; sourceTree = "<group>"; };
@@ -66,18 +56,12 @@
 		A1000019000 /* WorkshopProcedures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkshopProcedures.swift; sourceTree = "<group>"; };
 		A100001A000 /* BlackBoxRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackBoxRecorder.swift; sourceTree = "<group>"; };
 		A100001B000 /* AIAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAnalysisService.swift; sourceTree = "<group>"; };
-
-		/* Resources */
 		A1000020000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1000021000 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1000022000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000023000 /* RX8DiagTool.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RX8DiagTool.entitlements; sourceTree = "<group>"; };
-
-		/* Frameworks */
 		A1000030000 /* CarPlay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CarPlay.framework; path = System/Library/Frameworks/CarPlay.framework; sourceTree = SDKROOT; };
 		A1000031000 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
-
-		/* Products */
 		A1000040000 /* RX8DiagTool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RX8DiagTool.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -94,7 +78,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A1000060000 /* Root */ = {
+		A1000060000 = {
 			isa = PBXGroup;
 			children = (
 				A1000061000 /* RX8DiagTool */,
@@ -292,7 +276,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					A1000080000 = {
 						CreatedOnToolsVersion = 15.0;
@@ -308,7 +292,7 @@
 				Base,
 				es,
 			);
-			mainGroup = A1000060000 /* Root */;
+			mainGroup = A1000060000;
 			productRefGroup = A1000064000 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -367,6 +351,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -430,6 +415,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -490,6 +476,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RX8DiagTool/Preview Content\"";
+				DEVELOPMENT_TEAM = 29YBGXXCW3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RX8DiagTool/Info.plist;
@@ -524,6 +511,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RX8DiagTool/Preview Content\"";
+				DEVELOPMENT_TEAM = 29YBGXXCW3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RX8DiagTool/Info.plist;
@@ -552,20 +540,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A1000091000 /* Build configuration list for PBXProject "RX8DiagTool" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A1000100000 /* Debug */,
-				A1000100001 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		A1000081000 /* Build configuration list for PBXNativeTarget "RX8DiagTool" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A1000101000 /* Debug */,
 				A1000101001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000091000 /* Build configuration list for PBXProject "RX8DiagTool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000100000 /* Debug */,
+				A1000100001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
