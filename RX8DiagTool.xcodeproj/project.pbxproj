@@ -15,6 +15,8 @@
 		A1000005001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005000 /* SettingsView.swift */; };
 		A1000006001 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000006000 /* CarPlaySceneDelegate.swift */; };
 		A1000007001 /* GaugeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* GaugeViews.swift */; };
+		A1000008001 /* ProceduresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* ProceduresView.swift */; };
+		A1000009001 /* BlackBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* BlackBoxView.swift */; };
 
 		/* Library Sources */
 		A1000010001 /* RX8OBD.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010000 /* RX8OBD.swift */; };
@@ -25,6 +27,10 @@
 		A1000015001 /* RotaryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000015000 /* RotaryEngine.swift */; };
 		A1000016001 /* VehicleInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016000 /* VehicleInfo.swift */; };
 		A1000017001 /* FuelConsumption.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000017000 /* FuelConsumption.swift */; };
+		A1000018001 /* SensorSpecifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018000 /* SensorSpecifications.swift */; };
+		A1000019001 /* WorkshopProcedures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000019000 /* WorkshopProcedures.swift */; };
+		A100001A001 /* BlackBoxRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001A000 /* BlackBoxRecorder.swift */; };
+		A100001B001 /* AIAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001B000 /* AIAnalysisService.swift */; };
 
 		/* Resources */
 		A1000020001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000020000 /* Assets.xcassets */; };
@@ -44,6 +50,8 @@
 		A1000005000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1000006000 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		A1000007000 /* GaugeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeViews.swift; sourceTree = "<group>"; };
+		A1000008000 /* ProceduresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProceduresView.swift; sourceTree = "<group>"; };
+		A1000009000 /* BlackBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackBoxView.swift; sourceTree = "<group>"; };
 
 		/* Library Sources */
 		A1000010000 /* RX8OBD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RX8OBD.swift; sourceTree = "<group>"; };
@@ -54,6 +62,10 @@
 		A1000015000 /* RotaryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RotaryEngine.swift; sourceTree = "<group>"; };
 		A1000016000 /* VehicleInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleInfo.swift; sourceTree = "<group>"; };
 		A1000017000 /* FuelConsumption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelConsumption.swift; sourceTree = "<group>"; };
+		A1000018000 /* SensorSpecifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorSpecifications.swift; sourceTree = "<group>"; };
+		A1000019000 /* WorkshopProcedures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkshopProcedures.swift; sourceTree = "<group>"; };
+		A100001A000 /* BlackBoxRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackBoxRecorder.swift; sourceTree = "<group>"; };
+		A100001B000 /* AIAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAnalysisService.swift; sourceTree = "<group>"; };
 
 		/* Resources */
 		A1000020000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -138,6 +150,8 @@
 				A1000003000 /* DTCView.swift */,
 				A1000004000 /* FuelConsumptionView.swift */,
 				A1000005000 /* SettingsView.swift */,
+				A1000008000 /* ProceduresView.swift */,
+				A1000009000 /* BlackBoxView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -168,6 +182,10 @@
 				A1000071000 /* DTCs */,
 				A1000072000 /* Diagnostics */,
 				A1000073000 /* Models */,
+				A1000074000 /* Specifications */,
+				A1000075000 /* Procedures */,
+				A1000076000 /* Recording */,
+				A1000077000 /* AI */,
 			);
 			path = RX8OBD;
 			sourceTree = "<group>";
@@ -212,6 +230,38 @@
 				A1000017000 /* FuelConsumption.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000074000 /* Specifications */ = {
+			isa = PBXGroup;
+			children = (
+				A1000018000 /* SensorSpecifications.swift */,
+			);
+			path = Specifications;
+			sourceTree = "<group>";
+		};
+		A1000075000 /* Procedures */ = {
+			isa = PBXGroup;
+			children = (
+				A1000019000 /* WorkshopProcedures.swift */,
+			);
+			path = Procedures;
+			sourceTree = "<group>";
+		};
+		A1000076000 /* Recording */ = {
+			isa = PBXGroup;
+			children = (
+				A100001A000 /* BlackBoxRecorder.swift */,
+			);
+			path = Recording;
+			sourceTree = "<group>";
+		};
+		A1000077000 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				A100001B000 /* AIAnalysisService.swift */,
+			);
+			path = AI;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -292,6 +342,8 @@
 				A1000005001 /* SettingsView.swift in Sources */,
 				A1000006001 /* CarPlaySceneDelegate.swift in Sources */,
 				A1000007001 /* GaugeViews.swift in Sources */,
+				A1000008001 /* ProceduresView.swift in Sources */,
+				A1000009001 /* BlackBoxView.swift in Sources */,
 				A1000010001 /* RX8OBD.swift in Sources */,
 				A1000011001 /* OBDConnection.swift in Sources */,
 				A1000012001 /* RX8PIDs.swift in Sources */,
@@ -300,6 +352,10 @@
 				A1000015001 /* RotaryEngine.swift in Sources */,
 				A1000016001 /* VehicleInfo.swift in Sources */,
 				A1000017001 /* FuelConsumption.swift in Sources */,
+				A1000018001 /* SensorSpecifications.swift in Sources */,
+				A1000019001 /* WorkshopProcedures.swift in Sources */,
+				A100001A001 /* BlackBoxRecorder.swift in Sources */,
+				A100001B001 /* AIAnalysisService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
