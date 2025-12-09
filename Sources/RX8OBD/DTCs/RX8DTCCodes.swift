@@ -592,6 +592,610 @@ public struct RX8DTCDatabase {
         affectsApexSeals: true
     )
 
+    // MARK: - Códigos de Mariposa (Throttle)
+
+    public static let p0120 = DTCCode(
+        code: "P0120",
+        name: "TPS A Mal Funcionamiento",
+        description: "Sensor de posición del acelerador A reporta valores incorrectos",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sensor TPS defectuoso",
+            "Cableado dañado o conectores sucios",
+            "Cuerpo de aceleración sucio",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Aceleración errática",
+            "Ralentí irregular",
+            "Motor se ahoga",
+            "Respuesta lenta del acelerador"
+        ],
+        solutions: [
+            "Limpiar cuerpo de aceleración con limpiador específico",
+            "Verificar conexiones del TPS",
+            "Calibrar TPS con escáner",
+            "Reemplazar TPS si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0121 = DTCCode(
+        code: "P0121",
+        name: "TPS A Rango/Rendimiento",
+        description: "El sensor TPS A está fuera del rango esperado",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "TPS desajustado",
+            "Cuerpo de aceleración sucio",
+            "TPS desgastado",
+            "Fuga de vacío"
+        ],
+        symptoms: [
+            "Aceleración inconsistente",
+            "Consumo elevado",
+            "Ralentí variable"
+        ],
+        solutions: [
+            "Limpiar cuerpo de aceleración",
+            "Recalibrar TPS",
+            "Verificar fugas de vacío"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0122 = DTCCode(
+        code: "P0122",
+        name: "TPS A Señal Baja",
+        description: "Voltaje del sensor TPS A por debajo del mínimo",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Cortocircuito en cableado",
+            "TPS defectuoso",
+            "Conector dañado",
+            "Problema de tierra"
+        ],
+        symptoms: [
+            "Motor no acelera correctamente",
+            "Modo de emergencia activado",
+            "Limitación de potencia"
+        ],
+        solutions: [
+            "Verificar cableado y conectores",
+            "Medir voltaje del TPS (0.5-4.5V)",
+            "Reemplazar TPS"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0123 = DTCCode(
+        code: "P0123",
+        name: "TPS A Señal Alta",
+        description: "Voltaje del sensor TPS A por encima del máximo",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Circuito abierto en señal de tierra",
+            "TPS defectuoso",
+            "Cortocircuito a voltaje"
+        ],
+        symptoms: [
+            "Ralentí muy alto",
+            "Motor acelera solo",
+            "Modo de emergencia"
+        ],
+        solutions: [
+            "Verificar conexión a tierra del TPS",
+            "Inspeccionar cableado",
+            "Reemplazar TPS"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p2101 = DTCCode(
+        code: "P2101",
+        name: "Motor Mariposa Rango/Rendimiento",
+        description: "El motor del cuerpo de aceleración electrónico no responde correctamente",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Cuerpo de aceleración sucio o atascado",
+            "Motor de mariposa defectuoso",
+            "Cableado dañado",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Modo de emergencia (limp mode)",
+            "Ralentí fijo alto",
+            "No responde al acelerador"
+        ],
+        solutions: [
+            "Limpiar cuerpo de aceleración exhaustivamente",
+            "Verificar funcionamiento del motor de mariposa",
+            "Recalibrar con escáner Mazda",
+            "Reemplazar cuerpo de aceleración si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p2102 = DTCCode(
+        code: "P2102",
+        name: "Motor Mariposa Circuito Bajo",
+        description: "Señal baja en el circuito del motor del acelerador electrónico",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Cortocircuito en cableado",
+            "Motor de mariposa defectuoso",
+            "Fusible quemado"
+        ],
+        symptoms: [
+            "Mariposa no se mueve",
+            "Modo de emergencia",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar fusibles relacionados",
+            "Inspeccionar cableado",
+            "Probar motor de mariposa"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p2103 = DTCCode(
+        code: "P2103",
+        name: "Motor Mariposa Circuito Alto",
+        description: "Señal alta en el circuito del motor del acelerador electrónico",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Circuito abierto",
+            "Motor de mariposa defectuoso",
+            "Problema de conexión"
+        ],
+        symptoms: [
+            "Mariposa completamente abierta",
+            "Ralentí muy alto",
+            "Modo de emergencia"
+        ],
+        solutions: [
+            "Verificar conexiones",
+            "Probar resistencia del motor",
+            "Reemplazar cuerpo de aceleración"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos SSV (Secondary Shutter Valve) - Específico RX-8
+
+    public static let p2006 = DTCCode(
+        code: "P2006",
+        name: "SSV Atascada Cerrada",
+        description: "La válvula secundaria de admisión (SSV) está atascada en posición cerrada",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Depósitos de carbón en la SSV",
+            "Actuador de vacío defectuoso",
+            "Manguera de vacío rota o desconectada",
+            "Válvula solenoide SSV defectuosa"
+        ],
+        symptoms: [
+            "Pérdida de potencia a altas RPM (>5000)",
+            "Motor no respira bien arriba",
+            "Sensación de tope a altas vueltas"
+        ],
+        solutions: [
+            "Limpiar SSV con limpiador de admisión",
+            "Verificar actuador de vacío",
+            "Inspeccionar mangueras de vacío",
+            "Reemplazar solenoide SSV si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p2007 = DTCCode(
+        code: "P2007",
+        name: "SSV Atascada Abierta",
+        description: "La válvula secundaria de admisión (SSV) está atascada en posición abierta",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Actuador de vacío roto",
+            "Varilla de conexión rota",
+            "Depósitos impiden cierre"
+        ],
+        symptoms: [
+            "Ralentí irregular",
+            "Pérdida de torque a bajas RPM",
+            "Respuesta pobre en parcial"
+        ],
+        solutions: [
+            "Verificar mecanismo de la SSV",
+            "Limpiar válvula",
+            "Reemplazar actuador de vacío"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p2008 = DTCCode(
+        code: "P2008",
+        name: "SSV Circuito Abierto Banco 1",
+        description: "Circuito abierto en el solenoide de control de la SSV",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Solenoide SSV defectuoso",
+            "Cableado roto",
+            "Conector desconectado"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "SSV no opera",
+            "Pérdida de rendimiento"
+        ],
+        solutions: [
+            "Verificar conexión del solenoide",
+            "Medir resistencia del solenoide",
+            "Reemplazar solenoide SSV"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos VDI (Variable Dynamic Intake) - Específico RX-8
+
+    public static let p1530 = DTCCode(
+        code: "P1530",
+        name: "VDI Solenoide Circuito",
+        description: "Problema en el solenoide del sistema de admisión variable (VDI)",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Solenoide VDI defectuoso",
+            "Cableado dañado",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Pérdida de potencia en rango medio",
+            "Respuesta plana entre 4000-6000 RPM",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar solenoide VDI",
+            "Inspeccionar cableado",
+            "Limpiar conductos de vacío"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p1531 = DTCCode(
+        code: "P1531",
+        name: "VDI Válvula Atascada",
+        description: "La válvula de admisión dinámica variable no se mueve correctamente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Depósitos de carbón",
+            "Actuador defectuoso",
+            "Articulación atascada"
+        ],
+        symptoms: [
+            "Curva de potencia plana",
+            "Motor no tira arriba",
+            "Consumo elevado"
+        ],
+        solutions: [
+            "Limpiar sistema VDI",
+            "Verificar actuador",
+            "Lubricar articulaciones"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos EGR
+
+    public static let p0400 = DTCCode(
+        code: "P0400",
+        name: "EGR Flujo Insuficiente",
+        description: "El sistema de recirculación de gases de escape no fluye correctamente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Válvula EGR obstruida por carbón",
+            "Conductos EGR bloqueados",
+            "Solenoide EGR defectuoso",
+            "Sensor de posición EGR malo"
+        ],
+        symptoms: [
+            "Emisiones altas de NOx",
+            "Pistoneo/detonación",
+            "Temperatura de combustión alta"
+        ],
+        solutions: [
+            "Limpiar válvula EGR",
+            "Limpiar conductos de EGR",
+            "Reemplazar válvula EGR si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0401 = DTCCode(
+        code: "P0401",
+        name: "EGR Flujo Insuficiente Detectado",
+        description: "El flujo de EGR es menor al esperado",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Válvula EGR carbonizada",
+            "Pasajes de EGR obstruidos",
+            "Problema de vacío"
+        ],
+        symptoms: [
+            "Detonación bajo carga",
+            "Temperaturas altas",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Desmontar y limpiar válvula EGR",
+            "Limpiar pasajes con limpiador de carburador",
+            "Verificar líneas de vacío"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0402 = DTCCode(
+        code: "P0402",
+        name: "EGR Flujo Excesivo",
+        description: "El sistema EGR permite demasiado flujo de gases",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Válvula EGR atascada abierta",
+            "Fuga en diafragma de EGR",
+            "Solenoide EGR atascado abierto"
+        ],
+        symptoms: [
+            "Ralentí muy irregular",
+            "Motor se ahoga",
+            "Pérdida de potencia",
+            "Humo en escape"
+        ],
+        solutions: [
+            "Reemplazar válvula EGR",
+            "Verificar solenoide de control",
+            "Bloquear EGR temporalmente para diagnóstico"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0403 = DTCCode(
+        code: "P0403",
+        name: "EGR Circuito de Control",
+        description: "Problema en el circuito eléctrico del sistema EGR",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Solenoide EGR defectuoso",
+            "Cableado dañado",
+            "Mala conexión"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "EGR no opera"
+        ],
+        solutions: [
+            "Verificar conexiones eléctricas",
+            "Medir resistencia del solenoide",
+            "Reemplazar solenoide EGR"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos Sistema de Ralentí (IAC)
+
+    public static let p0505 = DTCCode(
+        code: "P0505",
+        name: "IAC Mal Funcionamiento",
+        description: "El sistema de control de ralentí no funciona correctamente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Válvula IAC sucia o defectuosa",
+            "Fuga de vacío",
+            "Cuerpo de aceleración sucio",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Ralentí inestable",
+            "Ralentí muy alto o muy bajo",
+            "Motor se apaga en ralentí"
+        ],
+        solutions: [
+            "Limpiar válvula IAC",
+            "Limpiar cuerpo de aceleración",
+            "Verificar fugas de vacío",
+            "Recalibrar ralentí con escáner"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0506 = DTCCode(
+        code: "P0506",
+        name: "IAC RPM Menor a Esperado",
+        description: "El ralentí es más bajo de lo que debería ser",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "IAC restringido",
+            "Fuga de vacío grande",
+            "Cuerpo de aceleración muy sucio"
+        ],
+        symptoms: [
+            "Ralentí bajo (<600 RPM)",
+            "Motor se apaga",
+            "Vibración excesiva"
+        ],
+        solutions: [
+            "Limpiar IAC y cuerpo de aceleración",
+            "Buscar fugas de vacío",
+            "Verificar sensor TPS"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0507 = DTCCode(
+        code: "P0507",
+        name: "IAC RPM Mayor a Esperado",
+        description: "El ralentí es más alto de lo que debería ser",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Fuga de vacío",
+            "IAC atascado abierto",
+            "TPS desajustado",
+            "Fuga en junta de admisión"
+        ],
+        symptoms: [
+            "Ralentí alto (>1000 RPM)",
+            "Consumo elevado en ralentí"
+        ],
+        solutions: [
+            "Buscar fugas de vacío exhaustivamente",
+            "Limpiar o reemplazar IAC",
+            "Verificar ajuste del TPS"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos OMP Adicionales (Oil Metering Pump)
+
+    public static let p0661 = DTCCode(
+        code: "P0661",
+        name: "OMP Solenoide Circuito Bajo",
+        description: "Señal baja en el circuito del solenoide de la bomba de aceite",
+        category: .powertrain,
+        severity: .critical,
+        causes: [
+            "Solenoide OMP en cortocircuito",
+            "Cableado dañado",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Posible lubricación insuficiente",
+            "Limitación de RPM"
+        ],
+        solutions: [
+            "Verificar cableado del OMP",
+            "Medir resistencia del solenoide",
+            "Reemplazar solenoide OMP urgentemente"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    public static let p0662 = DTCCode(
+        code: "P0662",
+        name: "OMP Solenoide Circuito Alto",
+        description: "Señal alta en el circuito del solenoide de la bomba de aceite",
+        category: .powertrain,
+        severity: .critical,
+        causes: [
+            "Circuito abierto en solenoide",
+            "Conector desconectado",
+            "Solenoide defectuoso"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "OMP puede no dosificar correctamente",
+            "Riesgo de daño al motor"
+        ],
+        solutions: [
+            "Verificar conexión del solenoide OMP",
+            "Inspeccionar cableado",
+            "Reemplazar solenoide si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    // MARK: - Códigos de Presión de Aceite
+
+    public static let p0520 = DTCCode(
+        code: "P0520",
+        name: "Sensor Presión Aceite Circuito",
+        description: "Problema en el circuito del sensor de presión de aceite",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sensor de presión defectuoso",
+            "Cableado dañado",
+            "Baja presión de aceite real"
+        ],
+        symptoms: [
+            "Luz de aceite encendida",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar nivel de aceite",
+            "Medir presión de aceite mecánicamente",
+            "Reemplazar sensor si presión es correcta"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: true
+    )
+
+    public static let p0524 = DTCCode(
+        code: "P0524",
+        name: "Presión Aceite Demasiado Baja",
+        description: "La presión de aceite del motor está por debajo del mínimo seguro",
+        category: .powertrain,
+        severity: .critical,
+        causes: [
+            "Nivel de aceite bajo",
+            "Bomba de aceite desgastada",
+            "Filtro de aceite obstruido",
+            "Cojinetes desgastados",
+            "Aceite incorrecto"
+        ],
+        symptoms: [
+            "Luz de presión de aceite",
+            "Ruidos metálicos",
+            "Motor caliente"
+        ],
+        solutions: [
+            "¡DETENER EL MOTOR INMEDIATAMENTE!",
+            "Verificar nivel de aceite",
+            "No arrancar hasta diagnosticar causa",
+            "Verificar bomba de aceite",
+            "En rotativo: verificar OMP y premix"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: true
+    )
+
     // MARK: - Colección Completa
 
     public static let allCodes: [DTCCode] = [
@@ -602,7 +1206,7 @@ public struct RX8DTCDatabase {
         // O2/Catalizador
         p0130, p0420,
         // OMP
-        p1520,
+        p1520, p0661, p0662,
         // Combustible
         p0171, p0172,
         // Bobinas
@@ -610,7 +1214,19 @@ public struct RX8DTCDatabase {
         // Temperatura
         p0117, p0125,
         // Mazda específicos
-        p1000, p1131
+        p1000, p1131,
+        // Mariposa/Throttle
+        p0120, p0121, p0122, p0123, p2101, p2102, p2103,
+        // SSV (Secondary Shutter Valve)
+        p2006, p2007, p2008,
+        // VDI (Variable Dynamic Intake)
+        p1530, p1531,
+        // EGR
+        p0400, p0401, p0402, p0403,
+        // IAC (Idle Air Control)
+        p0505, p0506, p0507,
+        // Presión de aceite
+        p0520, p0524
     ]
 
     /// Buscar código por string
