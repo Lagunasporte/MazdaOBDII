@@ -7,7 +7,7 @@ public class FuelConsumptionTracker: ObservableObject {
 
     // MARK: - Datos Publicados
     @Published public var instantConsumption: Double = 0 // L/100km
-    @Published public var averageConsumption: Double = 0 // L/100km
+    @Published public var averageConsumption: Double = 0 // L/100km (media de la sesión)
     @Published public var tripConsumption: Double = 0 // L/100km
     @Published public var fuelUsedTrip: Double = 0 // Litros
     @Published public var distanceTrip: Double = 0 // km
@@ -35,6 +35,8 @@ public class FuelConsumptionTracker: ObservableObject {
     private var speedReadings: [SpeedReading] = []
     private var tripStartTime: Date?
     private var tripStartOdometer: Double = 0
+    private var lastUpdateTime: Date? // Para calcular tiempo real entre lecturas
+    private var consumptionHistory: [Double] = [] // Historial para calcular media móvil
 
     // Constantes para cálculo
     private let airFuelRatioStoich: Double = 14.7 // Ratio estequiométrico gasolina
@@ -53,7 +55,10 @@ public class FuelConsumptionTracker: ObservableObject {
         let speedKmh: Double
     }
 
-    public init() {}
+    public init() {
+        // Iniciar con valores por defecto que tengan sentido
+        averageConsumption = 13.0 // Consumo típico RX-8
+    }
 
     // MARK: - Cálculo de Consumo Instantáneo
 
@@ -112,22 +117,46 @@ public class FuelConsumptionTracker: ObservableObject {
     // MARK: - Estadísticas del Viaje
 
     private func updateTripStatistics(fuelFlowLitersPerHour: Double, speedKmh: Double) {
-        guard let startTime = tripStartTime else { return }
+        guard tripStartTime != nil else { return }
 
-        // Tiempo transcurrido desde última lectura (asumiendo ~1 segundo entre lecturas)
-        let deltaTime: Double = 1.0 / 3600.0 // horas
+        let now = Date()
+
+        // Calcular tiempo real transcurrido desde última actualización
+        var deltaTimeHours: Double
+        if let lastTime = lastUpdateTime {
+            let deltaSeconds = now.timeIntervalSince(lastTime)
+            // Limitar a máximo 2 segundos para evitar saltos grandes
+            deltaTimeHours = min(deltaSeconds, 2.0) / 3600.0
+        } else {
+            // Primera lectura - usar un valor pequeño
+            deltaTimeHours = 0.1 / 3600.0
+        }
+        lastUpdateTime = now
 
         // Combustible usado en este intervalo
-        let fuelUsedInterval = fuelFlowLitersPerHour * deltaTime
+        let fuelUsedInterval = fuelFlowLitersPerHour * deltaTimeHours
         fuelUsedTrip += fuelUsedInterval
 
-        // Distancia recorrida en este intervalo
-        let distanceInterval = speedKmh * deltaTime
-        distanceTrip += distanceInterval
+        // Distancia recorrida en este intervalo (solo si hay velocidad)
+        if speedKmh > 1 {
+            let distanceInterval = speedKmh * deltaTimeHours
+            distanceTrip += distanceInterval
+        }
 
         // Consumo medio del viaje
         if distanceTrip > 0.1 {
             tripConsumption = (fuelUsedTrip / distanceTrip) * 100
+
+            // Actualizar media móvil solo cuando el consumo es válido (en movimiento)
+            if speedKmh > 10 && instantConsumption > 0 && instantConsumption < 40 {
+                consumptionHistory.append(instantConsumption)
+                // Mantener últimas 500 muestras (~8 minutos de conducción)
+                if consumptionHistory.count > 500 {
+                    consumptionHistory.removeFirst()
+                }
+                // Calcular media
+                averageConsumption = consumptionHistory.reduce(0, +) / Double(consumptionHistory.count)
+            }
         }
 
         // Costo estimado
@@ -135,18 +164,24 @@ public class FuelConsumptionTracker: ObservableObject {
 
         // Emisiones CO2 (gasolina: ~2.31 kg CO2 por litro)
         co2Emissions = (fuelUsedTrip * 2310) / max(distanceTrip, 0.1) // g/km
+
+        // Recalcular autonomía con los nuevos datos
+        calculateRangeAutomatically()
     }
 
     // MARK: - Control del Viaje
 
     public func startTrip() {
         tripStartTime = Date()
+        lastUpdateTime = nil
         fuelUsedTrip = 0
         distanceTrip = 0
         tripConsumption = 0
         fuelCost = 0
         mafReadings.removeAll()
         speedReadings.removeAll()
+        consumptionHistory.removeAll()
+        // Mantener averageConsumption ya que es una media histórica
     }
 
     public func endTrip() -> TripSummary {

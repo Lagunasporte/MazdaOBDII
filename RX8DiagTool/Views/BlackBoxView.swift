@@ -1,67 +1,71 @@
 import SwiftUI
 
-// MARK: - Black Box Recording View
+// MARK: - Black Box View
+// Vista de la caja negra con sesiones automáticas y análisis IA
 
 struct BlackBoxView: View {
-    @StateObject private var recorder = BlackBoxRecorder()
-    @StateObject private var aiService = AIAnalysisService()
+    @EnvironmentObject var blackBoxRecorder: BlackBoxRecorder
+    @State private var selectedSession: BlackBoxSession?
+    @State private var showingAnalysis = false
     @State private var showingAPIKeySheet = false
-    @State private var showingSessionDetail: RecordingSession?
-    @State private var showingAnalysisResult: AIAnalysisResult?
-    @State private var apiKeyInput = ""
+    @State private var apiKey = ""
+    @State private var isAnalyzing = false
+    @State private var analysisResult: String?
+    @State private var analysisError: String?
+
+    // API Key guardada en UserDefaults
+    @AppStorage("anthropicAPIKey") private var savedAPIKey = ""
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
-                // Recording status
-                RecordingStatusView(
-                    isRecording: recorder.isRecording,
-                    duration: recorder.recordingDuration,
-                    snapshotCount: recorder.currentSession?.snapshotCount ?? 0,
-                    onStart: { recorder.startRecording() },
-                    onStop: {
-                        if let session = recorder.stopRecording() {
-                            showingSessionDetail = session
-                        }
-                    },
-                    onAddMarker: { recorder.addUserMarker("Marcador del usuario") }
-                )
+                // Estado de grabación actual
+                RecordingStatusHeader()
 
-                // Live data preview when recording
-                if recorder.isRecording, let snapshot = recorder.lastSnapshot {
-                    LiveDataPreview(snapshot: snapshot)
-                        .padding()
-                }
-
-                // Saved sessions list
+                // Lista de sesiones
                 List {
-                    Section(header: Text("Sesiones Guardadas")) {
-                        if recorder.savedSessions.isEmpty {
-                            Text("No hay sesiones guardadas")
-                                .foregroundColor(.secondary)
-                                .italic()
-                        } else {
-                            ForEach(recorder.savedSessions) { session in
-                                SessionRow(session: session)
+                    if blackBoxRecorder.sessions.isEmpty {
+                        Section {
+                            VStack(spacing: 12) {
+                                Image(systemName: "car.side")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(.gray)
+                                Text("Sin sesiones grabadas")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                Text("La grabación comienza automáticamente cuando el motor arranca")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        }
+                    } else {
+                        Section(header: Text("Sesiones (\(blackBoxRecorder.sessions.count)/\(BlackBoxDatabase.maxSessions))")) {
+                            ForEach(blackBoxRecorder.sessions) { session in
+                                SessionRowView(session: session)
                                     .onTapGesture {
-                                        showingSessionDetail = session
+                                        selectedSession = session
                                     }
                             }
                             .onDelete { indexSet in
                                 for index in indexSet {
-                                    recorder.deleteSession(recorder.savedSessions[index])
+                                    blackBoxRecorder.deleteSession(blackBoxRecorder.sessions[index])
                                 }
                             }
                         }
                     }
 
-                    Section(header: Text("Análisis IA")) {
-                        if !aiService.hasAPIKey {
+                    // Configuración de API
+                    Section(header: Text("Análisis con IA")) {
+                        if savedAPIKey.isEmpty {
                             Button(action: { showingAPIKeySheet = true }) {
                                 HStack {
                                     Image(systemName: "key.fill")
                                         .foregroundColor(.orange)
                                     Text("Configurar API Key de Anthropic")
+                                        .foregroundColor(.white)
                                 }
                             }
                         } else {
@@ -69,134 +73,94 @@ struct BlackBoxView: View {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                                 Text("API Key configurada")
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.gray)
                                 Spacer()
                                 Button("Cambiar") {
                                     showingAPIKeySheet = true
                                 }
                                 .font(.caption)
+                                .foregroundColor(.blue)
                             }
                         }
 
-                        if !aiService.analysisHistory.isEmpty {
-                            ForEach(aiService.analysisHistory.prefix(5)) { result in
-                                AnalysisHistoryRow(result: result)
-                                    .onTapGesture {
-                                        showingAnalysisResult = result
-                                    }
-                            }
-                        }
+                        Text("El análisis enviará los datos de la sesión a Claude para obtener un diagnóstico experto del motor rotativo")
+                            .font(.caption)
+                            .foregroundColor(.gray)
                     }
                 }
-                .listStyle(InsetGroupedListStyle())
+                .listStyle(.insetGrouped)
             }
+            .background(Color.black)
             .navigationTitle("Caja Negra")
-            .sheet(isPresented: $showingAPIKeySheet) {
-                APIKeySheet(apiKey: $apiKeyInput) { key in
-                    aiService.setAPIKey(key)
-                    showingAPIKeySheet = false
-                }
-            }
-            .sheet(item: $showingSessionDetail) { session in
-                SessionDetailView(
+            .sheet(item: $selectedSession) { session in
+                SessionDetailSheet(
                     session: session,
-                    recorder: recorder,
-                    aiService: aiService,
-                    onAnalysisComplete: { result in
-                        showingAnalysisResult = result
-                    }
+                    recorder: blackBoxRecorder,
+                    apiKey: savedAPIKey,
+                    onDismiss: { selectedSession = nil }
                 )
             }
-            .sheet(item: $showingAnalysisResult) { result in
-                AnalysisResultView(result: result)
+            .sheet(isPresented: $showingAPIKeySheet) {
+                APIKeyConfigSheet(apiKey: $apiKey, savedAPIKey: $savedAPIKey)
+            }
+            .onAppear {
+                blackBoxRecorder.loadSessions()
             }
         }
     }
 }
 
-// MARK: - Recording Status View
+// MARK: - Recording Status Header
 
-struct RecordingStatusView: View {
-    let isRecording: Bool
-    let duration: TimeInterval
-    let snapshotCount: Int
-    let onStart: () -> Void
-    let onStop: () -> Void
-    let onAddMarker: () -> Void
+struct RecordingStatusHeader: View {
+    @EnvironmentObject var blackBoxRecorder: BlackBoxRecorder
 
     var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                // Recording indicator
-                Circle()
-                    .fill(isRecording ? Color.red : Color.gray)
-                    .frame(width: 12, height: 12)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.red.opacity(0.5), lineWidth: 4)
-                            .scaleEffect(isRecording ? 1.5 : 1)
-                            .opacity(isRecording ? 0 : 1)
-                            .animation(isRecording ? Animation.easeOut(duration: 1).repeatForever(autoreverses: false) : .default, value: isRecording)
-                    )
+        HStack {
+            // Indicador de grabación
+            Circle()
+                .fill(blackBoxRecorder.isRecording ? Color.red : Color.gray)
+                .frame(width: 12, height: 12)
+                .overlay(
+                    Circle()
+                        .stroke(Color.red.opacity(blackBoxRecorder.isRecording ? 0.5 : 0), lineWidth: 3)
+                        .scaleEffect(blackBoxRecorder.isRecording ? 1.5 : 1)
+                        .opacity(blackBoxRecorder.isRecording ? 0 : 1)
+                        .animation(blackBoxRecorder.isRecording ?
+                            Animation.easeOut(duration: 1).repeatForever(autoreverses: false) : .default,
+                            value: blackBoxRecorder.isRecording)
+                )
 
-                Text(isRecording ? "GRABANDO" : "DETENIDO")
-                    .font(.headline)
-                    .foregroundColor(isRecording ? .red : .secondary)
+            if blackBoxRecorder.isRecording {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("GRABANDO")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.red)
+                    Text(formatDuration(blackBoxRecorder.recordingDuration))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.white)
+                }
 
                 Spacer()
 
-                // Duration
-                Text(formatDuration(duration))
-                    .font(.system(.title2, design: .monospaced))
-                    .foregroundColor(.primary)
-            }
-
-            if isRecording {
-                HStack {
-                    Label("\(snapshotCount) muestras", systemImage: "waveform")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(blackBoxRecorder.snapshotCount)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("muestras")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
                 }
-            }
-
-            // Controls
-            HStack(spacing: 20) {
-                if isRecording {
-                    Button(action: onAddMarker) {
-                        Label("Marcador", systemImage: "flag.fill")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.orange)
-                            .cornerRadius(20)
-                    }
-
-                    Button(action: onStop) {
-                        Label("Detener", systemImage: "stop.fill")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 10)
-                            .background(Color.red)
-                            .cornerRadius(20)
-                    }
-                } else {
-                    Button(action: onStart) {
-                        Label("Iniciar Grabación", systemImage: "record.circle")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 12)
-                            .background(Color.red)
-                            .cornerRadius(25)
-                    }
-                }
+            } else {
+                Text("Esperando motor...")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                Spacer()
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(.systemGray6).opacity(0.3))
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -207,261 +171,179 @@ struct RecordingStatusView: View {
     }
 }
 
-// MARK: - Live Data Preview
+// MARK: - Session Row
 
-struct LiveDataPreview: View {
-    let snapshot: SensorSnapshot
+struct SessionRowView: View {
+    let session: BlackBoxSession
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Datos en Tiempo Real")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
-                ForEach(Array(snapshot.readings.prefix(6)), id: \.key) { key, value in
-                    VStack {
-                        Text(key.uppercased())
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text(String(format: "%.1f", value))
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                    }
-                    .padding(8)
-                    .background(Color(.systemGray5))
-                    .cornerRadius(8)
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-}
-
-// MARK: - Session Row
-
-struct SessionRow: View {
-    let session: RecordingSession
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(formatDate(session.startTime))
+                Text(session.dateFormatted)
                     .font(.headline)
+                    .foregroundColor(.white)
                 Spacer()
-                Text(session.durationString)
+                Text(session.durationFormatted)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.gray)
             }
 
-            HStack {
-                Label("\(session.snapshotCount) muestras", systemImage: "waveform")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                if !session.dtcsCaptured.isEmpty {
-                    Label("\(session.dtcsCaptured.count) DTCs", systemImage: "exclamationmark.triangle")
+            HStack(spacing: 16) {
+                // Distancia
+                HStack(spacing: 4) {
+                    Image(systemName: "road.lanes")
+                        .foregroundColor(.blue)
                         .font(.caption)
+                    Text(String(format: "%.1f km", session.totalDistance))
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+
+                // Max RPM
+                HStack(spacing: 4) {
+                    Image(systemName: "gauge.high")
                         .foregroundColor(.orange)
+                        .font(.caption)
+                    Text("\(session.maxRPM) rpm")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
 
-                if !session.events.filter({ $0.type == .critical }).isEmpty {
-                    Label("Alertas", systemImage: "exclamationmark.circle")
-                        .font(.caption)
-                        .foregroundColor(.red)
+                // Alertas
+                if session.alertCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.yellow)
+                            .font(.caption)
+                        Text("\(session.alertCount)")
+                            .font(.caption)
+                            .foregroundColor(.yellow)
+                    }
                 }
+
+                // DTCs
+                if session.dtcCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                        Text("\(session.dtcCount) DTC")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+
+                Spacer()
+
+                // Indicador de análisis
+                if session.analysisSent {
+                    Image(systemName: "brain")
+                        .foregroundColor(.purple)
+                        .font(.caption)
+                }
+            }
+
+            // Temperaturas máximas
+            HStack(spacing: 12) {
+                Text("Temp. máx:")
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                Text("Refr: \(Int(session.maxCoolantTemp))°C")
+                    .font(.caption2)
+                    .foregroundColor(session.maxCoolantTemp > 98 ? .orange : .gray)
+                Text("Aceite: \(Int(session.maxOilTemp))°C")
+                    .font(.caption2)
+                    .foregroundColor(session.maxOilTemp > 120 ? .orange : .gray)
             }
         }
         .padding(.vertical, 4)
     }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM/yyyy HH:mm"
-        return formatter.string(from: date)
-    }
 }
 
-// MARK: - Analysis History Row
+// MARK: - Session Detail Sheet
 
-struct AnalysisHistoryRow: View {
-    let result: AIAnalysisResult
-
-    var body: some View {
-        HStack {
-            HealthScoreBadge(score: result.healthScore)
-
-            VStack(alignment: .leading) {
-                Text(formatDate(result.timestamp))
-                    .font(.subheadline)
-                Text("\(result.issues.count) problemas, \(result.recommendations.count) recomendaciones")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-        }
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM HH:mm"
-        return formatter.string(from: date)
-    }
-}
-
-// MARK: - Health Score Badge
-
-struct HealthScoreBadge: View {
-    let score: Int
-
-    var color: Color {
-        if score >= 80 { return .green }
-        if score >= 60 { return .yellow }
-        if score >= 40 { return .orange }
-        return .red
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(color.opacity(0.3), lineWidth: 4)
-                .frame(width: 44, height: 44)
-
-            Circle()
-                .trim(from: 0, to: CGFloat(score) / 100)
-                .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                .frame(width: 44, height: 44)
-                .rotationEffect(.degrees(-90))
-
-            Text("\(score)")
-                .font(.caption)
-                .fontWeight(.bold)
-        }
-    }
-}
-
-// MARK: - Session Detail View
-
-struct SessionDetailView: View {
-    let session: RecordingSession
+struct SessionDetailSheet: View {
+    let session: BlackBoxSession
     let recorder: BlackBoxRecorder
-    let aiService: AIAnalysisService
-    let onAnalysisComplete: (AIAnalysisResult) -> Void
+    let apiKey: String
+    let onDismiss: () -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @State private var isAnalyzing = false
+    @State private var analysisResult: String?
     @State private var analysisError: String?
+    @State private var showingExport = false
+    @State private var noteText = ""
+    @State private var showingNoteInput = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Session info
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Duración:")
-                            Spacer()
-                            Text(session.durationString)
-                                .fontWeight(.medium)
-                        }
-                        HStack {
-                            Text("Muestras:")
-                            Spacer()
-                            Text("\(session.snapshotCount)")
-                                .fontWeight(.medium)
-                        }
-                        HStack {
-                            Text("Eventos:")
-                            Spacer()
-                            Text("\(session.events.count)")
-                                .fontWeight(.medium)
-                        }
+                VStack(spacing: 16) {
+                    // Resumen
+                    SessionSummaryCard(session: session)
+
+                    // Estadísticas
+                    SessionStatsCard(session: session)
+
+                    // Alertas
+                    let alerts = recorder.getSessionAlerts(session.id)
+                    if !alerts.isEmpty {
+                        SessionAlertsCard(alerts: alerts)
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
 
                     // DTCs
-                    if !session.dtcsCaptured.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("DTCs Detectados")
-                                .font(.headline)
+                    let dtcs = recorder.getSessionDTCs(session.id)
+                    if !dtcs.isEmpty {
+                        SessionDTCsCard(dtcs: dtcs)
+                    }
 
-                            ForEach(session.dtcsCaptured, id: \.self) { dtc in
-                                HStack {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.orange)
-                                    Text(dtc)
-                                        .fontWeight(.medium)
-                                }
-                            }
+                    // Notas
+                    if let notes = session.notes, !notes.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Notas")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text(notes)
+                                .font(.body)
+                                .foregroundColor(.gray)
                         }
                         .padding()
-                        .background(Color(.systemGray6))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.systemGray6).opacity(0.3))
                         .cornerRadius(12)
                     }
 
-                    // Events timeline
-                    if !session.events.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Eventos")
-                                .font(.headline)
-
-                            ForEach(session.events.prefix(20)) { event in
-                                HStack(alignment: .top) {
-                                    Image(systemName: iconForEventType(event.type))
-                                        .foregroundColor(colorForEventType(event.type))
-                                        .frame(width: 20)
-
-                                    VStack(alignment: .leading) {
-                                        Text(event.description)
-                                            .font(.subheadline)
-                                        Text(formatTime(event.timestamp))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                            }
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                    // Resultado del análisis
+                    if let result = session.analysisResult ?? analysisResult {
+                        AnalysisResultCard(result: result)
                     }
 
-                    // Analysis buttons
+                    // Botones de acción
                     VStack(spacing: 12) {
-                        Button(action: performQuickAnalysis) {
+                        // Añadir nota
+                        Button(action: { showingNoteInput = true }) {
                             HStack {
-                                Image(systemName: "bolt.fill")
-                                Text("Análisis Rápido (Offline)")
+                                Image(systemName: "note.text")
+                                Text("Añadir Nota")
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
+                            .background(Color.blue.opacity(0.3))
+                            .foregroundColor(.blue)
                             .cornerRadius(12)
                         }
 
-                        if aiService.hasAPIKey {
-                            Button(action: performAIAnalysis) {
+                        // Análisis IA
+                        if !apiKey.isEmpty && session.analysisResult == nil && analysisResult == nil {
+                            Button(action: performAnalysis) {
                                 HStack {
                                     if isAnalyzing {
                                         ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .tint(.white)
                                     } else {
                                         Image(systemName: "brain")
                                     }
-                                    Text(isAnalyzing ? "Analizando..." : "Análisis IA (Claude)")
+                                    Text(isAnalyzing ? "Analizando..." : "Analizar con Claude")
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding()
@@ -482,324 +364,365 @@ struct SessionDetailView: View {
                 }
                 .padding()
             }
+            .background(Color.black)
             .navigationTitle("Sesión")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cerrar") {
-                        dismiss()
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { onDismiss() }
+                }
+            }
+            .alert("Añadir Nota", isPresented: $showingNoteInput) {
+                TextField("Nota", text: $noteText)
+                Button("Cancelar", role: .cancel) {}
+                Button("Guardar") {
+                    if !noteText.isEmpty {
+                        recorder.addNote(session.id, note: noteText)
+                        noteText = ""
                     }
                 }
             }
         }
     }
 
-    private func performQuickAnalysis() {
-        let result = aiService.quickAnalysis(session: session, recorder: recorder)
-        dismiss()
-        onAnalysisComplete(result)
-    }
-
-    private func performAIAnalysis() {
+    private func performAnalysis() {
         isAnalyzing = true
         analysisError = nil
 
         Task {
             do {
-                let result = try await aiService.analyzeSession(session, recorder: recorder)
+                let report = recorder.exportSessionForAnalysis(session.id)
+                let result = try await sendToAnthropic(prompt: report)
+
                 await MainActor.run {
+                    analysisResult = result
+                    recorder.saveAnalysisResult(session.id, result: result)
                     isAnalyzing = false
-                    dismiss()
-                    onAnalysisComplete(result)
                 }
             } catch {
                 await MainActor.run {
-                    isAnalyzing = false
                     analysisError = error.localizedDescription
+                    isAnalyzing = false
                 }
             }
         }
     }
 
-    private func iconForEventType(_ type: RecordingEvent.EventType) -> String {
-        switch type {
-        case .warning: return "exclamationmark.triangle"
-        case .critical: return "exclamationmark.octagon"
-        case .dtcSet: return "exclamationmark.circle"
-        case .dtcCleared: return "checkmark.circle"
-        case .anomaly: return "waveform.badge.exclamationmark"
-        case .userMarker: return "flag.fill"
-        case .engineStart: return "power"
-        case .engineStop: return "power.circle"
-        }
-    }
+    private func sendToAnthropic(prompt: String) async throws -> String {
+        let url = URL(string: "https://api.anthropic.com/v1/messages")!
 
-    private func colorForEventType(_ type: RecordingEvent.EventType) -> Color {
-        switch type {
-        case .warning: return .yellow
-        case .critical: return .red
-        case .dtcSet: return .orange
-        case .dtcCleared: return .green
-        case .anomaly: return .purple
-        case .userMarker: return .blue
-        case .engineStart: return .green
-        case .engineStop: return .gray
-        }
-    }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.addValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
 
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter.string(from: date)
+        let body: [String: Any] = [
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 4096,
+            "messages": [
+                ["role": "user", "content": prompt]
+            ]
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "HTTP", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw NSError(domain: "API", code: httpResponse.statusCode,
+                         userInfo: [NSLocalizedDescriptionKey: "API Error: \(errorBody)"])
+        }
+
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let content = json?["content"] as? [[String: Any]]
+        let text = content?.first?["text"] as? String
+
+        return text ?? "No se recibió respuesta"
     }
 }
 
-// MARK: - Analysis Result View
+// MARK: - Session Summary Card
 
-struct AnalysisResultView: View {
-    let result: AIAnalysisResult
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Health score
-                    HStack {
-                        Spacer()
-                        VStack {
-                            ZStack {
-                                Circle()
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 12)
-                                    .frame(width: 120, height: 120)
-
-                                Circle()
-                                    .trim(from: 0, to: CGFloat(result.healthScore) / 100)
-                                    .stroke(healthColor, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                                    .frame(width: 120, height: 120)
-                                    .rotationEffect(.degrees(-90))
-
-                                VStack {
-                                    Text("\(result.healthScore)")
-                                        .font(.system(size: 36, weight: .bold))
-                                    Text("/ 100")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            Text("Puntuación de Salud")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .padding()
-
-                    // Summary
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Resumen")
-                            .font(.headline)
-                        Text(result.analysis)
-                            .font(.body)
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-
-                    // Urgent actions
-                    if !result.urgentActions.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.red)
-                                Text("Acciones Urgentes")
-                                    .font(.headline)
-                            }
-
-                            ForEach(result.urgentActions, id: \.self) { action in
-                                HStack(alignment: .top) {
-                                    Image(systemName: "arrow.right.circle.fill")
-                                        .foregroundColor(.red)
-                                    Text(action)
-                                }
-                            }
-                        }
-                        .padding()
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(12)
-                    }
-
-                    // Issues
-                    if !result.issues.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Problemas Detectados")
-                                .font(.headline)
-
-                            ForEach(result.issues) { issue in
-                                IssueCard(issue: issue)
-                            }
-                        }
-                    }
-
-                    // Recommendations
-                    if !result.recommendations.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Recomendaciones")
-                                .font(.headline)
-
-                            ForEach(result.recommendations) { rec in
-                                RecommendationCard(recommendation: rec)
-                            }
-                        }
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Análisis")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cerrar") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-
-    private var healthColor: Color {
-        if result.healthScore >= 80 { return .green }
-        if result.healthScore >= 60 { return .yellow }
-        if result.healthScore >= 40 { return .orange }
-        return .red
-    }
-}
-
-// MARK: - Issue Card
-
-struct IssueCard: View {
-    let issue: AIAnalysisResult.DiagnosedIssue
+struct SessionSummaryCard: View {
+    let session: BlackBoxSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 12) {
             HStack {
-                Text(issue.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                VStack(alignment: .leading) {
+                    Text(session.dateFormatted)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    Text("Duración: \(session.durationFormatted)")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
                 Spacer()
-                Text(issue.severity.rawValue)
+                if session.analysisSent {
+                    HStack {
+                        Image(systemName: "brain")
+                        Text("Analizado")
+                    }
                     .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(severityColor(issue.severity))
+                    .background(Color.purple.opacity(0.3))
+                    .foregroundColor(.purple)
                     .cornerRadius(8)
+                }
             }
 
-            Text(issue.description)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Divider()
+                .background(Color.gray)
 
-            if !issue.possibleCauses.isEmpty {
-                Text("Causas posibles:")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                ForEach(issue.possibleCauses.prefix(3), id: \.self) { cause in
-                    HStack(alignment: .top) {
-                        Text("•")
-                        Text(cause)
-                    }
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                }
+            HStack(spacing: 24) {
+                StatItem(title: "Distancia", value: String(format: "%.1f", session.totalDistance), unit: "km")
+                StatItem(title: "Vel. Máx", value: String(format: "%.0f", session.maxSpeed), unit: "km/h")
+                StatItem(title: "Consumo", value: String(format: "%.1f", session.avgConsumption), unit: "L/100")
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(.systemGray6).opacity(0.3))
         .cornerRadius(12)
     }
+}
 
-    private func severityColor(_ severity: AIAnalysisResult.IssueSeverity) -> Color {
-        switch severity {
-        case .low: return .green
-        case .medium: return .yellow
-        case .high: return .orange
-        case .critical: return .red
+struct StatItem: View {
+    let title: String
+    let value: String
+    let unit: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
         }
     }
 }
 
-// MARK: - Recommendation Card
+// MARK: - Session Stats Card
 
-struct RecommendationCard: View {
-    let recommendation: AIAnalysisResult.Recommendation
+struct SessionStatsCard: View {
+    let session: BlackBoxSession
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.blue)
-                    .frame(width: 28, height: 28)
-                Text("\(recommendation.priority)")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Estadísticas del Motor")
+                .font(.headline)
+                .foregroundColor(.white)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                StatBox(icon: "gauge.high", title: "RPM Máx", value: "\(session.maxRPM)",
+                       color: session.maxRPM > 8500 ? .orange : .blue)
+
+                StatBox(icon: "thermometer.high", title: "Refr. Máx",
+                       value: "\(Int(session.maxCoolantTemp))°C",
+                       color: session.maxCoolantTemp > 98 ? .orange : .green)
+
+                StatBox(icon: "drop.fill", title: "Aceite Máx",
+                       value: "\(Int(session.maxOilTemp))°C",
+                       color: session.maxOilTemp > 120 ? .orange : .green)
+
+                StatBox(icon: "exclamationmark.triangle", title: "Alertas",
+                       value: "\(session.alertCount)",
+                       color: session.alertCount > 0 ? .yellow : .gray)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6).opacity(0.3))
+        .cornerRadius(12)
+    }
+}
+
+struct StatBox: View {
+    let icon: String
+    let title: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.title3)
+
+            VStack(alignment: .leading) {
+                Text(title)
                     .font(.caption)
-                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+                Text(value)
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.15))
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - Session Alerts Card
+
+struct SessionAlertsCard: View {
+    let alerts: [BlackBoxAlert]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.yellow)
+                Text("Alertas (\(alerts.count))")
+                    .font(.headline)
                     .foregroundColor(.white)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(recommendation.title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text(recommendation.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                if let cost = recommendation.estimatedCost {
-                    Text("Coste estimado: \(cost)")
+            ForEach(Array(alerts.prefix(10).enumerated()), id: \.offset) { _, alert in
+                HStack {
+                    Circle()
+                        .fill(alert.severity == "Crítico" ? Color.red : Color.yellow)
+                        .frame(width: 8, height: 8)
+
+                    Text(alert.message)
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    if let param = alert.parameter {
+                        Text("\(param): \(String(format: "%.1f", alert.value))")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
                 }
+            }
+
+            if alerts.count > 10 {
+                Text("... y \(alerts.count - 10) más")
+                    .font(.caption)
+                    .foregroundColor(.gray)
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.yellow.opacity(0.1))
         .cornerRadius(12)
     }
 }
 
-// MARK: - API Key Sheet
+// MARK: - Session DTCs Card
 
-struct APIKeySheet: View {
-    @Binding var apiKey: String
-    let onSave: (String) -> Void
-    @Environment(\.dismiss) private var dismiss
+struct SessionDTCsCard: View {
+    let dtcs: [(code: String, description: String)]
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundColor(.red)
+                Text("Códigos de Error (DTC)")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            ForEach(dtcs, id: \.code) { dtc in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(dtc.code)
+                        .font(.headline)
+                        .foregroundColor(.red)
+                    Text(dtc.description)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .padding()
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Analysis Result Card
+
+struct AnalysisResultCard: View {
+    let result: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "brain")
+                    .foregroundColor(.purple)
+                Text("Análisis de Claude")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            Text(result)
+                .font(.body)
+                .foregroundColor(.gray)
+                .lineLimit(nil)
+        }
+        .padding()
+        .background(Color.purple.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - API Key Config Sheet
+
+struct APIKeyConfigSheet: View {
+    @Binding var apiKey: String
+    @Binding var savedAPIKey: String
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
                 Image(systemName: "key.fill")
                     .font(.system(size: 60))
                     .foregroundColor(.orange)
 
-                Text("Configura tu API Key de Anthropic")
-                    .font(.headline)
+                Text("API Key de Anthropic")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
 
-                Text("Para usar el análisis con IA, necesitas una API key de Anthropic (Claude).")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                Text("Para analizar tus sesiones con inteligencia artificial, necesitas una API key de Anthropic.")
+                    .font(.body)
+                    .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
 
                 TextField("sk-ant-...", text: $apiKey)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(.roundedBorder)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
 
-                Link("Obtener API Key", destination: URL(string: "https://console.anthropic.com/")!)
+                Link("Obtener API Key en console.anthropic.com",
+                     destination: URL(string: "https://console.anthropic.com/")!)
                     .font(.caption)
 
                 Spacer()
 
-                Button(action: { onSave(apiKey) }) {
+                Button(action: {
+                    savedAPIKey = apiKey
+                    dismiss()
+                }) {
                     Text("Guardar")
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -810,14 +733,16 @@ struct APIKeySheet: View {
                 .disabled(apiKey.isEmpty)
             }
             .padding()
-            .navigationTitle("API Key")
+            .background(Color.black)
+            .navigationTitle("Configuración")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancelar") {
-                        dismiss()
-                    }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancelar") { dismiss() }
                 }
+            }
+            .onAppear {
+                apiKey = savedAPIKey
             }
         }
     }
@@ -825,4 +750,5 @@ struct APIKeySheet: View {
 
 #Preview {
     BlackBoxView()
+        .environmentObject(BlackBoxRecorder())
 }

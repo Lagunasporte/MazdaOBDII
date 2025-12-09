@@ -79,12 +79,19 @@ struct MainTabView: View {
                 }
                 .tag(3)
 
-            // Tab 5: Configuración
+            // Tab 5: Caja Negra
+            BlackBoxView()
+                .tabItem {
+                    Label("Caja Negra", systemImage: "externaldrive.fill")
+                }
+                .tag(4)
+
+            // Tab 6: Configuración
             SettingsView()
                 .tabItem {
                     Label("Ajustes", systemImage: "gearshape")
                 }
-                .tag(4)
+                .tag(5)
         }
         .tint(.orange) // Color RX-8
     }
@@ -710,8 +717,6 @@ public class EngineMonitor: ObservableObject {
     private var updateInterval: UInt64 = 100_000_000 // 100ms = 10 Hz - Muy rápido
     private var lastUpdateTimestamp: Date = Date()
     private var updateCount: Int = 0
-    private var lastBlackBoxRecord: Date = Date()
-    private let blackBoxInterval: TimeInterval = 1.0 // Guardar cada segundo
 
     public init() {}
 
@@ -739,15 +744,12 @@ public class EngineMonitor: ObservableObject {
         isMonitoring = true
         updateCount = 0
         lastUpdateTimestamp = Date()
-        lastBlackBoxRecord = Date()
 
         // Iniciar trip en fuel tracker
         fuelTracker?.startTrip()
 
-        // Auto-iniciar grabación de caja negra
-        if let recorder = blackBoxRecorder, !recorder.isRecording {
-            recorder.startRecording()
-        }
+        // La caja negra ahora detecta automáticamente cuando el motor arranca
+        // y gestiona las sesiones automáticamente
 
         monitoringTask = Task { @MainActor in
             while isMonitoring && cm.connectionState == .connectedToVehicle {
@@ -873,30 +875,11 @@ public class EngineMonitor: ObservableObject {
     // MARK: - Grabación en Caja Negra
 
     private func recordToBlackBox() {
-        guard let recorder = blackBoxRecorder, recorder.isRecording else { return }
+        guard let recorder = blackBoxRecorder else { return }
 
-        // Solo guardar cada segundo para no sobrecargar
-        let now = Date()
-        guard now.timeIntervalSince(lastBlackBoxRecord) >= blackBoxInterval else { return }
-        lastBlackBoxRecord = now
-
-        let readings: [String: Double] = [
-            "rpm": Double(currentState.rpm),
-            "speed": currentState.vehicleSpeed,
-            "ect": currentState.coolantTemperature,
-            "iat": currentState.intakeAirTemperature,
-            "oil_temp": currentState.oilTemperature,
-            "cat_temp": currentState.catalystTemperature,
-            "throttle": currentState.throttlePosition,
-            "maf": currentState.mafAirFlow,
-            "stft": currentState.shortTermFuelTrim,
-            "ltft": currentState.longTermFuelTrim,
-            "timing": currentState.ignitionTiming,
-            "voltage": currentState.batteryVoltage,
-            "load": currentState.throttlePosition // Usar como aproximación de carga
-        ]
-
-        recorder.recordSnapshot(readings: readings)
+        // El recorder ahora detecta automáticamente si el motor está en marcha
+        // y gestiona las sesiones. Solo necesitamos enviar el estado.
+        recorder.recordSnapshot(state: currentState)
     }
 
     // MARK: - Sistema de Alertas
