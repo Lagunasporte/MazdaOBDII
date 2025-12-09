@@ -77,7 +77,7 @@ struct InstantConsumptionCard: View {
             }
 
             // Barra de eficiencia
-            ConsumptionBar(value: fuelTracker.instantConsumption)
+            ConsumptionIndicatorBar(value: fuelTracker.instantConsumption)
 
             // Indicador de eficiencia
             HStack {
@@ -135,7 +135,7 @@ struct InstantConsumptionCard: View {
     }
 }
 
-struct ConsumptionBar: View {
+struct ConsumptionIndicatorBar: View {
     let value: Double
 
     var body: some View {
