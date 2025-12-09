@@ -394,9 +394,9 @@ struct DTCDatabaseCard: View {
 
             // Estadísticas
             HStack {
-                StatItem(value: "\(RX8DTCDatabase.allCodes.count)", label: "Códigos")
-                StatItem(value: "\(RX8DTCDatabase.rotarySpecificCodes.count)", label: "Rotativo")
-                StatItem(value: "\(RX8DTCDatabase.criticalCodes.count)", label: "Críticos")
+                DTCStatItem(value: "\(RX8DTCDatabase.allCodes.count)", label: "Códigos")
+                DTCStatItem(value: "\(RX8DTCDatabase.rotarySpecificCodes.count)", label: "Rotativo")
+                DTCStatItem(value: "\(RX8DTCDatabase.criticalCodes.count)", label: "Críticos")
             }
         }
         .padding()
@@ -408,7 +408,7 @@ struct DTCDatabaseCard: View {
     }
 }
 
-struct StatItem: View {
+struct DTCStatItem: View {
     let value: String
     let label: String
 
