@@ -25,9 +25,15 @@ public struct RotaryEngineState: Codable, Sendable {
     public var mafVoltage: Double = 0 // V
     public var mafAirFlow: Double = 0 // g/s
     public var fuelPressure: Double = 0 // kPa
-    public var shortTermFuelTrim: Double = 0 // %
-    public var longTermFuelTrim: Double = 0 // %
+    public var shortTermFuelTrim: Double = 0 // % Bank 1
+    public var longTermFuelTrim: Double = 0 // % Bank 1
+    public var shortTermFuelTrimB2: Double = 0 // % Bank 2 (rotor trasero)
+    public var longTermFuelTrimB2: Double = 0 // % Bank 2 (rotor trasero)
     public var fuelLevel: Double = 0 // %
+
+    // MARK: - Carga y Presión del Motor
+    public var engineLoad: Double = 0 // % (calculado por ECU)
+    public var manifoldPressure: Double = 0 // kPa (MAP sensor)
 
     // MARK: - Sistema de Encendido
     public var ignitionTiming: Double = 0 // grados

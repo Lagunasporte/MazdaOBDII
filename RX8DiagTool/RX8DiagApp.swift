@@ -792,12 +792,13 @@ public class EngineMonitor: ObservableObject {
             currentState.coolantTemperature = Double(coolant)
 
             // PIDs secundarios - leer en ciclos rotatorios para maximizar velocidad
+            // Expandido a 6 ciclos para incluir PIDs de diagnóstico forense
             updateCount += 1
-            let cycle = updateCount % 4
+            let cycle = updateCount % 6
 
             switch cycle {
             case 0:
-                // Ciclo 0: throttle, MAF
+                // Ciclo 0: throttle, MAF, carga del motor
                 if let throttle = try? await cm.readThrottlePosition() {
                     currentState.throttlePosition = throttle
                 }
@@ -810,9 +811,12 @@ public class EngineMonitor: ObservableObject {
                         rpm: rpm
                     )
                 }
+                if let load = try? await cm.readEngineLoad() {
+                    currentState.engineLoad = load
+                }
 
             case 1:
-                // Ciclo 1: fuel trims
+                // Ciclo 1: fuel trims Bank 1
                 if let stft = try? await cm.readFuelTrimShort() {
                     currentState.shortTermFuelTrim = stft
                 }
@@ -821,16 +825,40 @@ public class EngineMonitor: ObservableObject {
                 }
 
             case 2:
-                // Ciclo 2: timing, voltaje
+                // Ciclo 2: fuel trims Bank 2 (rotor trasero) - crítico para diagnóstico
+                if let stftB2 = try? await cm.readFuelTrimShortB2() {
+                    currentState.shortTermFuelTrimB2 = stftB2
+                }
+                if let ltftB2 = try? await cm.readFuelTrimLongB2() {
+                    currentState.longTermFuelTrimB2 = ltftB2
+                }
+
+            case 3:
+                // Ciclo 3: timing, voltaje, MAP
                 if let timing = try? await cm.readTimingAdvance() {
                     currentState.ignitionTiming = timing
                 }
                 if let voltage = try? await cm.readVoltage() {
                     currentState.batteryVoltage = voltage
                 }
+                if let mapPressure = try? await cm.readMAP() {
+                    currentState.manifoldPressure = mapPressure
+                }
 
-            case 3:
-                // Ciclo 3: temperaturas adicionales (aceite, catalizador, IAT)
+            case 4:
+                // Ciclo 4: sensores O2 - importantes para diagnóstico de mezcla
+                if let o2s1 = try? await cm.readO2VoltageB1S1() {
+                    currentState.o2SensorBank1Sensor1 = o2s1
+                }
+                if let o2s2 = try? await cm.readO2VoltageB1S2() {
+                    currentState.o2SensorBank1Sensor2 = o2s2
+                }
+                if let accel = try? await cm.readAcceleratorPosition() {
+                    currentState.acceleratorPosition = accel
+                }
+
+            case 5:
+                // Ciclo 5: temperaturas adicionales (aceite, catalizador, IAT)
                 if let oilTemp = try? await cm.readOilTemp() {
                     currentState.oilTemperature = Double(oilTemp)
                 }

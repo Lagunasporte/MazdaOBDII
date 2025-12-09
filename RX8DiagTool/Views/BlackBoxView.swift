@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Black Box View
 // Vista de la caja negra con sesiones automáticas y análisis IA
@@ -304,6 +305,9 @@ struct SessionDetailSheet: View {
     @State private var showingExport = false
     @State private var noteText = ""
     @State private var showingNoteInput = false
+    @State private var isGeneratingPDF = false
+    @State private var showShareSheet = false
+    @State private var pdfURL: URL?
 
     var body: some View {
         NavigationStack {
@@ -350,6 +354,25 @@ struct SessionDetailSheet: View {
 
                     // Botones de acción
                     VStack(spacing: 12) {
+                        // Exportar PDF
+                        Button(action: generatePDF) {
+                            HStack {
+                                if isGeneratingPDF {
+                                    ProgressView()
+                                        .tint(.orange)
+                                } else {
+                                    Image(systemName: "doc.fill")
+                                }
+                                Text(isGeneratingPDF ? "Generando PDF..." : "Exportar Informe PDF")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange.opacity(0.3))
+                            .foregroundColor(.orange)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isGeneratingPDF)
+
                         // Añadir nota
                         Button(action: { showingNoteInput = true }) {
                             HStack {
@@ -412,6 +435,229 @@ struct SessionDetailSheet: View {
                     }
                 }
             }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = pdfURL {
+                    ShareSheet(items: [url])
+                }
+            }
+        }
+    }
+
+    private func generatePDF() {
+        isGeneratingPDF = true
+
+        Task {
+            let url = await createPDFReport()
+
+            await MainActor.run {
+                pdfURL = url
+                isGeneratingPDF = false
+                if url != nil {
+                    showShareSheet = true
+                }
+            }
+        }
+    }
+
+    private func createPDFReport() async -> URL? {
+        let pageWidth: CGFloat = 612 // Letter size
+        let pageHeight: CGFloat = 792
+        let margin: CGFloat = 50
+
+        let pdfMetaData = [
+            kCGPDFContextCreator: "RX-8 Diagnostic Tool",
+            kCGPDFContextAuthor: "Mazda RX-8 OBD",
+            kCGPDFContextTitle: "Informe Diagnóstico - \(session.dateFormatted)"
+        ]
+
+        let format = UIGraphicsPDFRendererFormat()
+        format.documentInfo = pdfMetaData as [String: Any]
+
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight), format: format)
+
+        let data = renderer.pdfData { context in
+            context.beginPage()
+            var yPosition: CGFloat = margin
+
+            // Título
+            let titleFont = UIFont.boldSystemFont(ofSize: 24)
+            let titleAttr: [NSAttributedString.Key: Any] = [.font: titleFont, .foregroundColor: UIColor.black]
+            let title = "Informe Diagnóstico Mazda RX-8"
+            title.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: titleAttr)
+            yPosition += 35
+
+            // Subtítulo
+            let subtitleFont = UIFont.systemFont(ofSize: 14)
+            let subtitleAttr: [NSAttributedString.Key: Any] = [.font: subtitleFont, .foregroundColor: UIColor.darkGray]
+            let subtitle = "Motor Rotativo 13B-MSP Renesis"
+            subtitle.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: subtitleAttr)
+            yPosition += 30
+
+            // Línea separadora
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: margin, y: yPosition))
+            path.addLine(to: CGPoint(x: pageWidth - margin, y: yPosition))
+            UIColor.orange.setStroke()
+            path.lineWidth = 2
+            path.stroke()
+            yPosition += 20
+
+            // Información de la sesión
+            let sectionFont = UIFont.boldSystemFont(ofSize: 16)
+            let sectionAttr: [NSAttributedString.Key: Any] = [.font: sectionFont, .foregroundColor: UIColor.black]
+            let bodyFont = UIFont.systemFont(ofSize: 12)
+            let bodyAttr: [NSAttributedString.Key: Any] = [.font: bodyFont, .foregroundColor: UIColor.darkGray]
+
+            "Información de la Sesión".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionAttr)
+            yPosition += 25
+
+            let sessionInfo = [
+                "Fecha: \(session.dateFormatted)",
+                "Duración: \(session.durationFormatted)",
+                "Distancia: \(String(format: "%.1f", session.totalDistance)) km",
+                "Velocidad máxima: \(String(format: "%.0f", session.maxSpeed)) km/h",
+                "Consumo medio: \(String(format: "%.1f", session.avgConsumption)) L/100km"
+            ]
+
+            for info in sessionInfo {
+                info.draw(at: CGPoint(x: margin + 10, y: yPosition), withAttributes: bodyAttr)
+                yPosition += 18
+            }
+            yPosition += 15
+
+            // Estadísticas del Motor
+            "Estadísticas del Motor".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionAttr)
+            yPosition += 25
+
+            let motorStats = [
+                "RPM máximo: \(session.maxRPM)",
+                "Temperatura refrigerante máx: \(String(format: "%.0f", session.maxCoolantTemp))°C",
+                "Temperatura aceite máx: \(String(format: "%.0f", session.maxOilTemp))°C",
+                "Alertas registradas: \(session.alertCount)",
+                "Códigos de error (DTC): \(session.dtcCount)"
+            ]
+
+            for stat in motorStats {
+                stat.draw(at: CGPoint(x: margin + 10, y: yPosition), withAttributes: bodyAttr)
+                yPosition += 18
+            }
+            yPosition += 15
+
+            // Alertas
+            let alerts = recorder.getSessionAlerts(session.id)
+            if !alerts.isEmpty {
+                "Alertas Registradas (\(alerts.count))".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionAttr)
+                yPosition += 25
+
+                for alert in alerts.prefix(15) {
+                    let alertText = "[\(alert.severity)] \(alert.message)"
+                    let color: UIColor = alert.severity == "Crítico" ? .red : .orange
+                    let alertAttr: [NSAttributedString.Key: Any] = [.font: bodyFont, .foregroundColor: color]
+                    alertText.draw(at: CGPoint(x: margin + 10, y: yPosition), withAttributes: alertAttr)
+                    yPosition += 16
+
+                    if yPosition > pageHeight - 100 {
+                        context.beginPage()
+                        yPosition = margin
+                    }
+                }
+                yPosition += 15
+            }
+
+            // DTCs
+            let dtcs = recorder.getSessionDTCs(session.id)
+            if !dtcs.isEmpty {
+                "Códigos de Error (DTC)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionAttr)
+                yPosition += 25
+
+                for dtc in dtcs {
+                    let dtcAttr: [NSAttributedString.Key: Any] = [.font: bodyFont, .foregroundColor: UIColor.red]
+                    "\(dtc.code): \(dtc.description)".draw(at: CGPoint(x: margin + 10, y: yPosition), withAttributes: dtcAttr)
+                    yPosition += 18
+                }
+                yPosition += 15
+            }
+
+            // Notas
+            if let notes = session.notes, !notes.isEmpty {
+                "Notas del Usuario".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionAttr)
+                yPosition += 25
+                notes.draw(at: CGPoint(x: margin + 10, y: yPosition), withAttributes: bodyAttr)
+                yPosition += 30
+            }
+
+            // Análisis de Claude (si existe)
+            if let analysis = session.analysisResult ?? analysisResult {
+                if yPosition > pageHeight - 200 {
+                    context.beginPage()
+                    yPosition = margin
+                }
+
+                "Análisis de Inteligencia Artificial".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionAttr)
+                yPosition += 25
+
+                // Dividir el análisis en líneas para que quepa
+                let maxWidth = pageWidth - (margin * 2) - 10
+                let analysisFont = UIFont.systemFont(ofSize: 11)
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.lineBreakMode = .byWordWrapping
+
+                let analysisAttr: [NSAttributedString.Key: Any] = [
+                    .font: analysisFont,
+                    .foregroundColor: UIColor.darkGray,
+                    .paragraphStyle: paragraphStyle
+                ]
+
+                let analysisRect = CGRect(x: margin + 10, y: yPosition, width: maxWidth, height: pageHeight - yPosition - margin)
+                let attributedAnalysis = NSAttributedString(string: analysis, attributes: analysisAttr)
+
+                // Calcular altura necesaria
+                let boundingRect = attributedAnalysis.boundingRect(with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
+                                                                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                                                                    context: nil)
+
+                // Si no cabe, crear nueva página
+                if boundingRect.height > pageHeight - yPosition - margin {
+                    // Dividir el texto en chunks que quepan
+                    let lines = analysis.components(separatedBy: "\n")
+                    for line in lines {
+                        if yPosition > pageHeight - 50 {
+                            context.beginPage()
+                            yPosition = margin
+                        }
+
+                        let lineRect = CGRect(x: margin + 10, y: yPosition, width: maxWidth, height: 200)
+                        line.draw(in: lineRect, withAttributes: analysisAttr)
+
+                        let lineHeight = (line as NSString).boundingRect(with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
+                                                                          options: .usesLineFragmentOrigin,
+                                                                          attributes: analysisAttr,
+                                                                          context: nil).height
+                        yPosition += lineHeight + 4
+                    }
+                } else {
+                    attributedAnalysis.draw(in: analysisRect)
+                }
+            }
+
+            // Pie de página en la última página
+            let footerFont = UIFont.italicSystemFont(ofSize: 9)
+            let footerAttr: [NSAttributedString.Key: Any] = [.font: footerFont, .foregroundColor: UIColor.gray]
+            let footer = "Generado por RX-8 Diagnostic Tool - \(Date().formatted())"
+            footer.draw(at: CGPoint(x: margin, y: pageHeight - 30), withAttributes: footerAttr)
+        }
+
+        // Guardar PDF
+        let fileName = "RX8_Diagnostico_\(session.dateFormatted.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")).pdf"
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent(fileName)
+
+        do {
+            try data.write(to: fileURL)
+            return fileURL
+        } catch {
+            print("Error guardando PDF: \(error)")
+            return nil
         }
     }
 
@@ -776,6 +1022,19 @@ struct APIKeyConfigSheet: View {
             }
         }
     }
+}
+
+// MARK: - Share Sheet (UIKit Wrapper)
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

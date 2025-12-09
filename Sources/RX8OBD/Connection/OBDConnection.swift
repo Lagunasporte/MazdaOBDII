@@ -784,6 +784,52 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return Double(digits) ?? 0.0
     }
 
+    /// Lee sensor O2 Bank 1 Sensor 1 (PID 0x14)
+    /// Retorna voltaje 0-1.275V
+    public func readO2VoltageB1S1() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x14)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) / 200.0
+    }
+
+    /// Lee sensor O2 Bank 1 Sensor 2 (PID 0x15)
+    /// Retorna voltaje 0-1.275V
+    public func readO2VoltageB1S2() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x15)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) / 200.0
+    }
+
+    /// Lee presión absoluta del colector (MAP) (PID 0x0B)
+    /// Retorna presión en kPa
+    public func readMAP() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x0B)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0])
+    }
+
+    /// Lee posición del acelerador (PID 0x49)
+    /// Retorna porcentaje 0-100%
+    public func readAcceleratorPosition() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x49)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) * 100.0 / 255.0
+    }
+
+    /// Lee STFT Bank 2 (PID 0x08)
+    public func readFuelTrimShortB2() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x08)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return (Double(bytes[0]) - 128.0) * 100.0 / 128.0
+    }
+
+    /// Lee LTFT Bank 2 (PID 0x09)
+    public func readFuelTrimLongB2() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x09)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return (Double(bytes[0]) - 128.0) * 100.0 / 128.0
+    }
+
     // MARK: - DTCs
 
     public func readDTCs() async throws -> [String] {

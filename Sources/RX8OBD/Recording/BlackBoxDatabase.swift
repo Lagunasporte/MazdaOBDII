@@ -52,7 +52,7 @@ public class BlackBoxDatabase {
         );
         """
 
-        // Tabla de snapshots (datos del motor)
+        // Tabla de snapshots (datos del motor) - Expandida para diagnóstico forense
         let createSnapshots = """
         CREATE TABLE IF NOT EXISTS snapshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,9 +72,25 @@ public class BlackBoxDatabase {
             voltage REAL,
             fuel_level REAL,
             load REAL,
+            o2b1s1 REAL DEFAULT 0,
+            o2b1s2 REAL DEFAULT 0,
+            map REAL DEFAULT 0,
+            accelerator REAL DEFAULT 0,
+            stft_b2 REAL DEFAULT 0,
+            ltft_b2 REAL DEFAULT 0,
             FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
         );
         """
+
+        // Migración: añadir nuevas columnas si no existen
+        let migrations = [
+            "ALTER TABLE snapshots ADD COLUMN o2b1s1 REAL DEFAULT 0;",
+            "ALTER TABLE snapshots ADD COLUMN o2b1s2 REAL DEFAULT 0;",
+            "ALTER TABLE snapshots ADD COLUMN map REAL DEFAULT 0;",
+            "ALTER TABLE snapshots ADD COLUMN accelerator REAL DEFAULT 0;",
+            "ALTER TABLE snapshots ADD COLUMN stft_b2 REAL DEFAULT 0;",
+            "ALTER TABLE snapshots ADD COLUMN ltft_b2 REAL DEFAULT 0;"
+        ]
 
         // Tabla de alertas
         let createAlerts = """
@@ -117,6 +133,13 @@ public class BlackBoxDatabase {
         executeSQL(createAlerts)
         executeSQL(createDTCs)
         executeSQL(createIndexes)
+
+        // Aplicar migraciones (ignora errores si columnas ya existen)
+        for migration in migrations {
+            var errMsg: UnsafeMutablePointer<CChar>?
+            sqlite3_exec(db, migration, nil, nil, &errMsg)
+            if errMsg != nil { sqlite3_free(errMsg) }
+        }
     }
 
     private func executeSQL(_ sql: String) {
@@ -312,8 +335,9 @@ public class BlackBoxDatabase {
         let sql = """
         INSERT INTO snapshots (
             session_id, timestamp, rpm, speed, coolant_temp, oil_temp, intake_temp,
-            catalyst_temp, throttle, maf, stft, ltft, timing, voltage, fuel_level, load
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            catalyst_temp, throttle, maf, stft, ltft, timing, voltage, fuel_level, load,
+            o2b1s1, o2b1s2, map, accelerator, stft_b2, ltft_b2
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
 
         var stmt: OpaquePointer?
@@ -334,6 +358,12 @@ public class BlackBoxDatabase {
             sqlite3_bind_double(stmt, 14, data.voltage)
             sqlite3_bind_double(stmt, 15, data.fuelLevel)
             sqlite3_bind_double(stmt, 16, data.load)
+            sqlite3_bind_double(stmt, 17, data.o2b1s1)
+            sqlite3_bind_double(stmt, 18, data.o2b1s2)
+            sqlite3_bind_double(stmt, 19, data.map)
+            sqlite3_bind_double(stmt, 20, data.accelerator)
+            sqlite3_bind_double(stmt, 21, data.stftB2)
+            sqlite3_bind_double(stmt, 22, data.ltftB2)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -432,7 +462,8 @@ public class BlackBoxDatabase {
 
         let sql = """
         SELECT timestamp, rpm, speed, coolant_temp, oil_temp, intake_temp,
-               catalyst_temp, throttle, maf, stft, ltft, timing, voltage, fuel_level, load
+               catalyst_temp, throttle, maf, stft, ltft, timing, voltage, fuel_level, load,
+               o2b1s1, o2b1s2, map, accelerator, stft_b2, ltft_b2
         FROM snapshots WHERE session_id = ? ORDER BY timestamp;
         """
 
@@ -455,7 +486,13 @@ public class BlackBoxDatabase {
                     timing: sqlite3_column_double(stmt, 11),
                     voltage: sqlite3_column_double(stmt, 12),
                     fuelLevel: sqlite3_column_double(stmt, 13),
-                    load: sqlite3_column_double(stmt, 14)
+                    load: sqlite3_column_double(stmt, 14),
+                    o2b1s1: sqlite3_column_double(stmt, 15),
+                    o2b1s2: sqlite3_column_double(stmt, 16),
+                    map: sqlite3_column_double(stmt, 17),
+                    accelerator: sqlite3_column_double(stmt, 18),
+                    stftB2: sqlite3_column_double(stmt, 19),
+                    ltftB2: sqlite3_column_double(stmt, 20)
                 )
                 snapshots.append(snapshot)
             }
@@ -566,12 +603,18 @@ public class BlackBoxDatabase {
         let oilValues = snapshots.map { $0.oilTemp }
         let stftValues = snapshots.map { $0.stft }
         let ltftValues = snapshots.map { $0.ltft }
+        let o2s1Values = snapshots.map { $0.o2b1s1 }.filter { $0 > 0 }
+        let o2s2Values = snapshots.map { $0.o2b1s2 }.filter { $0 > 0 }
+        let mapValues = snapshots.map { $0.map }.filter { $0 > 0 }
+        let loadValues = snapshots.map { $0.load }.filter { $0 > 0 }
+        let stftB2Values = snapshots.map { $0.stftB2 }
+        let ltftB2Values = snapshots.map { $0.ltftB2 }
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd/MM/yyyy HH:mm"
 
         var report = """
-        # Análisis de Datos - Mazda RX-8 Motor Rotativo
+        # Análisis Forense - Mazda RX-8 Motor Rotativo 13B-MSP Renesis
 
         ## Información de la Sesión
         - Fecha: \(dateFormatter.string(from: session.startTime))
@@ -585,18 +628,44 @@ public class BlackBoxDatabase {
         - Máximo: \(session.maxRPM)
         - Promedio: \(rpmValues.isEmpty ? 0 : rpmValues.reduce(0, +) / rpmValues.count)
         - Tiempo en zona roja (>8500): \(snapshots.filter { $0.rpm > 8500 }.count) muestras
+        - Tiempo en idle (<1000): \(snapshots.filter { $0.rpm > 0 && $0.rpm < 1000 }.count) muestras
+
+        ### Carga del Motor
+        - Carga máxima: \(String(format: "%.1f", loadValues.max() ?? 0))%
+        - Carga promedio: \(String(format: "%.1f", loadValues.isEmpty ? 0 : loadValues.reduce(0, +) / Double(loadValues.count)))%
 
         ### Temperaturas
         - Refrigerante máx: \(String(format: "%.1f", session.maxCoolantTemp))°C
         - Refrigerante promedio: \(String(format: "%.1f", coolantValues.isEmpty ? 0 : coolantValues.reduce(0, +) / Double(coolantValues.count)))°C
         - Aceite máx: \(String(format: "%.1f", session.maxOilTemp))°C
         - Aceite promedio: \(String(format: "%.1f", oilValues.isEmpty ? 0 : oilValues.reduce(0, +) / Double(oilValues.count)))°C
+        - Tiempo sobrecalentamiento ref. (>100°C): \(snapshots.filter { $0.coolantTemp > 100 }.count) muestras
+        - Tiempo sobrecalentamiento aceite (>120°C): \(snapshots.filter { $0.oilTemp > 120 }.count) muestras
 
-        ### Fuel Trims
+        ### Fuel Trims Bank 1 (Rotor Delantero)
         - STFT promedio: \(String(format: "%+.1f", stftValues.isEmpty ? 0 : stftValues.reduce(0, +) / Double(stftValues.count)))%
+        - STFT máx: \(String(format: "%+.1f", stftValues.max() ?? 0))%
+        - STFT mín: \(String(format: "%+.1f", stftValues.min() ?? 0))%
         - LTFT promedio: \(String(format: "%+.1f", ltftValues.isEmpty ? 0 : ltftValues.reduce(0, +) / Double(ltftValues.count)))%
         - STFT fuera de rango (>±10%): \(snapshots.filter { abs($0.stft) > 10 }.count) muestras
         - LTFT fuera de rango (>±10%): \(snapshots.filter { abs($0.ltft) > 10 }.count) muestras
+
+        ### Fuel Trims Bank 2 (Rotor Trasero)
+        - STFT B2 promedio: \(String(format: "%+.1f", stftB2Values.isEmpty ? 0 : stftB2Values.reduce(0, +) / Double(stftB2Values.count)))%
+        - LTFT B2 promedio: \(String(format: "%+.1f", ltftB2Values.isEmpty ? 0 : ltftB2Values.reduce(0, +) / Double(ltftB2Values.count)))%
+        - Diferencia LTFT entre rotores: \(String(format: "%.1f", abs((ltftValues.isEmpty ? 0 : ltftValues.reduce(0, +) / Double(ltftValues.count)) - (ltftB2Values.isEmpty ? 0 : ltftB2Values.reduce(0, +) / Double(ltftB2Values.count)))))%
+
+        ### Sensores de Oxígeno
+        - O2 B1S1 (pre-cat) promedio: \(String(format: "%.3f", o2s1Values.isEmpty ? 0 : o2s1Values.reduce(0, +) / Double(o2s1Values.count)))V
+        - O2 B1S1 máx: \(String(format: "%.3f", o2s1Values.max() ?? 0))V
+        - O2 B1S1 mín: \(String(format: "%.3f", o2s1Values.min() ?? 0))V
+        - O2 B1S2 (post-cat) promedio: \(String(format: "%.3f", o2s2Values.isEmpty ? 0 : o2s2Values.reduce(0, +) / Double(o2s2Values.count)))V
+        - Ciclos O2 (cruces 0.45V): \(countO2Cycles(o2s1Values))
+
+        ### Presión del Colector (MAP)
+        - MAP promedio: \(String(format: "%.1f", mapValues.isEmpty ? 0 : mapValues.reduce(0, +) / Double(mapValues.count))) kPa
+        - MAP máxima (aceleración): \(String(format: "%.1f", mapValues.max() ?? 0)) kPa
+        - MAP mínima (vacío): \(String(format: "%.1f", mapValues.min() ?? 0)) kPa
 
         ### Consumo
         - Consumo medio estimado: \(String(format: "%.1f", session.avgConsumption)) L/100km
@@ -610,6 +679,8 @@ public class BlackBoxDatabase {
             for dtc in dtcs {
                 report += "- **\(dtc.code)**: \(dtc.description)\n"
             }
+        } else {
+            report += "\n## Códigos de Error (DTCs)\n- Sin códigos de error activos\n"
         }
 
         // Alertas
@@ -638,30 +709,99 @@ public class BlackBoxDatabase {
             report += "\n## Notas del Usuario\n\(notes)\n"
         }
 
+        // Análisis automático de indicadores
+        report += "\n## Indicadores de Diagnóstico Automático\n"
+
+        // Análisis de fuel trims
+        let avgStft = stftValues.isEmpty ? 0 : stftValues.reduce(0, +) / Double(stftValues.count)
+        let avgLtft = ltftValues.isEmpty ? 0 : ltftValues.reduce(0, +) / Double(ltftValues.count)
+
+        if abs(avgLtft) > 15 {
+            report += "- **ALERTA**: LTFT muy fuera de rango (\(String(format: "%+.1f", avgLtft))%) - Posible problema de sellos (apex/corner) o MAF\n"
+        } else if abs(avgLtft) > 10 {
+            report += "- **ADVERTENCIA**: LTFT elevado (\(String(format: "%+.1f", avgLtft))%) - Monitorear evolución\n"
+        } else {
+            report += "- Fuel trims dentro de rangos normales\n"
+        }
+
+        // Análisis de sensores O2
+        let avgO2 = o2s1Values.isEmpty ? 0 : o2s1Values.reduce(0, +) / Double(o2s1Values.count)
+        if o2s1Values.count > 10 {
+            if avgO2 < 0.3 {
+                report += "- **ADVERTENCIA**: Sensor O2 indica mezcla pobre constante - Verificar fugas de vacío o inyectores\n"
+            } else if avgO2 > 0.7 {
+                report += "- **ADVERTENCIA**: Sensor O2 indica mezcla rica constante - Verificar MAF, presión combustible\n"
+            }
+        }
+
+        // Análisis de temperaturas
+        if session.maxCoolantTemp > 105 {
+            report += "- **ALERTA**: Sobrecalentamiento detectado (\(String(format: "%.0f", session.maxCoolantTemp))°C) - Verificar sistema de refrigeración\n"
+        }
+        if session.maxOilTemp > 130 {
+            report += "- **ALERTA**: Temperatura de aceite crítica (\(String(format: "%.0f", session.maxOilTemp))°C)\n"
+        }
+
         report += """
 
         ---
 
-        ## Solicitud de Análisis
+        ## Solicitud de Análisis Forense
 
-        Por favor, analiza estos datos como un experto en diagnóstico de motores rotativos Mazda (Wankel).
+        Eres un experto en diagnóstico de motores rotativos Mazda Wankel (13B-MSP Renesis).
+        Analiza estos datos considerando las características específicas del motor rotativo:
 
-        Considera especialmente:
-        1. **Sellos del rotor**: Los fuel trims anormales pueden indicar desgaste de apex seals
-        2. **Sistema de refrigeración**: El RX-8 es propenso a sobrecalentamiento
-        3. **Bomba de aceite metering (OMP)**: Crítica para la lubricación de los sellos
-        4. **Bobinas de encendido**: El motor rotativo es muy exigente con el sistema de encendido
-        5. **Catalizador**: Sensible a mezclas ricas por problemas de encendido
+        ### Consideraciones Específicas del Motor Rotativo:
+        1. **Apex Seals**: Los fuel trims son indicadores clave del estado de los sellos apex
+           - LTFT >+10%: Posible fuga de compresión (apex seals desgastados)
+           - LTFT <-10%: Posible problema de inyección o MAF
+           - Diferencia entre Bank1/Bank2: Un rotor más desgastado que otro
 
-        Proporciona:
-        - Diagnóstico del estado general del motor (puntuación 0-100)
-        - Problemas identificados con su severidad
-        - Posibles causas
-        - Recomendaciones de mantenimiento o reparación
-        - Acciones urgentes si las hay
+        2. **Corner Seals y Side Seals**: Afectan la compresión igual que los apex
+           - Síntomas similares pero distribución diferente entre cámaras
+
+        3. **Sistema de Refrigeración**: El RX-8 es muy sensible
+           - Temperatura normal: 85-95°C
+           - >100°C: Riesgo de daño a sellos
+           - El sobrecalentamiento acelera el desgaste de apex seals
+
+        4. **Sistema OMP (Oil Metering Pump)**: Crítico para lubricación de sellos
+           - Fallo de OMP = destrucción rápida del motor
+           - LTFT elevado + humo azul = posible problema OMP
+
+        5. **Bobinas de Encendido**: El rotativo es muy exigente
+           - Catalizador caliente + mezcla rica = bobinas fallando
+           - Recomendación: Cambiar cada 50,000 km
+
+        6. **Sensores O2**:
+           - Debe ciclar entre 0.1V y 0.9V
+           - Pocos ciclos = sensor lento o mezcla estancada
+
+        ### Proporciona:
+        - **Puntuación de salud del motor** (0-100)
+        - **Diagnóstico principal** con nivel de severidad
+        - **Problemas identificados** con probabilidad y causa raíz
+        - **Recomendaciones de mantenimiento** inmediatas y a medio plazo
+        - **Estimación de vida útil restante** si hay desgaste evidente
+        - **Acciones urgentes** si las hay
         """
 
         return report
+    }
+
+    // Contar ciclos de O2 (cruces del punto estequiométrico)
+    private func countO2Cycles(_ values: [Double]) -> Int {
+        guard values.count > 1 else { return 0 }
+        var cycles = 0
+        let threshold = 0.45
+        for i in 1..<values.count {
+            let prev = values[i-1]
+            let curr = values[i]
+            if (prev < threshold && curr >= threshold) || (prev >= threshold && curr < threshold) {
+                cycles += 1
+            }
+        }
+        return cycles / 2 // Un ciclo completo = subida + bajada
     }
 }
 
@@ -684,6 +824,14 @@ public struct EngineSnapshot {
     public let fuelLevel: Double
     public let load: Double
 
+    // Nuevos campos para diagnóstico forense
+    public let o2b1s1: Double      // Sensor O2 Bank 1 Sensor 1 (V)
+    public let o2b1s2: Double      // Sensor O2 Bank 1 Sensor 2 (V)
+    public let map: Double         // Presión absoluta del colector (kPa)
+    public let accelerator: Double // Posición del acelerador (%)
+    public let stftB2: Double      // STFT Bank 2 (%)
+    public let ltftB2: Double      // LTFT Bank 2 (%)
+
     public init(
         timestamp: Double = Date().timeIntervalSince1970,
         rpm: Int = 0,
@@ -699,7 +847,13 @@ public struct EngineSnapshot {
         timing: Double = 0,
         voltage: Double = 0,
         fuelLevel: Double = 0,
-        load: Double = 0
+        load: Double = 0,
+        o2b1s1: Double = 0,
+        o2b1s2: Double = 0,
+        map: Double = 0,
+        accelerator: Double = 0,
+        stftB2: Double = 0,
+        ltftB2: Double = 0
     ) {
         self.timestamp = timestamp
         self.rpm = rpm
@@ -716,6 +870,12 @@ public struct EngineSnapshot {
         self.voltage = voltage
         self.fuelLevel = fuelLevel
         self.load = load
+        self.o2b1s1 = o2b1s1
+        self.o2b1s2 = o2b1s2
+        self.map = map
+        self.accelerator = accelerator
+        self.stftB2 = stftB2
+        self.ltftB2 = ltftB2
     }
 }
 

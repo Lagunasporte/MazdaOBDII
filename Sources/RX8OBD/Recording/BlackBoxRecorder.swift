@@ -121,7 +121,13 @@ public class BlackBoxRecorder: ObservableObject {
             timing: state.ignitionTiming,
             voltage: state.batteryVoltage,
             fuelLevel: state.fuelLevel,
-            load: state.throttlePosition // Aproximación
+            load: state.engineLoad,
+            o2b1s1: state.o2SensorBank1Sensor1,
+            o2b1s2: state.o2SensorBank1Sensor2,
+            map: state.manifoldPressure,
+            accelerator: state.acceleratorPosition,
+            stftB2: state.shortTermFuelTrimB2,
+            ltftB2: state.longTermFuelTrimB2
         )
 
         database.recordSnapshot(sessionId, data: snapshot)
