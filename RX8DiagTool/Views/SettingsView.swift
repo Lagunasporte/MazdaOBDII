@@ -11,6 +11,22 @@ struct SettingsView: View {
     @State private var showVehicleInfo = false
     @State private var showAbout = false
 
+    // Color según estado de conexión
+    private var connectionStateColor: Color {
+        switch connectionManager.connectionState {
+        case .connectedToVehicle:
+            return .green
+        case .connectedToAdapter, .connecting:
+            return .orange
+        case .disconnected:
+            return .gray
+        case .scanning:
+            return .blue
+        case .error:
+            return .red
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -81,8 +97,17 @@ struct SettingsView: View {
                     HStack {
                         Text("Estado")
                         Spacer()
-                        Text(connectionManager.connectionState.rawValue)
-                            .foregroundColor(.gray)
+                        if connectionManager.isAutoConnecting {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Conectando...")
+                                    .foregroundColor(.orange)
+                            }
+                        } else {
+                            Text(connectionManager.connectionState.rawValue)
+                                .foregroundColor(connectionStateColor)
+                        }
                     }
 
                     if let adapter = connectionManager.adapterInfo {
@@ -105,6 +130,60 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Conexión OBD2")
+                }
+
+                // Auto-conexión
+                Section {
+                    Toggle("Conexión automática", isOn: Binding(
+                        get: { connectionManager.isAutoConnectEnabled },
+                        set: { connectionManager.isAutoConnectEnabled = $0 }
+                    ))
+
+                    if let savedName = connectionManager.savedAdapterName {
+                        HStack {
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading) {
+                                Text("Adaptador guardado")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Text(savedName)
+                                    .foregroundColor(.white)
+                            }
+                            Spacer()
+                            if connectionManager.connectionState == .connectedToVehicle ||
+                               connectionManager.connectionState == .connectedToAdapter {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            }
+                        }
+
+                        Button(role: .destructive) {
+                            connectionManager.forgetSavedAdapter()
+                        } label: {
+                            Label("Olvidar adaptador", systemImage: "trash")
+                        }
+                    } else {
+                        HStack {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(.blue)
+                            Text("Conecta un adaptador para guardar")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    }
+
+                    if connectionManager.connectionState == .disconnected && connectionManager.savedAdapterUUID != nil {
+                        Button {
+                            connectionManager.attemptAutoConnect()
+                        } label: {
+                            Label("Conectar ahora", systemImage: "bolt.fill")
+                        }
+                    }
+                } header: {
+                    Text("Auto-conexión")
+                } footer: {
+                    Text("La app intentará conectar automáticamente al adaptador guardado al iniciar")
                 }
 
                 // Datos

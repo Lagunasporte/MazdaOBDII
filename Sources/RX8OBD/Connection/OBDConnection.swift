@@ -15,6 +15,8 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     @Published public var discoveredDevices: [OBDDevice] = []
     @Published public var lastError: OBDError?
     @Published public var lastResponse: String = ""
+    @Published public var isAutoConnecting: Bool = false
+    @Published public var savedAdapterName: String?
 
     // MARK: - Bluetooth
     private var centralManager: CBCentralManager?
@@ -29,13 +31,127 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     private var responseCompletion: ((Result<String, OBDError>) -> Void)?
     private var responseTimer: Timer?
 
+    // MARK: - Auto-conexión
+    private let savedAdapterUUIDKey = "SavedOBDAdapterUUID"
+    private let savedAdapterNameKey = "SavedOBDAdapterName"
+    private let autoConnectEnabledKey = "OBDAutoConnectEnabled"
+    private var pendingAutoConnect = false
+    private var autoConnectAttempts = 0
+    private let maxAutoConnectAttempts = 3
+
     // MARK: - Inicialización
 
     public override init() {
         super.init()
+        loadSavedAdapter()
         DispatchQueue.main.async { [weak self] in
             self?.centralManager = CBCentralManager(delegate: self, queue: .main)
         }
+    }
+
+    // MARK: - Guardado de Adaptador
+
+    private func loadSavedAdapter() {
+        savedAdapterName = UserDefaults.standard.string(forKey: savedAdapterNameKey)
+    }
+
+    public var savedAdapterUUID: UUID? {
+        get {
+            if let uuidString = UserDefaults.standard.string(forKey: savedAdapterUUIDKey) {
+                return UUID(uuidString: uuidString)
+            }
+            return nil
+        }
+        set {
+            if let uuid = newValue {
+                UserDefaults.standard.set(uuid.uuidString, forKey: savedAdapterUUIDKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: savedAdapterUUIDKey)
+            }
+        }
+    }
+
+    public var isAutoConnectEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: autoConnectEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: autoConnectEnabledKey) }
+    }
+
+    public func saveCurrentAdapter() {
+        guard let peripheral = connectedPeripheral else { return }
+        savedAdapterUUID = peripheral.identifier
+        savedAdapterName = peripheral.name ?? "OBD Adapter"
+        UserDefaults.standard.set(savedAdapterName, forKey: savedAdapterNameKey)
+        isAutoConnectEnabled = true
+    }
+
+    public func forgetSavedAdapter() {
+        savedAdapterUUID = nil
+        savedAdapterName = nil
+        UserDefaults.standard.removeObject(forKey: savedAdapterNameKey)
+        isAutoConnectEnabled = false
+    }
+
+    // MARK: - Auto-conexión
+
+    public func attemptAutoConnect() {
+        guard isAutoConnectEnabled,
+              let savedUUID = savedAdapterUUID,
+              connectionState == .disconnected else {
+            return
+        }
+
+        guard let central = centralManager, central.state == .poweredOn else {
+            pendingAutoConnect = true
+            return
+        }
+
+        isAutoConnecting = true
+        autoConnectAttempts = 0
+        connectionState = .connecting
+
+        // Buscar el dispositivo guardado
+        let knownPeripherals = central.retrievePeripherals(withIdentifiers: [savedUUID])
+
+        if let peripheral = knownPeripherals.first {
+            // Dispositivo encontrado directamente
+            connect(toPeripheral: peripheral)
+        } else {
+            // Escanear para encontrarlo
+            startScanningForSavedAdapter()
+        }
+    }
+
+    private func startScanningForSavedAdapter() {
+        guard let central = centralManager, central.state == .poweredOn else { return }
+
+        central.scanForPeripherals(withServices: nil, options: nil)
+
+        // Timeout para auto-conexión
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+            guard let self = self, self.isAutoConnecting else { return }
+            self.stopScanning()
+
+            if self.connectionState != .connectedToVehicle && self.connectionState != .connectedToAdapter {
+                self.autoConnectAttempts += 1
+                if self.autoConnectAttempts < self.maxAutoConnectAttempts {
+                    // Reintentar
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        self.startScanningForSavedAdapter()
+                    }
+                } else {
+                    self.isAutoConnecting = false
+                    self.connectionState = .disconnected
+                    self.lastError = .initializationFailed("No se pudo conectar al adaptador guardado. Verifica que esté encendido.")
+                }
+            }
+        }
+    }
+
+    private func connect(toPeripheral peripheral: CBPeripheral) {
+        stopScanning()
+        connectedPeripheral = peripheral
+        peripheral.delegate = self
+        centralManager?.connect(peripheral, options: nil)
     }
 
     // MARK: - Escaneo de Dispositivos
@@ -499,9 +615,17 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
         switch central.state {
         case .poweredOn:
             lastError = nil
+            // Intentar auto-conexión cuando el Bluetooth esté listo
+            if pendingAutoConnect || (isAutoConnectEnabled && savedAdapterUUID != nil && connectionState == .disconnected) {
+                pendingAutoConnect = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.attemptAutoConnect()
+                }
+            }
         case .poweredOff:
             lastError = .bluetoothNotAvailable
             connectionState = .disconnected
+            isAutoConnecting = false
         case .unauthorized:
             lastError = .bluetoothNotAuthorized
         case .unsupported:
@@ -515,7 +639,13 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
                                advertisementData: [String : Any], rssi RSSI: NSNumber) {
         let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Desconocido"
 
-        let obdKeywords = ["OBD", "ELM", "OBDII", "Vgate", "Veepeak", "BAFX", "LELink", "vLinker", "BT"]
+        // Si estamos en auto-conexión, buscar el adaptador guardado
+        if isAutoConnecting, let savedUUID = savedAdapterUUID, peripheral.identifier == savedUUID {
+            connect(toPeripheral: peripheral)
+            return
+        }
+
+        let obdKeywords = ["OBD", "ELM", "OBDII", "Vgate", "Veepeak", "BAFX", "LELink", "vLinker", "BT", "Car", "iOS-Vlink", "STN"]
         let nameUpper = name.uppercased()
         let isOBDDevice = obdKeywords.contains { nameUpper.contains($0.uppercased()) }
 
@@ -541,11 +671,16 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
         peripheral.delegate = self
         peripheral.discoverServices(nil)
         connectionState = .connectedToAdapter
+        isAutoConnecting = false
+
+        // Guardar este adaptador para auto-conexión futura
+        saveCurrentAdapter()
     }
 
     public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         lastError = .connectionFailed(error?.localizedDescription ?? "Error desconocido")
         connectionState = .disconnected
+        isAutoConnecting = false
     }
 
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
