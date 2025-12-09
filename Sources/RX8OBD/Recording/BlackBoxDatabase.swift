@@ -51,7 +51,8 @@ public class BlackBoxDatabase {
             alert_count INTEGER DEFAULT 0,
             notes TEXT,
             analysis_sent INTEGER DEFAULT 0,
-            analysis_result TEXT
+            analysis_result TEXT,
+            duration_seconds REAL DEFAULT 0
         );
         """
 
@@ -143,6 +144,87 @@ public class BlackBoxDatabase {
             sqlite3_exec(db, migration, nil, nil, &errMsg)
             if errMsg != nil { sqlite3_free(errMsg) }
         }
+
+        // Migración para duration_seconds
+        let durationMigration = "ALTER TABLE sessions ADD COLUMN duration_seconds REAL DEFAULT 0;"
+        var errMsg2: UnsafeMutablePointer<CChar>?
+        sqlite3_exec(db, durationMigration, nil, nil, &errMsg2)
+        if errMsg2 != nil { sqlite3_free(errMsg2) }
+
+        // Calcular y actualizar duración para sesiones antiguas que no la tienen
+        updateMissingDurations()
+    }
+
+    private func updateMissingDurations() {
+        // Buscar sesiones con end_time pero sin duration_seconds calculada
+        let sql = """
+        SELECT id, start_time, end_time FROM sessions
+        WHERE end_time IS NOT NULL AND (duration_seconds IS NULL OR duration_seconds = 0);
+        """
+
+        var stmt: OpaquePointer?
+        var sessionsToUpdate: [(id: String, duration: Double)] = []
+
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                let id = String(cString: sqlite3_column_text(stmt, 0))
+                let startTime = sqlite3_column_double(stmt, 1)
+                let endTime = sqlite3_column_double(stmt, 2)
+                let duration = endTime - startTime
+                if duration > 0 {
+                    sessionsToUpdate.append((id, duration))
+                }
+            }
+        }
+        sqlite3_finalize(stmt)
+
+        // Actualizar las duraciones
+        for session in sessionsToUpdate {
+            let updateSql = "UPDATE sessions SET duration_seconds = ? WHERE id = ?;"
+            if sqlite3_prepare_v2(db, updateSql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_double(stmt, 1, session.duration)
+                sqlite3_bind_text(stmt, 2, session.id, -1, SQLITE_TRANSIENT)
+                sqlite3_step(stmt)
+            }
+            sqlite3_finalize(stmt)
+        }
+
+        // Para sesiones sin end_time, calcular desde snapshots
+        let noEndTimeSql = "SELECT id, start_time FROM sessions WHERE end_time IS NULL;"
+        var sessionsWithoutEndTime: [(id: String, startTime: Double)] = []
+
+        if sqlite3_prepare_v2(db, noEndTimeSql, -1, &stmt, nil) == SQLITE_OK {
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                let id = String(cString: sqlite3_column_text(stmt, 0))
+                let startTime = sqlite3_column_double(stmt, 1)
+                sessionsWithoutEndTime.append((id, startTime))
+            }
+        }
+        sqlite3_finalize(stmt)
+
+        // Calcular duración desde snapshots
+        for session in sessionsWithoutEndTime {
+            let maxTimeSql = "SELECT MAX(timestamp) FROM snapshots WHERE session_id = ?;"
+            if sqlite3_prepare_v2(db, maxTimeSql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_text(stmt, 1, session.id, -1, SQLITE_TRANSIENT)
+                if sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_type(stmt, 0) != SQLITE_NULL {
+                    let lastSnapshotTime = sqlite3_column_double(stmt, 0)
+                    let duration = lastSnapshotTime - session.startTime
+                    if duration > 0 {
+                        sqlite3_finalize(stmt)
+                        // Actualizar tanto end_time como duration_seconds
+                        let updateSql = "UPDATE sessions SET end_time = ?, duration_seconds = ? WHERE id = ?;"
+                        if sqlite3_prepare_v2(db, updateSql, -1, &stmt, nil) == SQLITE_OK {
+                            sqlite3_bind_double(stmt, 1, lastSnapshotTime)
+                            sqlite3_bind_double(stmt, 2, duration)
+                            sqlite3_bind_text(stmt, 3, session.id, -1, SQLITE_TRANSIENT)
+                            sqlite3_step(stmt)
+                        }
+                    }
+                }
+            }
+            sqlite3_finalize(stmt)
+        }
     }
 
     private func executeSQL(_ sql: String) {
@@ -183,12 +265,28 @@ public class BlackBoxDatabase {
     public func endSession(_ sessionId: String) {
         let endTime = Date().timeIntervalSince1970
 
+        // Obtener start_time para calcular duración
+        var startTime: Double = 0
+        let startSql = "SELECT start_time FROM sessions WHERE id = ?;"
+        var startStmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, startSql, -1, &startStmt, nil) == SQLITE_OK {
+            sqlite3_bind_text(startStmt, 1, sessionId, -1, SQLITE_TRANSIENT)
+            if sqlite3_step(startStmt) == SQLITE_ROW {
+                startTime = sqlite3_column_double(startStmt, 0)
+            }
+        }
+        sqlite3_finalize(startStmt)
+
+        // Calcular duración real
+        let durationSeconds = endTime - startTime
+
         // Calcular estadísticas de la sesión
         let stats = calculateSessionStats(sessionId)
 
         let sql = """
         UPDATE sessions SET
             end_time = ?,
+            duration_seconds = ?,
             total_distance = ?,
             max_rpm = ?,
             max_speed = ?,
@@ -201,13 +299,14 @@ public class BlackBoxDatabase {
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
             sqlite3_bind_double(stmt, 1, endTime)
-            sqlite3_bind_double(stmt, 2, stats.totalDistance)
-            sqlite3_bind_int(stmt, 3, Int32(stats.maxRPM))
-            sqlite3_bind_double(stmt, 4, stats.maxSpeed)
-            sqlite3_bind_double(stmt, 5, stats.maxCoolantTemp)
-            sqlite3_bind_double(stmt, 6, stats.maxOilTemp)
-            sqlite3_bind_double(stmt, 7, stats.avgConsumption)
-            sqlite3_bind_text(stmt, 8, sessionId, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_double(stmt, 2, durationSeconds)
+            sqlite3_bind_double(stmt, 3, stats.totalDistance)
+            sqlite3_bind_int(stmt, 4, Int32(stats.maxRPM))
+            sqlite3_bind_double(stmt, 5, stats.maxSpeed)
+            sqlite3_bind_double(stmt, 6, stats.maxCoolantTemp)
+            sqlite3_bind_double(stmt, 7, stats.maxOilTemp)
+            sqlite3_bind_double(stmt, 8, stats.avgConsumption)
+            sqlite3_bind_text(stmt, 9, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -435,7 +534,7 @@ public class BlackBoxDatabase {
         let sql = """
         SELECT id, start_time, end_time, total_distance, max_rpm, max_speed,
                max_coolant_temp, max_oil_temp, avg_consumption, dtc_count, alert_count,
-               notes, analysis_sent, analysis_result
+               notes, analysis_sent, analysis_result, duration_seconds
         FROM sessions ORDER BY start_time DESC;
         """
 
@@ -456,7 +555,8 @@ public class BlackBoxDatabase {
                     alertCount: Int(sqlite3_column_int(stmt, 10)),
                     notes: sqlite3_column_type(stmt, 11) != SQLITE_NULL ? String(cString: sqlite3_column_text(stmt, 11)) : nil,
                     analysisSent: sqlite3_column_int(stmt, 12) == 1,
-                    analysisResult: sqlite3_column_type(stmt, 13) != SQLITE_NULL ? String(cString: sqlite3_column_text(stmt, 13)) : nil
+                    analysisResult: sqlite3_column_type(stmt, 13) != SQLITE_NULL ? String(cString: sqlite3_column_text(stmt, 13)) : nil,
+                    durationSeconds: sqlite3_column_double(stmt, 14)
                 )
                 sessions.append(session)
             }
@@ -947,9 +1047,20 @@ public struct BlackBoxSession: Identifiable {
     public let notes: String?
     public let analysisSent: Bool
     public let analysisResult: String?
+    public let durationSeconds: TimeInterval  // Duración guardada en DB
 
+    /// Duración real de la sesión - usa el valor guardado si existe
     public var duration: TimeInterval {
-        (endTime ?? Date()).timeIntervalSince(startTime)
+        // Usar duración guardada si está disponible y es válida
+        if durationSeconds > 0 {
+            return durationSeconds
+        }
+        // Fallback: calcular desde endTime (solo si la sesión terminó)
+        if let end = endTime {
+            return end.timeIntervalSince(startTime)
+        }
+        // Sesión activa: mostrar 0 hasta que termine
+        return 0
     }
 
     public var durationFormatted: String {
@@ -967,6 +1078,11 @@ public struct BlackBoxSession: Identifiable {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy HH:mm"
         return formatter.string(from: startTime)
+    }
+
+    /// Indica si la sesión está en progreso
+    public var isActive: Bool {
+        return endTime == nil && durationSeconds == 0
     }
 }
 
