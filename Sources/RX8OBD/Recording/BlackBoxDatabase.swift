@@ -9,6 +9,9 @@ public class BlackBoxDatabase {
     private let dbPath: String
     public static let maxSessions = 30
 
+    // SQLITE_TRANSIENT para que SQLite haga una copia del string antes de que Swift lo libere
+    private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
     public init() {
         // Crear ruta en Documents
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -162,9 +165,15 @@ public class BlackBoxDatabase {
         var stmt: OpaquePointer?
 
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_bind_double(stmt, 2, startTime)
-            sqlite3_step(stmt)
+            if sqlite3_step(stmt) != SQLITE_DONE {
+                print("BlackBox: Error creating session - \(String(cString: sqlite3_errmsg(db)))")
+            } else {
+                print("BlackBox: Session created successfully - \(sessionId)")
+            }
+        } else {
+            print("BlackBox: Error preparing create session - \(String(cString: sqlite3_errmsg(db)))")
         }
         sqlite3_finalize(stmt)
 
@@ -198,7 +207,7 @@ public class BlackBoxDatabase {
             sqlite3_bind_double(stmt, 5, stats.maxCoolantTemp)
             sqlite3_bind_double(stmt, 6, stats.maxOilTemp)
             sqlite3_bind_double(stmt, 7, stats.avgConsumption)
-            sqlite3_bind_text(stmt, 8, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 8, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -225,7 +234,7 @@ public class BlackBoxDatabase {
 
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             if sqlite3_step(stmt) == SQLITE_ROW {
                 stats.maxRPM = Int(sqlite3_column_int(stmt, 0))
                 stats.maxSpeed = sqlite3_column_double(stmt, 1)
@@ -246,7 +255,7 @@ public class BlackBoxDatabase {
         var totalDistance: Double = 0
 
         if sqlite3_prepare_v2(db, distSql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             while sqlite3_step(stmt) == SQLITE_ROW {
                 let time = sqlite3_column_double(stmt, 0)
                 let speed = sqlite3_column_double(stmt, 1)
@@ -270,7 +279,7 @@ public class BlackBoxDatabase {
         let dtcSql = "SELECT COUNT(*) FROM dtcs WHERE session_id = ?;"
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, dtcSql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             if sqlite3_step(stmt) == SQLITE_ROW {
                 dtcCount = Int(sqlite3_column_int(stmt, 0))
             }
@@ -281,7 +290,7 @@ public class BlackBoxDatabase {
         var alertCount = 0
         let alertSql = "SELECT COUNT(*) FROM alerts WHERE session_id = ?;"
         if sqlite3_prepare_v2(db, alertSql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             if sqlite3_step(stmt) == SQLITE_ROW {
                 alertCount = Int(sqlite3_column_int(stmt, 0))
             }
@@ -293,7 +302,7 @@ public class BlackBoxDatabase {
         if sqlite3_prepare_v2(db, updateSql, -1, &stmt, nil) == SQLITE_OK {
             sqlite3_bind_int(stmt, 1, Int32(dtcCount))
             sqlite3_bind_int(stmt, 2, Int32(alertCount))
-            sqlite3_bind_text(stmt, 3, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 3, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -342,7 +351,7 @@ public class BlackBoxDatabase {
 
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_bind_double(stmt, 2, data.timestamp)
             sqlite3_bind_int(stmt, 3, Int32(data.rpm))
             sqlite3_bind_double(stmt, 4, data.speed)
@@ -377,14 +386,14 @@ public class BlackBoxDatabase {
 
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_bind_double(stmt, 2, alert.timestamp)
-            sqlite3_bind_text(stmt, 3, alert.type, -1, nil)
-            sqlite3_bind_text(stmt, 4, alert.severity, -1, nil)
-            sqlite3_bind_text(stmt, 5, alert.parameter, -1, nil)
+            sqlite3_bind_text(stmt, 3, alert.type, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(stmt, 4, alert.severity, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(stmt, 5, alert.parameter, -1, SQLITE_TRANSIENT)
             sqlite3_bind_double(stmt, 6, alert.value)
             sqlite3_bind_double(stmt, 7, alert.threshold)
-            sqlite3_bind_text(stmt, 8, alert.message, -1, nil)
+            sqlite3_bind_text(stmt, 8, alert.message, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -397,8 +406,8 @@ public class BlackBoxDatabase {
         var exists = false
 
         if sqlite3_prepare_v2(db, checkSql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
-            sqlite3_bind_text(stmt, 2, code, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(stmt, 2, code, -1, SQLITE_TRANSIENT)
             if sqlite3_step(stmt) == SQLITE_ROW {
                 exists = sqlite3_column_int(stmt, 0) > 0
             }
@@ -408,10 +417,10 @@ public class BlackBoxDatabase {
         if !exists {
             let sql = "INSERT INTO dtcs (session_id, timestamp, code, description) VALUES (?, ?, ?, ?);"
             if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+                sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
                 sqlite3_bind_double(stmt, 2, Date().timeIntervalSince1970)
-                sqlite3_bind_text(stmt, 3, code, -1, nil)
-                sqlite3_bind_text(stmt, 4, description, -1, nil)
+                sqlite3_bind_text(stmt, 3, code, -1, SQLITE_TRANSIENT)
+                sqlite3_bind_text(stmt, 4, description, -1, SQLITE_TRANSIENT)
                 sqlite3_step(stmt)
             }
             sqlite3_finalize(stmt)
@@ -469,7 +478,7 @@ public class BlackBoxDatabase {
 
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             while sqlite3_step(stmt) == SQLITE_ROW {
                 let snapshot = EngineSnapshot(
                     timestamp: sqlite3_column_double(stmt, 0),
@@ -512,7 +521,7 @@ public class BlackBoxDatabase {
 
         var stmt: OpaquePointer?
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             while sqlite3_step(stmt) == SQLITE_ROW {
                 let alert = BlackBoxAlert(
                     timestamp: sqlite3_column_double(stmt, 0),
@@ -538,7 +547,7 @@ public class BlackBoxDatabase {
         var stmt: OpaquePointer?
 
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             while sqlite3_step(stmt) == SQLITE_ROW {
                 let code = String(cString: sqlite3_column_text(stmt, 0))
                 let desc = sqlite3_column_type(stmt, 1) != SQLITE_NULL ? String(cString: sqlite3_column_text(stmt, 1)) : ""
@@ -556,7 +565,7 @@ public class BlackBoxDatabase {
         var stmt: OpaquePointer?
 
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -567,8 +576,8 @@ public class BlackBoxDatabase {
         var stmt: OpaquePointer?
 
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, result, -1, nil)
-            sqlite3_bind_text(stmt, 2, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, result, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(stmt, 2, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -579,8 +588,8 @@ public class BlackBoxDatabase {
         var stmt: OpaquePointer?
 
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_bind_text(stmt, 1, note, -1, nil)
-            sqlite3_bind_text(stmt, 2, sessionId, -1, nil)
+            sqlite3_bind_text(stmt, 1, note, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(stmt, 2, sessionId, -1, SQLITE_TRANSIENT)
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
