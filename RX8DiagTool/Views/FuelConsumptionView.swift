@@ -22,6 +22,9 @@ struct FuelConsumptionView: View {
                     // Autonomía
                     RangeCard()
 
+                    // Parciales de consumo
+                    PartialsSection()
+
                     // Promedios
                     AveragesCard()
 
@@ -449,6 +452,179 @@ struct FuelLevelIndicator: View {
         if level > 25 { return .yellow }
         if level > 10 { return .orange }
         return .red
+    }
+}
+
+// MARK: - Parciales de Consumo
+
+struct PartialsSection: View {
+    @EnvironmentObject var fuelTracker: FuelConsumptionTracker
+    @State private var showingResetConfirmation = false
+    @State private var partialToReset: Int = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "chart.bar.doc.horizontal")
+                    .foregroundColor(.purple)
+                Text("Parciales de Consumo")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            // Parcial 1 - Viaje actual
+            PartialCard(
+                partial: fuelTracker.partial1,
+                onReset: {
+                    partialToReset = 1
+                    showingResetConfirmation = true
+                }
+            )
+
+            // Parcial 2 - Acumulado
+            PartialCard(
+                partial: fuelTracker.partial2,
+                onReset: {
+                    partialToReset = 2
+                    showingResetConfirmation = true
+                }
+            )
+
+            // Nota explicativa
+            Text("El viaje se considera el mismo si el motor para menos de 2 horas")
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .padding(.top, 4)
+        }
+        .padding()
+        .background(Color(.systemGray6).opacity(0.3))
+        .cornerRadius(16)
+        .alert("¿Resetear parcial?", isPresented: $showingResetConfirmation) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Resetear", role: .destructive) {
+                fuelTracker.resetPartial(partialToReset)
+            }
+        } message: {
+            Text("Se borrarán todos los datos del \(partialToReset == 1 ? "viaje actual" : "acumulado")")
+        }
+    }
+}
+
+struct PartialCard: View {
+    let partial: TripPartial
+    let onReset: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Header con nombre y reset
+            HStack {
+                Text(partial.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(partial.id == 1 ? .blue : .purple)
+
+                if let start = partial.startTime {
+                    Text(partial.dateRangeFormatted)
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Button(action: onReset) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            }
+
+            // Stats principales
+            HStack(spacing: 16) {
+                PartialStatItem(
+                    value: String(format: "%.1f", partial.distance),
+                    unit: "km",
+                    label: "Distancia"
+                )
+
+                PartialStatItem(
+                    value: String(format: "%.2f", partial.fuelUsed),
+                    unit: "L",
+                    label: "Consumido"
+                )
+
+                PartialStatItem(
+                    value: partial.avgConsumption > 0 ? String(format: "%.1f", partial.avgConsumption) : "--",
+                    unit: "L/100",
+                    label: "Media"
+                )
+
+                PartialStatItem(
+                    value: String(format: "%.2f", partial.fuelCost),
+                    unit: "€",
+                    label: "Coste"
+                )
+            }
+
+            // Stats secundarios
+            if partial.distance > 0 {
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "speedometer")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                        Text("Media: \(String(format: "%.0f", partial.avgSpeed)) km/h")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "gauge.high")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                        Text("Máx: \(String(format: "%.0f", partial.maxSpeed)) km/h")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                        Text(partial.drivingTimeFormatted)
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(partial.id == 1 ? Color.blue.opacity(0.1) : Color.purple.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+struct PartialStatItem: View {
+    let value: String
+    let unit: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(value)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.gray)
+        }
     }
 }
 

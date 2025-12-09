@@ -24,6 +24,10 @@ public class FuelConsumptionTracker: ObservableObject {
     @Published public var runtimeSeconds: Int = 0 // Tiempo desde arranque
     @Published public var distanceSinceDTCClear: Int = 0 // km desde último borrado
 
+    // MARK: - Parciales de consumo
+    @Published public var partial1: TripPartial = TripPartial(id: 1) // Viaje actual
+    @Published public var partial2: TripPartial = TripPartial(id: 2) // Acumulado
+
     // MARK: - Configuración
     public var tankCapacity: Double = 60.0 // Litros (RX-8 tiene 60L)
     public var fuelPricePerLiter: Double = 1.50 // €/L
@@ -37,6 +41,7 @@ public class FuelConsumptionTracker: ObservableObject {
     private var tripStartOdometer: Double = 0
     private var lastUpdateTime: Date? // Para calcular tiempo real entre lecturas
     private var consumptionHistory: [Double] = [] // Historial para calcular media móvil
+    private let consumptionDB = ConsumptionDatabase()
 
     // Constantes para cálculo
     private let airFuelRatioStoich: Double = 14.7 // Ratio estequiométrico gasolina
@@ -58,6 +63,20 @@ public class FuelConsumptionTracker: ObservableObject {
     public init() {
         // Iniciar con valores por defecto que tengan sentido
         averageConsumption = 13.0 // Consumo típico RX-8
+        // Cargar parciales desde la base de datos
+        loadPartials()
+    }
+
+    // MARK: - Parciales
+
+    public func loadPartials() {
+        partial1 = consumptionDB.getPartial(1)
+        partial2 = consumptionDB.getPartial(2)
+    }
+
+    public func resetPartial(_ id: Int) {
+        consumptionDB.resetPartial(id)
+        loadPartials()
     }
 
     // MARK: - Cálculo de Consumo Instantáneo
@@ -167,6 +186,26 @@ public class FuelConsumptionTracker: ObservableObject {
 
         // Recalcular autonomía con los nuevos datos
         calculateRangeAutomatically()
+
+        // Guardar en la base de datos de consumo (parciales)
+        if speedKmh > 1 {
+            let deltaSeconds = deltaTimeHours * 3600
+            let distanceInterval = speedKmh * deltaTimeHours
+
+            consumptionDB.recordConsumptionData(
+                distanceKm: distanceInterval,
+                fuelUsedLiters: fuelUsedInterval,
+                speedKmh: speedKmh,
+                fuelPricePerLiter: fuelPricePerLiter,
+                drivingTimeSeconds: deltaSeconds
+            )
+
+            // Actualizar parciales publicados cada ~5 segundos para no sobrecargar UI
+            if Int(distanceTrip * 1000) % 50 == 0 {
+                partial1 = consumptionDB.getPartial(1)
+                partial2 = consumptionDB.getPartial(2)
+            }
+        }
     }
 
     // MARK: - Control del Viaje
@@ -182,6 +221,13 @@ public class FuelConsumptionTracker: ObservableObject {
         speedReadings.removeAll()
         consumptionHistory.removeAll()
         // Mantener averageConsumption ya que es una media histórica
+
+        // Verificar si debemos continuar el viaje anterior o empezar uno nuevo
+        let continuedTrip = consumptionDB.startOrContinueTrip()
+        if !continuedTrip {
+            // Nuevo viaje, cargar parciales actualizados
+            loadPartials()
+        }
     }
 
     public func endTrip() -> TripSummary {
