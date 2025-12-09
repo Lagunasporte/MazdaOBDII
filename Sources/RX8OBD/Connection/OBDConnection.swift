@@ -3,7 +3,48 @@ import CoreBluetooth
 import Combine
 
 // MARK: - Gestor de Conexión OBD2
-// Compatible con ELM327 v1.4+ vía Bluetooth
+// Compatible con ELM327 v1.4+, STN1110, OBDLink y clones vía Bluetooth LE
+
+// MARK: - UUIDs de Servicios BLE para Adaptadores OBD conocidos
+public struct OBDServiceUUIDs {
+    // ELM327 estándar / Genéricos
+    static let elm327Service = CBUUID(string: "FFE0")
+    static let elm327Characteristic = CBUUID(string: "FFE1")
+
+    // Carista / STN1110 / STN2120
+    static let stnService = CBUUID(string: "FFF0")
+    static let stnWriteCharacteristic = CBUUID(string: "FFF1")
+    static let stnNotifyCharacteristic = CBUUID(string: "FFF2")
+
+    // Alternativo STN
+    static let stnAltService = CBUUID(string: "E7810A71-73AE-499D-8C15-FAA9AEF0C3F2")
+
+    // vLinker / vGate
+    static let vLinkerService = CBUUID(string: "18F0")
+    static let vLinkerAltService = CBUUID(string: "BEF8D6C9-9C21-4C9E-B632-BD58C1009F9F")
+
+    // OBDLink
+    static let obdLinkService = CBUUID(string: "FFE0")
+
+    // LELink
+    static let leLinkService = CBUUID(string: "C0FFE0")
+
+    // Veepeak
+    static let veepeakService = CBUUID(string: "FFE0")
+
+    // BAFX
+    static let bafxService = CBUUID(string: "0000FFE0-0000-1000-8000-00805F9B34FB")
+
+    // Konnwei
+    static let konnweiService = CBUUID(string: "FFF0")
+
+    // Lista de todos los servicios conocidos para escaneo
+    static let allKnownServices: [CBUUID] = [
+        elm327Service, stnService, stnAltService,
+        vLinkerService, vLinkerAltService, obdLinkService,
+        leLinkService, veepeakService, bafxService, konnweiService
+    ]
+}
 
 public class OBDConnectionManager: NSObject, ObservableObject {
 
@@ -17,6 +58,12 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     @Published public var lastResponse: String = ""
     @Published public var isAutoConnecting: Bool = false
     @Published public var savedAdapterName: String?
+
+    // MARK: - Debug y Diagnóstico
+    @Published public var debugLog: [String] = []
+    @Published public var isVerboseMode: Bool = false
+    @Published public var detectedAdapterType: AdapterType = .unknown
+    @Published public var diagnosticResults: DiagnosticResults?
 
     // MARK: - Bluetooth
     private var centralManager: CBCentralManager?
@@ -215,122 +262,250 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         connectionState = .disconnected
         adapterInfo = nil
         vehicleProtocol = nil
+        detectedAdapterType = .unknown
+    }
+
+    // MARK: - Logging para Debug
+    private func log(_ message: String) {
+        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        let entry = "[\(timestamp)] \(message)"
+        DispatchQueue.main.async { [weak self] in
+            self?.debugLog.append(entry)
+            // Mantener solo los últimos 100 logs
+            if self?.debugLog.count ?? 0 > 100 {
+                self?.debugLog.removeFirst()
+            }
+        }
+        if isVerboseMode {
+            print("OBD: \(message)")
+        }
+    }
+
+    public func clearDebugLog() {
+        debugLog.removeAll()
     }
 
     // MARK: - Inicialización del Adaptador ELM327/STN compatible
 
     public func initializeAdapter() {
         connectionState = .initializing
+        log("Iniciando inicialización del adaptador...")
 
         Task { @MainActor in
             do {
-                // Intento 1: Reset completo con timeout largo
-                var resetOK = false
-                for attempt in 1...3 {
-                    do {
-                        let resetResponse = try await sendCommand("ATZ", timeout: 8.0)
-                        if resetResponse.contains("ELM") || resetResponse.contains("STN") || resetResponse.contains("OK") || !resetResponse.isEmpty {
-                            resetOK = true
-                            break
-                        }
-                    } catch {
-                        if attempt < 3 {
-                            try await Task.sleep(nanoseconds: 1_000_000_000)
-                        }
-                    }
-                }
+                // Paso 1: Detectar tipo de adaptador y hacer reset
+                log("Paso 1: Reset del adaptador")
+                let adapterVersion = await detectAndResetAdapter()
 
-                // Si ATZ no funcionó, intentar warm start
-                if !resetOK {
-                    _ = try? await sendCommand("ATWS", timeout: 5.0)
-                }
+                // Paso 2: Configuración básica del adaptador
+                log("Paso 2: Configuración básica")
+                await configureAdapter()
 
-                try await Task.sleep(nanoseconds: 1_500_000_000)
+                // Paso 3: Obtener información del adaptador
+                log("Paso 3: Obteniendo info del adaptador")
+                adapterInfo = OBDAdapterInfo(version: adapterVersion)
+                detectedAdapterType = AdapterType.detect(from: adapterVersion)
+                log("Tipo de adaptador detectado: \(detectedAdapterType.rawValue)")
 
-                // Echo off - intentar varias veces
-                for _ in 1...2 {
-                    let echoResp = try? await sendCommand("ATE0", timeout: 3.0)
-                    if echoResp != nil { break }
-                    try await Task.sleep(nanoseconds: 300_000_000)
-                }
-                try await Task.sleep(nanoseconds: 300_000_000)
+                // Paso 4: Configuración específica según tipo de adaptador
+                log("Paso 4: Configuración específica para \(detectedAdapterType.rawValue)")
+                await configureForAdapterType(detectedAdapterType)
 
-                // Linefeed off
-                _ = try? await sendCommand("ATL0", timeout: 3.0)
-                try await Task.sleep(nanoseconds: 200_000_000)
-
-                // Spaces off (algunos adaptadores no lo soportan)
-                _ = try? await sendCommand("ATS0", timeout: 3.0)
-                try await Task.sleep(nanoseconds: 200_000_000)
-
-                // Headers off
-                _ = try? await sendCommand("ATH0", timeout: 3.0)
-                try await Task.sleep(nanoseconds: 200_000_000)
-
-                // Adaptive timing auto
-                _ = try? await sendCommand("ATAT1", timeout: 3.0)
-                try await Task.sleep(nanoseconds: 200_000_000)
-
-                // Timeout máximo para respuestas del vehículo (FF = máximo)
-                _ = try? await sendCommand("ATST96", timeout: 3.0)
-                try await Task.sleep(nanoseconds: 200_000_000)
-
-                // Versión del adaptador
-                let version = try await sendCommand("ATI", timeout: 3.0)
-                adapterInfo = OBDAdapterInfo(version: version)
-
-                // Auto protocolo
-                _ = try await sendCommand("ATSP0", timeout: 3.0)
-                try await Task.sleep(nanoseconds: 1_000_000_000)
-
-                // Test conexión con vehículo - varios intentos
-                var vehicleConnected = false
-                for attempt in 1...3 {
-                    do {
-                        let testResponse = try await sendCommand("0100", timeout: 10.0)
-
-                        if !testResponse.contains("NO DATA") &&
-                           !testResponse.contains("UNABLE") &&
-                           !testResponse.contains("ERROR") &&
-                           !testResponse.contains("?") &&
-                           testResponse.contains("41") {
-                            vehicleConnected = true
-                            break
-                        }
-
-                        // Si falla, intentar protocolo específico para Mazda (ISO 15765-4 CAN 500kbps 11bit)
-                        if attempt == 2 {
-                            _ = try? await sendCommand("ATSP6", timeout: 3.0)
-                            try await Task.sleep(nanoseconds: 1_000_000_000)
-                        }
-                        // Último intento con protocolo automático de nuevo
-                        if attempt == 3 {
-                            _ = try? await sendCommand("ATSP0", timeout: 3.0)
-                            try await Task.sleep(nanoseconds: 1_000_000_000)
-                        }
-                    } catch {
-                        if attempt < 3 {
-                            try await Task.sleep(nanoseconds: 1_000_000_000)
-                        }
-                    }
-                }
+                // Paso 5: Intentar conexión con el vehículo
+                log("Paso 5: Intentando conexión con vehículo")
+                let vehicleConnected = await attemptVehicleConnection()
 
                 if vehicleConnected {
                     let protocolResponse = try await sendCommand("ATDPN", timeout: 3.0)
                     vehicleProtocol = VehicleProtocol.from(elm327Code: protocolResponse)
                     connectionState = .connectedToVehicle
+                    log("Conexión exitosa - Protocolo: \(vehicleProtocol?.rawValue ?? "desconocido")")
                 } else {
-                    // Conectado al adaptador pero no al vehículo
-                    // Puede ser que el motor no esté en contacto
                     connectionState = .connectedToAdapter
+                    log("Adaptador OK pero sin conexión al vehículo")
                     lastError = .initializationFailed("Adaptador OK. Verifica: 1) Contacto puesto (no hace falta arrancar) 2) Adaptador bien conectado al puerto OBD")
                 }
 
             } catch {
-                lastError = .initializationFailed("Error: \(error.localizedDescription). Verifica que el adaptador esté emparejado en Ajustes Bluetooth.")
+                log("Error en inicialización: \(error.localizedDescription)")
+                lastError = .initializationFailed("Error: \(error.localizedDescription)")
                 connectionState = .connectedToAdapter
             }
         }
+    }
+
+    private func detectAndResetAdapter() async -> String {
+        var version = ""
+
+        // Intento 1: Reset estándar ATZ
+        for attempt in 1...3 {
+            do {
+                log("Reset ATZ intento \(attempt)/3")
+                let response = try await sendCommand("ATZ", timeout: 10.0)
+                log("ATZ respuesta: \(response)")
+
+                if response.contains("ELM") || response.contains("STN") ||
+                   response.contains("OBD") || response.uppercased().contains("V1") ||
+                   response.uppercased().contains("V2") {
+                    version = response
+                    break
+                }
+            } catch {
+                log("ATZ intento \(attempt) falló: \(error.localizedDescription)")
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+            }
+        }
+
+        // Si ATZ falló, intentar warm start
+        if version.isEmpty {
+            log("ATZ falló, intentando ATWS (warm start)")
+            do {
+                let wsResponse = try await sendCommand("ATWS", timeout: 8.0)
+                log("ATWS respuesta: \(wsResponse)")
+                if !wsResponse.isEmpty {
+                    version = wsResponse
+                }
+            } catch {
+                log("ATWS falló: \(error.localizedDescription)")
+            }
+        }
+
+        // Obtener versión con ATI si aún no la tenemos clara
+        if version.isEmpty || (!version.contains("ELM") && !version.contains("STN")) {
+            do {
+                try await Task.sleep(nanoseconds: 500_000_000)
+                let atiResponse = try await sendCommand("ATI", timeout: 5.0)
+                log("ATI respuesta: \(atiResponse)")
+                version = atiResponse
+            } catch {
+                log("ATI falló: \(error.localizedDescription)")
+            }
+        }
+
+        return version
+    }
+
+    private func configureAdapter() async {
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
+        // Echo off - crítico para comunicación limpia
+        for _ in 1...3 {
+            if let resp = try? await sendCommand("ATE0", timeout: 3.0) {
+                log("ATE0: \(resp)")
+                break
+            }
+            try? await Task.sleep(nanoseconds: 300_000_000)
+        }
+
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        // Configuraciones estándar
+        let configs: [(String, String)] = [
+            ("ATL0", "Linefeeds off"),
+            ("ATS0", "Spaces off"),
+            ("ATH0", "Headers off"),
+            ("ATAT2", "Adaptive timing aggressive"),
+            ("ATSTFF", "Max timeout")
+        ]
+
+        for (cmd, desc) in configs {
+            if let resp = try? await sendCommand(cmd, timeout: 2.0) {
+                log("\(cmd) (\(desc)): \(resp)")
+            }
+            try? await Task.sleep(nanoseconds: 150_000_000)
+        }
+    }
+
+    private func configureForAdapterType(_ type: AdapterType) async {
+        switch type {
+        case .stn1110, .stn2120, .carista:
+            log("Aplicando configuración STN...")
+            // STN soporta comandos adicionales
+            _ = try? await sendCommand("STPO", timeout: 2.0) // Desactivar protocolo actual
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            _ = try? await sendCommand("STCMM1", timeout: 2.0) // Modo monitoreo CAN
+            try? await Task.sleep(nanoseconds: 200_000_000)
+
+        case .obdLink:
+            log("Aplicando configuración OBDLink...")
+            _ = try? await sendCommand("ATCAF1", timeout: 2.0) // CAN auto formatting
+            try? await Task.sleep(nanoseconds: 200_000_000)
+
+        case .elm327, .elm327Clone, .unknown:
+            log("Usando configuración ELM327 estándar...")
+            // Ya configurado con comandos básicos
+        }
+    }
+
+    private func attemptVehicleConnection() async -> Bool {
+        // Protocolos a intentar (en orden de probabilidad para Mazda RX-8)
+        let protocols: [(cmd: String, name: String, wait: UInt64)] = [
+            ("ATSP0", "Auto", 2_000_000_000),
+            ("ATSP6", "CAN 500k 11bit", 1_500_000_000),
+            ("ATSP7", "CAN 500k 29bit", 1_500_000_000),
+            ("ATSP8", "CAN 250k 11bit", 1_500_000_000),
+            ("ATSP5", "KWP Fast", 2_000_000_000),
+            ("ATSP3", "ISO 9141", 2_500_000_000)
+        ]
+
+        for (protocolCmd, protocolName, waitTime) in protocols {
+            log("Intentando protocolo: \(protocolName)")
+
+            // Establecer protocolo
+            if let resp = try? await sendCommand(protocolCmd, timeout: 3.0) {
+                log("\(protocolCmd): \(resp)")
+            }
+
+            try? await Task.sleep(nanoseconds: waitTime)
+
+            // Test de conexión con PID 0100 (PIDs soportados)
+            for attempt in 1...2 {
+                do {
+                    log("Test 0100 intento \(attempt)")
+                    let testResponse = try await sendCommand("0100", timeout: 12.0)
+                    log("0100 respuesta: \(testResponse)")
+
+                    // Verificar respuesta válida
+                    if isValidOBDResponse(testResponse) {
+                        log("Conexión exitosa con protocolo \(protocolName)")
+                        return true
+                    }
+                } catch {
+                    log("0100 error: \(error.localizedDescription)")
+                }
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+        }
+
+        return false
+    }
+
+    private func isValidOBDResponse(_ response: String) -> Bool {
+        let upper = response.uppercased()
+
+        // Respuestas de error
+        if upper.contains("NO DATA") ||
+           upper.contains("UNABLE") ||
+           upper.contains("ERROR") ||
+           upper.contains("BUS INIT") ||
+           upper.contains("CAN ERROR") ||
+           upper.contains("?") ||
+           upper.contains("STOPPED") {
+            return false
+        }
+
+        // Respuesta válida debe contener 41 (respuesta al modo 01)
+        if upper.contains("41") {
+            return true
+        }
+
+        // También puede ser válida si tiene datos hex
+        let hexPattern = response.replacingOccurrences(of: " ", with: "")
+        if hexPattern.count >= 4 && hexPattern.allSatisfy({ $0.isHexDigit }) {
+            return true
+        }
+
+        return false
     }
 
     // MARK: - Envío de Comandos
@@ -605,6 +780,147 @@ public class OBDConnectionManager: NSObject, ObservableObject {
             return false
         }
     }
+
+    // MARK: - Diagnóstico Completo del Adaptador
+
+    public func runFullDiagnostic() async -> DiagnosticResults {
+        log("=== Iniciando diagnóstico completo ===")
+        var results = DiagnosticResults()
+
+        // Test 1: Estado del Bluetooth
+        results.bluetoothAvailable = centralManager?.state == .poweredOn
+        log("Bluetooth disponible: \(results.bluetoothAvailable)")
+
+        // Test 2: Conexión al adaptador
+        results.adapterConnected = connectedPeripheral != nil && writeCharacteristic != nil
+        log("Adaptador conectado: \(results.adapterConnected)")
+
+        guard results.adapterConnected else {
+            results.summary = "No hay conexión con el adaptador"
+            return results
+        }
+
+        // Test 3: Reset del adaptador
+        do {
+            let atzResp = try await sendCommand("ATZ", timeout: 8.0)
+            results.atzResponse = atzResp
+            results.atzOK = !atzResp.isEmpty
+            log("ATZ: \(atzResp)")
+        } catch {
+            results.atzResponse = "Error: \(error.localizedDescription)"
+            log("ATZ falló: \(error.localizedDescription)")
+        }
+
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+        // Test 4: Versión del adaptador
+        do {
+            _ = try await sendCommand("ATE0", timeout: 2.0)
+            let atiResp = try await sendCommand("ATI", timeout: 3.0)
+            results.atiResponse = atiResp
+            results.adapterVersion = atiResp
+            log("ATI: \(atiResp)")
+        } catch {
+            results.atiResponse = "Error: \(error.localizedDescription)"
+            log("ATI falló: \(error.localizedDescription)")
+        }
+
+        // Test 5: Voltaje de batería
+        do {
+            let voltResp = try await sendCommand("ATRV", timeout: 2.0)
+            results.voltage = voltResp
+            log("Voltaje: \(voltResp)")
+        } catch {
+            results.voltage = "Error"
+            log("ATRV falló")
+        }
+
+        // Test 6: Protocolo actual
+        do {
+            let dpnResp = try await sendCommand("ATDPN", timeout: 2.0)
+            results.protocolNumber = dpnResp
+            log("Protocolo: \(dpnResp)")
+        } catch {
+            results.protocolNumber = "Error"
+        }
+
+        // Test 7: Auto-protocolo y conexión al vehículo
+        _ = try? await sendCommand("ATSP0", timeout: 2.0)
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+        do {
+            let pid0100Resp = try await sendCommand("0100", timeout: 10.0)
+            results.pid0100Response = pid0100Resp
+            results.vehicleResponding = isValidOBDResponse(pid0100Resp)
+            log("0100: \(pid0100Resp)")
+        } catch {
+            results.pid0100Response = "Error: \(error.localizedDescription)"
+            log("0100 falló: \(error.localizedDescription)")
+        }
+
+        // Test 8: Si el vehículo responde, intentar leer RPM
+        if results.vehicleResponding {
+            do {
+                let rpmResp = try await sendCommand("010C", timeout: 5.0)
+                results.pid010CResponse = rpmResp
+                log("RPM (010C): \(rpmResp)")
+            } catch {
+                results.pid010CResponse = "Error"
+            }
+        }
+
+        // Test 9: Probar diferentes protocolos
+        results.protocolTests = []
+        let testProtocols = [
+            ("ATSP6", "CAN 500k 11bit"),
+            ("ATSP7", "CAN 500k 29bit"),
+            ("ATSP5", "KWP Fast"),
+            ("ATSP3", "ISO 9141")
+        ]
+
+        if !results.vehicleResponding {
+            log("Probando protocolos alternativos...")
+            for (cmd, name) in testProtocols {
+                _ = try? await sendCommand(cmd, timeout: 2.0)
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+
+                do {
+                    let testResp = try await sendCommand("0100", timeout: 8.0)
+                    let success = isValidOBDResponse(testResp)
+                    results.protocolTests.append(ProtocolTestResult(name: name, response: testResp, success: success))
+                    log("\(name): \(testResp) - \(success ? "OK" : "FAIL")")
+
+                    if success {
+                        results.vehicleResponding = true
+                        results.workingProtocol = name
+                        break
+                    }
+                } catch {
+                    results.protocolTests.append(ProtocolTestResult(name: name, response: "Timeout", success: false))
+                }
+            }
+        }
+
+        // Generar resumen
+        results.generateSummary()
+        log("=== Diagnóstico completado ===")
+        log("Resumen: \(results.summary)")
+
+        DispatchQueue.main.async { [weak self] in
+            self?.diagnosticResults = results
+        }
+
+        return results
+    }
+
+    // MARK: - Envío de comandos AT en crudo (para testing)
+
+    public func sendRawCommand(_ command: String) async throws -> String {
+        log("Raw CMD: \(command)")
+        let response = try await sendCommand(command, timeout: 5.0)
+        log("Raw RSP: \(response)")
+        return response
+    }
 }
 
 // MARK: - CBCentralManagerDelegate
@@ -645,7 +961,21 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
             return
         }
 
-        let obdKeywords = ["OBD", "ELM", "OBDII", "Vgate", "Veepeak", "BAFX", "LELink", "vLinker", "BT", "Car", "iOS-Vlink", "STN"]
+        // Lista ampliada de keywords para detectar adaptadores OBD
+        let obdKeywords = [
+            // Genéricos
+            "OBD", "OBDII", "OBD2", "ELM", "ELM327", "ODB",
+            // Chips específicos
+            "STN", "STN1110", "STN2120",
+            // Marcas conocidas
+            "Carista", "Vgate", "Veepeak", "BAFX", "LELink", "vLinker",
+            "Konnwei", "Kufatec", "BlueDriver", "Torque", "ScanTool",
+            "OBDLink", "OBDII-Link", "Autel", "Ancel", "Foxwell",
+            "Launch", "Thinkcar", "MUCAR", "NONDA", "Carly", "AUTOPHIX",
+            // Keywords parciales
+            "BT", "Car", "iOS-Vlink", "Wireless", "Scanner", "Diag",
+            "Auto", "Vehicle", "V-Link", "V-Gate", "V-Scan"
+        ]
         let nameUpper = name.uppercased()
         let isOBDDevice = obdKeywords.contains { nameUpper.contains($0.uppercased()) }
 
@@ -708,21 +1038,69 @@ extension OBDConnectionManager: CBPeripheralDelegate {
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard error == nil, let characteristics = service.characteristics else { return }
 
+        log("Servicio: \(service.uuid) - \(characteristics.count) características")
+
+        // Priorizar características conocidas de OBD
+        let knownWriteUUIDs = [
+            OBDServiceUUIDs.elm327Characteristic,
+            OBDServiceUUIDs.stnWriteCharacteristic,
+            CBUUID(string: "FFF1"),
+            CBUUID(string: "FFE1")
+        ]
+
+        let knownNotifyUUIDs = [
+            OBDServiceUUIDs.elm327Characteristic,
+            OBDServiceUUIDs.stnNotifyCharacteristic,
+            CBUUID(string: "FFF2"),
+            CBUUID(string: "FFE1")
+        ]
+
         for characteristic in characteristics {
-            if characteristic.properties.contains(.write) || characteristic.properties.contains(.writeWithoutResponse) {
-                if writeCharacteristic == nil {
+            let props = characteristic.properties
+            let uuid = characteristic.uuid
+            log("  Característica: \(uuid) - Props: \(props.rawValue)")
+
+            // Buscar característica de escritura
+            if props.contains(.write) || props.contains(.writeWithoutResponse) {
+                // Priorizar UUIDs conocidos
+                if knownWriteUUIDs.contains(uuid) {
                     writeCharacteristic = characteristic
+                    log("  -> Write (conocida): \(uuid)")
+                } else if writeCharacteristic == nil {
+                    writeCharacteristic = characteristic
+                    log("  -> Write (genérica): \(uuid)")
                 }
             }
-            if characteristic.properties.contains(.notify) {
-                notifyCharacteristic = characteristic
-                peripheral.setNotifyValue(true, for: characteristic)
-            } else if characteristic.properties.contains(.read) && notifyCharacteristic == nil {
-                notifyCharacteristic = characteristic
+
+            // Buscar característica de notificación
+            if props.contains(.notify) || props.contains(.indicate) {
+                if knownNotifyUUIDs.contains(uuid) {
+                    notifyCharacteristic = characteristic
+                    peripheral.setNotifyValue(true, for: characteristic)
+                    log("  -> Notify (conocida): \(uuid)")
+                } else if notifyCharacteristic == nil {
+                    notifyCharacteristic = characteristic
+                    peripheral.setNotifyValue(true, for: characteristic)
+                    log("  -> Notify (genérica): \(uuid)")
+                }
             }
         }
 
+        // Para STN/Carista: a veces la misma característica es write+notify
+        if writeCharacteristic != nil && notifyCharacteristic == nil {
+            for characteristic in characteristics {
+                if characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate) {
+                    notifyCharacteristic = characteristic
+                    peripheral.setNotifyValue(true, for: characteristic)
+                    log("  -> Notify (fallback): \(characteristic.uuid)")
+                    break
+                }
+            }
+        }
+
+        // Inicializar solo cuando tenemos ambas características
         if writeCharacteristic != nil && notifyCharacteristic != nil {
+            log("Características OK - Iniciando adaptador")
             initializeAdapter()
         }
     }
@@ -862,5 +1240,130 @@ public enum OBDError: Error, LocalizedError, Sendable {
         case .canError: return "Error CAN"
         case .busError: return "Error BUS"
         }
+    }
+}
+
+// MARK: - Tipos de Adaptador
+
+public enum AdapterType: String, Sendable {
+    case elm327 = "ELM327"
+    case elm327Clone = "ELM327 Clone"
+    case stn1110 = "STN1110"
+    case stn2120 = "STN2120"
+    case carista = "Carista"
+    case obdLink = "OBDLink"
+    case unknown = "Desconocido"
+
+    public static func detect(from version: String) -> AdapterType {
+        let upper = version.uppercased()
+
+        if upper.contains("STN2120") { return .stn2120 }
+        if upper.contains("STN1110") || upper.contains("STN11") { return .stn1110 }
+        if upper.contains("CARISTA") { return .carista }
+        if upper.contains("OBDLINK") { return .obdLink }
+
+        if upper.contains("ELM327") {
+            // Detectar clones vs originales
+            if upper.contains("V1.5") || upper.contains("V2.") {
+                // Versiones altas suelen ser clones (ELM327 real es v1.4a máximo)
+                return .elm327Clone
+            }
+            return .elm327
+        }
+
+        // STN chips a veces se identifican como ELM pero soportan comandos ST
+        if upper.contains("STN") || upper.contains("ST ") {
+            return .stn1110
+        }
+
+        return .unknown
+    }
+
+    public var supportsSTCommands: Bool {
+        switch self {
+        case .stn1110, .stn2120, .carista, .obdLink:
+            return true
+        default:
+            return false
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .elm327:
+            return "ELM327 original - Soporta OBD-II estándar"
+        case .elm327Clone:
+            return "Clon ELM327 - Compatibilidad variable"
+        case .stn1110:
+            return "STN1110 - Chip profesional con comandos extendidos"
+        case .stn2120:
+            return "STN2120 - Chip avanzado con soporte CAN FD"
+        case .carista:
+            return "Carista OBD2 - Basado en STN, buena compatibilidad"
+        case .obdLink:
+            return "OBDLink - Adaptador profesional de alta velocidad"
+        case .unknown:
+            return "Adaptador desconocido"
+        }
+    }
+}
+
+// MARK: - Resultados de Diagnóstico
+
+public struct DiagnosticResults: Sendable {
+    public var bluetoothAvailable: Bool = false
+    public var adapterConnected: Bool = false
+    public var atzOK: Bool = false
+    public var atzResponse: String = ""
+    public var atiResponse: String = ""
+    public var adapterVersion: String = ""
+    public var voltage: String = ""
+    public var protocolNumber: String = ""
+    public var pid0100Response: String = ""
+    public var pid010CResponse: String = ""
+    public var vehicleResponding: Bool = false
+    public var workingProtocol: String = ""
+    public var protocolTests: [ProtocolTestResult] = []
+    public var summary: String = ""
+
+    public init() {}
+
+    public mutating func generateSummary() {
+        var issues: [String] = []
+
+        if !bluetoothAvailable {
+            issues.append("Bluetooth no disponible")
+        }
+        if !adapterConnected {
+            issues.append("Adaptador no conectado")
+        }
+        if !atzOK {
+            issues.append("Reset del adaptador falló")
+        }
+        if !vehicleResponding {
+            issues.append("El vehículo no responde - Verifica contacto puesto")
+        }
+
+        if issues.isEmpty {
+            summary = "Todo OK - Conexión establecida con el vehículo"
+        } else {
+            summary = issues.joined(separator: ". ")
+        }
+    }
+
+    public var isFullyOperational: Bool {
+        bluetoothAvailable && adapterConnected && atzOK && vehicleResponding
+    }
+}
+
+public struct ProtocolTestResult: Sendable {
+    public let name: String
+    public let response: String
+    public let success: Bool
+
+    public init(name: String, response: String, success: Bool) {
+        self.name = name
+        self.response = response
+        self.success = success
     }
 }

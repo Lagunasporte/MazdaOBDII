@@ -126,6 +126,16 @@ struct SettingsView: View {
                                 .font(.caption)
                         }
                     }
+
+                    NavigationLink {
+                        AdapterDiagnosticView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "stethoscope")
+                                .foregroundColor(.green)
+                            Text("Diagnóstico del adaptador")
+                        }
+                    }
                 } header: {
                     Text("Conexión OBD2")
                 }
