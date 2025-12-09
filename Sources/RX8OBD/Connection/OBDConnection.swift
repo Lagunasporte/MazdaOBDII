@@ -704,6 +704,30 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return Int(bytes[0]) - 40
     }
 
+    /// Lee temperatura del catalizador Bank 1 Sensor 1 (PID 0x3C)
+    /// Retorna temperatura en °C (rango: -40 a 6513.5°C)
+    public func readCatalystTemp() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x3C)
+        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+        return (Double(bytes[0]) * 256.0 + Double(bytes[1])) / 10.0 - 40.0
+    }
+
+    /// Lee temperatura del aceite (PID 0x5C)
+    /// Retorna temperatura en °C
+    public func readOilTemp() async throws -> Int {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x5C)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Int(bytes[0]) - 40
+    }
+
+    /// Lee carga del motor (PID 0x04)
+    /// Retorna porcentaje 0-100%
+    public func readEngineLoad() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x04)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) * 100.0 / 255.0
+    }
+
     public func readFuelTrimShort() async throws -> Double {
         let bytes = try await readStandardPID(mode: 0x01, pid: 0x06)
         guard bytes.count >= 1 else { throw OBDError.invalidResponse }

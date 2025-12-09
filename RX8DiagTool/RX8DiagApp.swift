@@ -707,9 +707,11 @@ public class EngineMonitor: ObservableObject {
     private var fuelTracker: FuelConsumptionTracker?
     private var blackBoxRecorder: BlackBoxRecorder?
 
-    private var updateInterval: UInt64 = 250_000_000 // 250ms = 4 Hz
+    private var updateInterval: UInt64 = 100_000_000 // 100ms = 10 Hz - Muy rápido
     private var lastUpdateTimestamp: Date = Date()
     private var updateCount: Int = 0
+    private var lastBlackBoxRecord: Date = Date()
+    private let blackBoxInterval: TimeInterval = 1.0 // Guardar cada segundo
 
     public init() {}
 
@@ -737,14 +739,21 @@ public class EngineMonitor: ObservableObject {
         isMonitoring = true
         updateCount = 0
         lastUpdateTimestamp = Date()
+        lastBlackBoxRecord = Date()
 
         // Iniciar trip en fuel tracker
         fuelTracker?.startTrip()
 
+        // Auto-iniciar grabación de caja negra
+        if let recorder = blackBoxRecorder, !recorder.isRecording {
+            recorder.startRecording()
+        }
+
         monitoringTask = Task { @MainActor in
             while isMonitoring && cm.connectionState == .connectedToVehicle {
                 await readAllSensors()
-                try? await Task.sleep(nanoseconds: updateInterval)
+                // Sin espera adicional - leer lo más rápido posible
+                // El límite de velocidad lo impone el adaptador OBD
             }
             isMonitoring = false
         }
@@ -780,17 +789,18 @@ public class EngineMonitor: ObservableObject {
             currentState.vehicleSpeed = Double(speed)
             currentState.coolantTemperature = Double(coolant)
 
-            // PIDs secundarios - leer en ciclos alternos para mayor velocidad
+            // PIDs secundarios - leer en ciclos rotatorios para maximizar velocidad
             updateCount += 1
+            let cycle = updateCount % 4
 
-            if updateCount % 2 == 0 {
-                // Ciclo par: throttle, MAF, fuel trims
+            switch cycle {
+            case 0:
+                // Ciclo 0: throttle, MAF
                 if let throttle = try? await cm.readThrottlePosition() {
                     currentState.throttlePosition = throttle
                 }
                 if let maf = try? await cm.readMAF() {
                     currentState.mafAirFlow = maf
-
                     // Actualizar consumo de combustible
                     _ = fuelTracker?.calculateInstantConsumption(
                         mafGramsPerSecond: maf,
@@ -798,27 +808,39 @@ public class EngineMonitor: ObservableObject {
                         rpm: rpm
                     )
                 }
+
+            case 1:
+                // Ciclo 1: fuel trims
                 if let stft = try? await cm.readFuelTrimShort() {
                     currentState.shortTermFuelTrim = stft
-                }
-            } else {
-                // Ciclo impar: timing, LTFT, voltaje
-                if let timing = try? await cm.readTimingAdvance() {
-                    currentState.ignitionTiming = timing
                 }
                 if let ltft = try? await cm.readFuelTrimLong() {
                     currentState.longTermFuelTrim = ltft
                 }
+
+            case 2:
+                // Ciclo 2: timing, voltaje
+                if let timing = try? await cm.readTimingAdvance() {
+                    currentState.ignitionTiming = timing
+                }
                 if let voltage = try? await cm.readVoltage() {
                     currentState.batteryVoltage = voltage
                 }
-            }
 
-            // Cada 10 ciclos: temperaturas adicionales
-            if updateCount % 10 == 0 {
+            case 3:
+                // Ciclo 3: temperaturas adicionales (aceite, catalizador, IAT)
+                if let oilTemp = try? await cm.readOilTemp() {
+                    currentState.oilTemperature = Double(oilTemp)
+                }
+                if let catTemp = try? await cm.readCatalystTemp() {
+                    currentState.catalystTemperature = catTemp
+                }
                 if let iat = try? await cm.readIntakeTemp() {
                     currentState.intakeAirTemperature = Double(iat)
                 }
+
+            default:
+                break
             }
 
             // Calcular tasa de actualización
@@ -844,18 +866,25 @@ public class EngineMonitor: ObservableObject {
     private func recordToBlackBox() {
         guard let recorder = blackBoxRecorder, recorder.isRecording else { return }
 
+        // Solo guardar cada segundo para no sobrecargar
+        let now = Date()
+        guard now.timeIntervalSince(lastBlackBoxRecord) >= blackBoxInterval else { return }
+        lastBlackBoxRecord = now
+
         let readings: [String: Double] = [
             "rpm": Double(currentState.rpm),
             "speed": currentState.vehicleSpeed,
             "ect": currentState.coolantTemperature,
             "iat": currentState.intakeAirTemperature,
+            "oil_temp": currentState.oilTemperature,
+            "cat_temp": currentState.catalystTemperature,
             "throttle": currentState.throttlePosition,
             "maf": currentState.mafAirFlow,
             "stft": currentState.shortTermFuelTrim,
             "ltft": currentState.longTermFuelTrim,
             "timing": currentState.ignitionTiming,
             "voltage": currentState.batteryVoltage,
-            "oil_temp": currentState.oilTemperature
+            "load": currentState.throttlePosition // Usar como aproximación de carga
         ]
 
         recorder.recordSnapshot(readings: readings)
@@ -931,6 +960,48 @@ public class EngineMonitor: ObservableObject {
                 value: currentState.batteryVoltage,
                 threshold: 12.0,
                 message: "Voltaje bajo: \(String(format: "%.1fV", currentState.batteryVoltage))"
+            ))
+        }
+
+        // Temperatura de aceite
+        if currentState.oilTemperature > 130 {
+            newAlerts.append(EngineAlert(
+                type: .temperature,
+                severity: .critical,
+                parameter: "Aceite",
+                value: currentState.oilTemperature,
+                threshold: 130,
+                message: "¡Aceite crítico! \(Int(currentState.oilTemperature))°C"
+            ))
+        } else if currentState.oilTemperature > 120 {
+            newAlerts.append(EngineAlert(
+                type: .temperature,
+                severity: .warning,
+                parameter: "Aceite",
+                value: currentState.oilTemperature,
+                threshold: 120,
+                message: "Aceite caliente: \(Int(currentState.oilTemperature))°C"
+            ))
+        }
+
+        // Temperatura de catalizador
+        if currentState.catalystTemperature > 900 {
+            newAlerts.append(EngineAlert(
+                type: .temperature,
+                severity: .critical,
+                parameter: "Catalizador",
+                value: currentState.catalystTemperature,
+                threshold: 900,
+                message: "¡Catalizador sobrecalentado! \(Int(currentState.catalystTemperature))°C"
+            ))
+        } else if currentState.catalystTemperature > 750 {
+            newAlerts.append(EngineAlert(
+                type: .temperature,
+                severity: .warning,
+                parameter: "Catalizador",
+                value: currentState.catalystTemperature,
+                threshold: 750,
+                message: "Cat. caliente: \(Int(currentState.catalystTemperature))°C"
             ))
         }
 
