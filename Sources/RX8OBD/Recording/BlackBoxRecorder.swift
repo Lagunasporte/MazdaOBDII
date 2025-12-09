@@ -91,12 +91,13 @@ public class BlackBoxRecorder: ObservableObject {
     // MARK: - Data Recording
 
     public func recordSnapshot(state: RotaryEngineState) {
-        guard isRecording, let sessionId = currentSessionId else { return }
-
         let now = Date()
 
-        // Verificar estado del motor
+        // PRIMERO verificar estado del motor (puede iniciar la grabación)
         checkEngineState(rpm: state.rpm)
+
+        // Si no está grabando después de verificar, salir
+        guard isRecording, let sessionId = currentSessionId else { return }
 
         // Solo guardar cada segundo
         if let lastTime = lastSnapshotTime,
@@ -132,14 +133,15 @@ public class BlackBoxRecorder: ObservableObject {
 
     /// Método alternativo para grabar desde diccionario (compatibilidad)
     public func recordSnapshot(readings: [String: Double]) {
-        guard isRecording, let sessionId = currentSessionId else { return }
-
         let now = Date()
 
-        // Verificar estado del motor
+        // PRIMERO verificar estado del motor (puede iniciar la grabación)
         if let rpm = readings["rpm"] {
             checkEngineState(rpm: Int(rpm))
         }
+
+        // Si no está grabando después de verificar, salir
+        guard isRecording, let sessionId = currentSessionId else { return }
 
         // Solo guardar cada segundo
         if let lastTime = lastSnapshotTime,
