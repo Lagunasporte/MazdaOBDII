@@ -144,7 +144,7 @@ public class AIAnalysisService: ObservableObject {
 
     // MARK: - Analysis
 
-    public func analyzeSession(_ session: RecordingSession, recorder: BlackBoxRecorder) async throws -> AIAnalysisResult {
+    public func analyzeSession(_ session: BlackBoxSession, recorder: BlackBoxRecorder) async throws -> AIAnalysisResult {
         guard let apiKey = apiKey, !apiKey.isEmpty else {
             throw AIAnalysisError.noAPIKey
         }
@@ -155,7 +155,7 @@ public class AIAnalysisService: ObservableObject {
         defer { isAnalyzing = false }
 
         // Generate the analysis report
-        let dataReport = recorder.exportForAIAnalysis(session)
+        let dataReport = recorder.exportSessionForAnalysis(session.id)
 
         // Create the request
         let systemPrompt = """
@@ -240,8 +240,9 @@ public class AIAnalysisService: ObservableObject {
             throw AIAnalysisError.noContent
         }
 
-        // Parse the response
-        let result = try parseAnalysisResponse(textContent, sessionId: session.id)
+        // Parse the response - convert session.id String to UUID
+        let sessionUUID = UUID(uuidString: session.id) ?? UUID()
+        let result = try parseAnalysisResponse(textContent, sessionId: sessionUUID)
 
         // Save the result
         lastAnalysis = result
@@ -327,116 +328,114 @@ public class AIAnalysisService: ObservableObject {
 
     // MARK: - Quick Analysis (without API)
 
-    public func quickAnalysis(session: RecordingSession, recorder: BlackBoxRecorder) -> AIAnalysisResult {
-        let summary = recorder.generateSummary(for: session)
+    public func quickAnalysis(session: BlackBoxSession, recorder: BlackBoxRecorder) -> AIAnalysisResult {
+        // Get data from recorder
+        let snapshots = recorder.getSessionSnapshots(session.id)
+        let alerts = recorder.getSessionAlerts(session.id)
+        let dtcs = recorder.getSessionDTCs(session.id)
+
         var issues: [AIAnalysisResult.DiagnosedIssue] = []
         var recommendations: [AIAnalysisResult.Recommendation] = []
         var urgentActions: [String] = []
         var healthScore = 100
 
-        // Analyze sensor stats
-        for stat in summary.sensorStats {
-            switch stat.sensorId {
-            case "ect":
-                if stat.max > 105 {
-                    issues.append(AIAnalysisResult.DiagnosedIssue(
-                        title: "Sobrecalentamiento del motor",
-                        description: "Se detectó temperatura de refrigerante crítica (máx: \(String(format: "%.1f", stat.max))°C)",
-                        severity: .critical,
-                        affectedSystems: ["Sistema de refrigeración", "Motor"],
-                        possibleCauses: ["Termostato defectuoso", "Bomba de agua", "Nivel de refrigerante bajo", "Ventilador"]
-                    ))
-                    healthScore -= 30
-                    urgentActions.append("Verificar sistema de refrigeración inmediatamente")
-                } else if stat.max > 98 {
-                    issues.append(AIAnalysisResult.DiagnosedIssue(
-                        title: "Temperatura de refrigerante elevada",
-                        description: "Temperatura máxima registrada: \(String(format: "%.1f", stat.max))°C",
-                        severity: .high,
-                        affectedSystems: ["Sistema de refrigeración"],
-                        possibleCauses: ["Termostato", "Radiador sucio", "Nivel bajo"]
-                    ))
-                    healthScore -= 15
-                }
+        // Analyze temperatures from session stats
+        if session.maxCoolantTemp > 105 {
+            issues.append(AIAnalysisResult.DiagnosedIssue(
+                title: "Sobrecalentamiento del motor",
+                description: "Se detectó temperatura de refrigerante crítica (máx: \(String(format: "%.1f", session.maxCoolantTemp))°C)",
+                severity: .critical,
+                affectedSystems: ["Sistema de refrigeración", "Motor"],
+                possibleCauses: ["Termostato defectuoso", "Bomba de agua", "Nivel de refrigerante bajo", "Ventilador"]
+            ))
+            healthScore -= 30
+            urgentActions.append("Verificar sistema de refrigeración inmediatamente")
+        } else if session.maxCoolantTemp > 98 {
+            issues.append(AIAnalysisResult.DiagnosedIssue(
+                title: "Temperatura de refrigerante elevada",
+                description: "Temperatura máxima registrada: \(String(format: "%.1f", session.maxCoolantTemp))°C",
+                severity: .high,
+                affectedSystems: ["Sistema de refrigeración"],
+                possibleCauses: ["Termostato", "Radiador sucio", "Nivel bajo"]
+            ))
+            healthScore -= 15
+        }
 
-            case "oil_temp":
-                if stat.max > 130 {
-                    issues.append(AIAnalysisResult.DiagnosedIssue(
-                        title: "Aceite sobrecalentado",
-                        description: "Temperatura de aceite crítica: \(String(format: "%.1f", stat.max))°C. Riesgo para apex seals.",
-                        severity: .critical,
-                        affectedSystems: ["Lubricación", "Motor rotativo"],
-                        possibleCauses: ["Aceite degradado", "Oil cooler obstruido", "Conducción muy agresiva"]
-                    ))
-                    healthScore -= 25
-                    urgentActions.append("Cambiar aceite y verificar oil cooler")
-                }
+        if session.maxOilTemp > 130 {
+            issues.append(AIAnalysisResult.DiagnosedIssue(
+                title: "Aceite sobrecalentado",
+                description: "Temperatura de aceite crítica: \(String(format: "%.1f", session.maxOilTemp))°C. Riesgo para apex seals.",
+                severity: .critical,
+                affectedSystems: ["Lubricación", "Motor rotativo"],
+                possibleCauses: ["Aceite degradado", "Oil cooler obstruido", "Conducción muy agresiva"]
+            ))
+            healthScore -= 25
+            urgentActions.append("Cambiar aceite y verificar oil cooler")
+        } else if session.maxOilTemp > 120 {
+            issues.append(AIAnalysisResult.DiagnosedIssue(
+                title: "Temperatura de aceite elevada",
+                description: "Temperatura máxima registrada: \(String(format: "%.1f", session.maxOilTemp))°C",
+                severity: .high,
+                affectedSystems: ["Lubricación"],
+                possibleCauses: ["Conducción agresiva", "Aceite viejo"]
+            ))
+            healthScore -= 10
+        }
 
-            case "stft", "ltft":
-                if abs(stat.average) > 15 {
-                    let isLean = stat.average > 0
-                    issues.append(AIAnalysisResult.DiagnosedIssue(
-                        title: isLean ? "Mezcla constantemente pobre" : "Mezcla constantemente rica",
-                        description: "Fuel trim promedio: \(String(format: "%.1f", stat.average))%",
-                        severity: .high,
-                        affectedSystems: ["Sistema de combustible", "Admisión"],
-                        possibleCauses: isLean ?
-                            ["Fuga de vacío", "Sensor MAF sucio", "Inyectores obstruidos"] :
-                            ["Regulador de presión", "Inyector con fuga", "Sensor O2 defectuoso"]
-                    ))
-                    healthScore -= 15
-                    recommendations.append(AIAnalysisResult.Recommendation(
-                        title: "Diagnóstico del sistema de combustible",
-                        description: "Verificar fugas de vacío, limpiar MAF, y revisar inyectores",
-                        priority: 2
-                    ))
-                }
+        // Analyze fuel trims from snapshots
+        if !snapshots.isEmpty {
+            let stftValues = snapshots.map { $0.stft }
+            let ltftValues = snapshots.map { $0.ltft }
+            let avgStft = stftValues.reduce(0, +) / Double(stftValues.count)
+            let avgLtft = ltftValues.reduce(0, +) / Double(ltftValues.count)
 
-            case "oil_pressure":
-                if stat.min < 0.5 {
-                    issues.append(AIAnalysisResult.DiagnosedIssue(
-                        title: "Presión de aceite baja",
-                        description: "Se registró presión mínima de \(String(format: "%.2f", stat.min)) bar",
-                        severity: .critical,
-                        affectedSystems: ["Lubricación", "Motor"],
-                        possibleCauses: ["Nivel de aceite bajo", "Bomba de aceite desgastada", "Aceite degradado"]
-                    ))
-                    healthScore -= 30
-                    urgentActions.append("PARAR el motor y verificar nivel/presión de aceite")
-                }
-
-            default:
-                break
+            if abs(avgStft) > 15 || abs(avgLtft) > 15 {
+                let isLean = (avgStft + avgLtft) > 0
+                issues.append(AIAnalysisResult.DiagnosedIssue(
+                    title: isLean ? "Mezcla constantemente pobre" : "Mezcla constantemente rica",
+                    description: "Fuel trim promedio: STFT \(String(format: "%+.1f", avgStft))%, LTFT \(String(format: "%+.1f", avgLtft))%",
+                    severity: .high,
+                    affectedSystems: ["Sistema de combustible", "Admisión"],
+                    possibleCauses: isLean ?
+                        ["Fuga de vacío", "Sensor MAF sucio", "Inyectores obstruidos"] :
+                        ["Regulador de presión", "Inyector con fuga", "Sensor O2 defectuoso"]
+                ))
+                healthScore -= 15
+                recommendations.append(AIAnalysisResult.Recommendation(
+                    title: "Diagnóstico del sistema de combustible",
+                    description: "Verificar fugas de vacío, limpiar MAF, y revisar inyectores",
+                    priority: 2
+                ))
             }
         }
 
         // Analyze DTCs
-        if !summary.dtcs.isEmpty {
-            for dtc in summary.dtcs {
-                if dtc.starts(with: "P030") {
-                    issues.append(AIAnalysisResult.DiagnosedIssue(
-                        title: "Fallos de encendido detectados",
-                        description: "DTC \(dtc) indica fallos de encendido",
-                        severity: .high,
-                        affectedSystems: ["Encendido", "Compresión"],
-                        possibleCauses: ["Bujías desgastadas", "Bobinas defectuosas", "Compresión baja"],
-                        relatedDTCs: [dtc]
-                    ))
-                    healthScore -= 10
-                    recommendations.append(AIAnalysisResult.Recommendation(
-                        title: "Inspección del sistema de encendido",
-                        description: "Verificar bujías y bobinas. Realizar test de compresión.",
-                        priority: 1,
-                        relatedProcedureId: "spark_plug_inspection"
-                    ))
-                }
+        for dtc in dtcs {
+            if dtc.code.starts(with: "P030") {
+                issues.append(AIAnalysisResult.DiagnosedIssue(
+                    title: "Fallos de encendido detectados",
+                    description: "DTC \(dtc.code) indica fallos de encendido",
+                    severity: .high,
+                    affectedSystems: ["Encendido", "Compresión"],
+                    possibleCauses: ["Bujías desgastadas", "Bobinas defectuosas", "Compresión baja"],
+                    relatedDTCs: [dtc.code]
+                ))
+                healthScore -= 10
+                recommendations.append(AIAnalysisResult.Recommendation(
+                    title: "Inspección del sistema de encendido",
+                    description: "Verificar bujías y bobinas. Realizar test de compresión.",
+                    priority: 1,
+                    relatedProcedureId: "spark_plug_inspection"
+                ))
             }
         }
 
-        // Analyze anomalies
-        for anomaly in summary.anomalies {
-            healthScore -= anomaly.occurrences > 10 ? 10 : 5
-        }
+        // Analyze alerts
+        let criticalAlerts = alerts.filter { $0.severity == "Crítico" }
+        healthScore -= criticalAlerts.count * 10
+
+        let warningAlerts = alerts.filter { $0.severity == "Advertencia" }
+        healthScore -= warningAlerts.count * 3
 
         // Ensure health score is in valid range
         healthScore = max(0, min(100, healthScore))
@@ -453,9 +452,10 @@ public class AIAnalysisService: ObservableObject {
         }
 
         let analysisText = generateQuickAnalysisText(healthScore: healthScore, issues: issues)
+        let sessionUUID = UUID(uuidString: session.id) ?? UUID()
 
         return AIAnalysisResult(
-            sessionId: session.id,
+            sessionId: sessionUUID,
             analysis: analysisText,
             healthScore: healthScore,
             issues: issues,
