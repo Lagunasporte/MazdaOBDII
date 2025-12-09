@@ -789,7 +789,7 @@ public class EngineMonitor: ObservableObject {
                     currentState.throttlePosition = throttle
                 }
                 if let maf = try? await cm.readMAF() {
-                    currentState.massAirFlow = maf
+                    currentState.mafAirFlow = maf
 
                     // Actualizar consumo de combustible
                     _ = fuelTracker?.calculateInstantConsumption(
@@ -816,7 +816,7 @@ public class EngineMonitor: ObservableObject {
 
             // Cada 10 ciclos: temperaturas adicionales
             if updateCount % 10 == 0 {
-                if let iat = try? await cm.readIntakeAirTemp() {
+                if let iat = try? await cm.readIntakeTemp() {
                     currentState.intakeAirTemperature = Double(iat)
                 }
             }
@@ -850,7 +850,7 @@ public class EngineMonitor: ObservableObject {
             "ect": currentState.coolantTemperature,
             "iat": currentState.intakeAirTemperature,
             "throttle": currentState.throttlePosition,
-            "maf": currentState.massAirFlow,
+            "maf": currentState.mafAirFlow,
             "stft": currentState.shortTermFuelTrim,
             "ltft": currentState.longTermFuelTrim,
             "timing": currentState.ignitionTiming,
@@ -869,50 +869,68 @@ public class EngineMonitor: ObservableObject {
         // Temperatura de refrigerante
         if currentState.coolantTemperature > 105 {
             newAlerts.append(EngineAlert(
-                id: "coolant_critical",
-                message: "¡Temperatura crítica! \(Int(currentState.coolantTemperature))°C",
-                severity: .critical
+                type: .temperature,
+                severity: .critical,
+                parameter: "Refrigerante",
+                value: currentState.coolantTemperature,
+                threshold: 105,
+                message: "¡Temperatura crítica! \(Int(currentState.coolantTemperature))°C"
             ))
         } else if currentState.coolantTemperature > 98 {
             newAlerts.append(EngineAlert(
-                id: "coolant_high",
-                message: "Temperatura elevada: \(Int(currentState.coolantTemperature))°C",
-                severity: .warning
+                type: .temperature,
+                severity: .warning,
+                parameter: "Refrigerante",
+                value: currentState.coolantTemperature,
+                threshold: 98,
+                message: "Temperatura elevada: \(Int(currentState.coolantTemperature))°C"
             ))
         }
 
         // Fuel trims
         if abs(currentState.shortTermFuelTrim) > 20 {
             newAlerts.append(EngineAlert(
-                id: "stft_high",
-                message: "STFT anormal: \(String(format: "%+.1f%%", currentState.shortTermFuelTrim))",
-                severity: .warning
+                type: .fuel,
+                severity: .warning,
+                parameter: "STFT",
+                value: currentState.shortTermFuelTrim,
+                threshold: 20,
+                message: "STFT anormal: \(String(format: "%+.1f%%", currentState.shortTermFuelTrim))"
             ))
         }
 
         if abs(currentState.longTermFuelTrim) > 15 {
             newAlerts.append(EngineAlert(
-                id: "ltft_high",
-                message: "LTFT fuera de rango: \(String(format: "%+.1f%%", currentState.longTermFuelTrim))",
-                severity: .warning
+                type: .fuel,
+                severity: .warning,
+                parameter: "LTFT",
+                value: currentState.longTermFuelTrim,
+                threshold: 15,
+                message: "LTFT fuera de rango: \(String(format: "%+.1f%%", currentState.longTermFuelTrim))"
             ))
         }
 
         // RPM
         if currentState.rpm > 9000 {
             newAlerts.append(EngineAlert(
-                id: "rpm_redline",
-                message: "¡RPM en zona roja!",
-                severity: .critical
+                type: .rpm,
+                severity: .critical,
+                parameter: "RPM",
+                value: Double(currentState.rpm),
+                threshold: 9000,
+                message: "¡RPM en zona roja!"
             ))
         }
 
         // Voltaje batería
         if currentState.batteryVoltage < 12.0 && currentState.rpm > 800 {
             newAlerts.append(EngineAlert(
-                id: "voltage_low",
-                message: "Voltaje bajo: \(String(format: "%.1fV", currentState.batteryVoltage))",
-                severity: .warning
+                type: .voltage,
+                severity: .warning,
+                parameter: "Batería",
+                value: currentState.batteryVoltage,
+                threshold: 12.0,
+                message: "Voltaje bajo: \(String(format: "%.1fV", currentState.batteryVoltage))"
             ))
         }
 
