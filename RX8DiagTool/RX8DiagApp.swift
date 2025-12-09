@@ -8,6 +8,7 @@ struct RX8DiagApp: App {
     @StateObject private var engineMonitor = EngineMonitor()
     @StateObject private var diagnosticMode = DiagnosticMode()
     @StateObject private var fuelTracker = FuelConsumptionTracker()
+    @StateObject private var blackBoxRecorder = BlackBoxRecorder()
 
     var body: some Scene {
         WindowGroup {
@@ -16,7 +17,28 @@ struct RX8DiagApp: App {
                 .environmentObject(engineMonitor)
                 .environmentObject(diagnosticMode)
                 .environmentObject(fuelTracker)
-                .preferredColorScheme(.dark) // Tema oscuro por defecto
+                .environmentObject(blackBoxRecorder)
+                .preferredColorScheme(.dark)
+                .onAppear {
+                    // Configurar el monitor con todas las dependencias
+                    engineMonitor.configure(
+                        connectionManager: connectionManager,
+                        fuelTracker: fuelTracker,
+                        blackBoxRecorder: blackBoxRecorder
+                    )
+                    // Intervalo de 250ms (4 Hz)
+                    engineMonitor.setUpdateInterval(milliseconds: 250)
+                }
+                .onChange(of: connectionManager.connectionState) { oldState, newState in
+                    // Auto-iniciar monitoreo al conectar al vehículo
+                    if newState == .connectedToVehicle && !engineMonitor.isMonitoring {
+                        engineMonitor.startMonitoring()
+                    }
+                    // Detener al desconectar
+                    if newState == .disconnected && engineMonitor.isMonitoring {
+                        engineMonitor.stopMonitoring()
+                    }
+                }
         }
     }
 }
@@ -671,11 +693,229 @@ struct SignalBars: View {
 }
 
 // MARK: - Engine Monitor (ObservableObject)
+// Sistema centralizado de monitoreo en tiempo real - 200-300ms refresh
 
 public class EngineMonitor: ObservableObject {
     @Published public var currentState = RotaryEngineState()
     @Published public var activeAlerts: [EngineAlert] = []
     @Published public var isMonitoring = false
+    @Published public var updateRate: Double = 0 // Hz
+    @Published public var lastUpdateTime: Date?
+
+    private var monitoringTask: Task<Void, Never>?
+    private var connectionManager: OBDConnectionManager?
+    private var fuelTracker: FuelConsumptionTracker?
+    private var blackBoxRecorder: BlackBoxRecorder?
+
+    private var updateInterval: UInt64 = 250_000_000 // 250ms = 4 Hz
+    private var lastUpdateTimestamp: Date = Date()
+    private var updateCount: Int = 0
 
     public init() {}
+
+    // MARK: - Configuración
+
+    public func configure(
+        connectionManager: OBDConnectionManager,
+        fuelTracker: FuelConsumptionTracker? = nil,
+        blackBoxRecorder: BlackBoxRecorder? = nil
+    ) {
+        self.connectionManager = connectionManager
+        self.fuelTracker = fuelTracker
+        self.blackBoxRecorder = blackBoxRecorder
+    }
+
+    public func setUpdateInterval(milliseconds: Int) {
+        updateInterval = UInt64(milliseconds) * 1_000_000
+    }
+
+    // MARK: - Control de Monitoreo
+
+    public func startMonitoring() {
+        guard !isMonitoring, let cm = connectionManager else { return }
+
+        isMonitoring = true
+        updateCount = 0
+        lastUpdateTimestamp = Date()
+
+        // Iniciar trip en fuel tracker
+        fuelTracker?.startTrip()
+
+        monitoringTask = Task { @MainActor in
+            while isMonitoring && cm.connectionState == .connectedToVehicle {
+                await readAllSensors()
+                try? await Task.sleep(nanoseconds: updateInterval)
+            }
+            isMonitoring = false
+        }
+    }
+
+    public func stopMonitoring() {
+        isMonitoring = false
+        monitoringTask?.cancel()
+        monitoringTask = nil
+    }
+
+    // MARK: - Lectura Rápida de Sensores
+
+    private func readAllSensors() async {
+        guard let cm = connectionManager else { return }
+
+        let startTime = Date()
+
+        // Leer PIDs en secuencia rápida (sin esperas innecesarias)
+        do {
+            // PIDs críticos - siempre leer
+            async let rpmTask = cm.readRPM()
+            async let speedTask = cm.readSpeed()
+            async let coolantTask = cm.readCoolantTemp()
+
+            // Esperar los críticos
+            let rpm = try await rpmTask
+            let speed = try await speedTask
+            let coolant = try await coolantTask
+
+            // Actualizar estado
+            currentState.rpm = rpm
+            currentState.vehicleSpeed = Double(speed)
+            currentState.coolantTemperature = Double(coolant)
+
+            // PIDs secundarios - leer en ciclos alternos para mayor velocidad
+            updateCount += 1
+
+            if updateCount % 2 == 0 {
+                // Ciclo par: throttle, MAF, fuel trims
+                if let throttle = try? await cm.readThrottlePosition() {
+                    currentState.throttlePosition = throttle
+                }
+                if let maf = try? await cm.readMAF() {
+                    currentState.massAirFlow = maf
+
+                    // Actualizar consumo de combustible
+                    _ = fuelTracker?.calculateInstantConsumption(
+                        mafGramsPerSecond: maf,
+                        speedKmh: currentState.vehicleSpeed,
+                        rpm: rpm
+                    )
+                }
+                if let stft = try? await cm.readFuelTrimShort() {
+                    currentState.shortTermFuelTrim = stft
+                }
+            } else {
+                // Ciclo impar: timing, LTFT, voltaje
+                if let timing = try? await cm.readTimingAdvance() {
+                    currentState.ignitionTiming = timing
+                }
+                if let ltft = try? await cm.readFuelTrimLong() {
+                    currentState.longTermFuelTrim = ltft
+                }
+                if let voltage = try? await cm.readVoltage() {
+                    currentState.batteryVoltage = voltage
+                }
+            }
+
+            // Cada 10 ciclos: temperaturas adicionales
+            if updateCount % 10 == 0 {
+                if let iat = try? await cm.readIntakeAirTemp() {
+                    currentState.intakeAirTemperature = Double(iat)
+                }
+            }
+
+            // Calcular tasa de actualización
+            let elapsed = Date().timeIntervalSince(startTime)
+            if elapsed > 0 {
+                updateRate = 1.0 / elapsed
+            }
+            lastUpdateTime = Date()
+
+            // Enviar datos a la caja negra
+            recordToBlackBox()
+
+            // Verificar alertas
+            checkAlerts()
+
+        } catch {
+            // Silent fail - continuar monitoreando
+        }
+    }
+
+    // MARK: - Grabación en Caja Negra
+
+    private func recordToBlackBox() {
+        guard let recorder = blackBoxRecorder, recorder.isRecording else { return }
+
+        let readings: [String: Double] = [
+            "rpm": Double(currentState.rpm),
+            "speed": currentState.vehicleSpeed,
+            "ect": currentState.coolantTemperature,
+            "iat": currentState.intakeAirTemperature,
+            "throttle": currentState.throttlePosition,
+            "maf": currentState.massAirFlow,
+            "stft": currentState.shortTermFuelTrim,
+            "ltft": currentState.longTermFuelTrim,
+            "timing": currentState.ignitionTiming,
+            "voltage": currentState.batteryVoltage,
+            "oil_temp": currentState.oilTemperature
+        ]
+
+        recorder.recordSnapshot(readings: readings)
+    }
+
+    // MARK: - Sistema de Alertas
+
+    private func checkAlerts() {
+        var newAlerts: [EngineAlert] = []
+
+        // Temperatura de refrigerante
+        if currentState.coolantTemperature > 105 {
+            newAlerts.append(EngineAlert(
+                id: "coolant_critical",
+                message: "¡Temperatura crítica! \(Int(currentState.coolantTemperature))°C",
+                severity: .critical
+            ))
+        } else if currentState.coolantTemperature > 98 {
+            newAlerts.append(EngineAlert(
+                id: "coolant_high",
+                message: "Temperatura elevada: \(Int(currentState.coolantTemperature))°C",
+                severity: .warning
+            ))
+        }
+
+        // Fuel trims
+        if abs(currentState.shortTermFuelTrim) > 20 {
+            newAlerts.append(EngineAlert(
+                id: "stft_high",
+                message: "STFT anormal: \(String(format: "%+.1f%%", currentState.shortTermFuelTrim))",
+                severity: .warning
+            ))
+        }
+
+        if abs(currentState.longTermFuelTrim) > 15 {
+            newAlerts.append(EngineAlert(
+                id: "ltft_high",
+                message: "LTFT fuera de rango: \(String(format: "%+.1f%%", currentState.longTermFuelTrim))",
+                severity: .warning
+            ))
+        }
+
+        // RPM
+        if currentState.rpm > 9000 {
+            newAlerts.append(EngineAlert(
+                id: "rpm_redline",
+                message: "¡RPM en zona roja!",
+                severity: .critical
+            ))
+        }
+
+        // Voltaje batería
+        if currentState.batteryVoltage < 12.0 && currentState.rpm > 800 {
+            newAlerts.append(EngineAlert(
+                id: "voltage_low",
+                message: "Voltaje bajo: \(String(format: "%.1fV", currentState.batteryVoltage))",
+                severity: .warning
+            ))
+        }
+
+        activeAlerts = newAlerts
+    }
 }

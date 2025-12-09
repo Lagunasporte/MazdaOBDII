@@ -49,14 +49,18 @@ struct DiagnosticView: View {
                             showBlackBox: $showBlackBox
                         )
 
-                        // Test de compresión
-                        CompressionTestCard()
+                        // Diagnósticos específicos RX-8
+                        RX8SpecificDiagnosticsCard()
                     }
                 }
                 .padding()
             }
             .background(Color.black)
             .navigationTitle("Diagnóstico")
+            .onAppear {
+                // Conectar DiagnosticMode con ConnectionManager
+                diagnosticMode.connectionManager = connectionManager
+            }
             .sheet(isPresented: $showReport) {
                 if let report = lastReport {
                     DiagnosticReportView(report: report)
@@ -96,16 +100,924 @@ struct DiagnosticView: View {
             } message: {
                 Text(errorMessage ?? "Error desconocido")
             }
+            .alert("Resultado", isPresented: $showClearResult) {
+                Button("OK") {}
+            } message: {
+                Text(clearResultMessage)
+            }
         }
     }
+
+    @State private var showClearResult = false
+    @State private var clearResultMessage = ""
 
     private func clearDTCs() {
         Task {
             do {
                 try await connectionManager.clearDTCs()
+
+                // Esperar a que se procese el resultado
+                try? await Task.sleep(nanoseconds: 500_000_000)
+
+                await MainActor.run {
+                    if let result = connectionManager.dtcClearResult {
+                        clearResultMessage = result.message
+                        if !result.success {
+                            clearResultMessage += "\n\nNota: Algunos códigos no se pudieron borrar. Pueden ser códigos permanentes o el motor puede necesitar estar apagado."
+                        }
+                    } else {
+                        clearResultMessage = "Códigos borrados. Verifica el estado con un nuevo escaneo."
+                    }
+                    showClearResult = true
+                }
             } catch {
-                errorMessage = error.localizedDescription
-                showError = true
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Diagnósticos Específicos RX-8
+
+struct RX8SpecificDiagnosticsCard: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @State private var showCatalystCheck = false
+    @State private var showIgnitionCheck = false
+    @State private var showOMPCheck = false
+    @State private var showFuelTrimAnalysis = false
+
+    var isConnected: Bool {
+        connectionManager.connectionState == .connectedToVehicle
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "r.circle.fill")
+                    .foregroundColor(.orange)
+                Text("Diagnósticos Motor Rotativo")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            Text("Pruebas específicas para el motor 13B-MSP Renesis")
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                RX8DiagButton(
+                    title: "Estado Bobinas",
+                    icon: "bolt.fill",
+                    color: .yellow,
+                    isEnabled: isConnected
+                ) {
+                    showIgnitionCheck = true
+                }
+
+                RX8DiagButton(
+                    title: "Análisis Fuel Trim",
+                    icon: "fuelpump.fill",
+                    color: .green,
+                    isEnabled: isConnected
+                ) {
+                    showFuelTrimAnalysis = true
+                }
+
+                RX8DiagButton(
+                    title: "Estado Catalizador",
+                    icon: "leaf.fill",
+                    color: .teal,
+                    isEnabled: isConnected
+                ) {
+                    showCatalystCheck = true
+                }
+
+                RX8DiagButton(
+                    title: "Sistema OMP",
+                    icon: "drop.fill",
+                    color: .purple,
+                    isEnabled: isConnected
+                ) {
+                    showOMPCheck = true
+                }
+            }
+
+            // Información importante
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    Text("Las bobinas trailing fallan silenciosamente y dañan el catalizador")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+                HStack(alignment: .top) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.caption)
+                    Text("Reemplazar siempre las 4 bobinas juntas")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+            }
+            .padding(.top, 8)
+        }
+        .padding()
+        .background(Color(.systemGray6).opacity(0.3))
+        .cornerRadius(16)
+        .sheet(isPresented: $showIgnitionCheck) {
+            IgnitionCheckSheet()
+        }
+        .sheet(isPresented: $showFuelTrimAnalysis) {
+            FuelTrimAnalysisSheet()
+        }
+        .sheet(isPresented: $showCatalystCheck) {
+            CatalystCheckSheet()
+        }
+        .sheet(isPresented: $showOMPCheck) {
+            OMPCheckSheet()
+        }
+    }
+}
+
+struct RX8DiagButton: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(isEnabled ? color : .gray)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(isEnabled ? .white : .gray)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(isEnabled ? color.opacity(0.2) : Color.gray.opacity(0.1))
+            .cornerRadius(12)
+        }
+        .disabled(!isEnabled)
+    }
+}
+
+// MARK: - Hojas de Diagnóstico Específico
+
+struct IgnitionCheckSheet: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Environment(\.dismiss) var dismiss
+    @State private var isChecking = false
+    @State private var results: IgnitionCheckResults?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    if isChecking {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                            Text("Verificando sistema de encendido...")
+                                .foregroundColor(.white)
+                        }
+                        .padding(40)
+                    } else if let results = results {
+                        IgnitionResultsView(results: results)
+                    } else {
+                        // Información inicial
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Este diagnóstico verifica:")
+                                .font(.headline)
+                                .foregroundColor(.white)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                CheckItem(text: "Códigos relacionados con bobinas (P0351-P0354)")
+                                CheckItem(text: "Códigos de misfire (P0300-P0302)")
+                                CheckItem(text: "Avance de encendido (timing)")
+                                CheckItem(text: "Voltaje de batería")
+                            }
+
+                            Divider()
+                                .background(Color.gray)
+
+                            Text("Configuración de bujías RX-8:")
+                                .font(.subheadline)
+                                .foregroundColor(.orange)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("• Leading: NGK RE7C-L (gap 1.1mm)")
+                                Text("• Trailing: NGK RE9B-T (gap 1.1mm)")
+                                Text("• Cambiar cada 30,000 km máximo")
+                            }
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        }
+                        .padding()
+                        .background(Color(.systemGray6).opacity(0.3))
+                        .cornerRadius(16)
+
+                        Button(action: runCheck) {
+                            HStack {
+                                Image(systemName: "bolt.fill")
+                                Text("Iniciar Verificación")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.yellow)
+                            .foregroundColor(.black)
+                            .cornerRadius(12)
+                        }
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Estado del Encendido")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    func runCheck() {
+        isChecking = true
+        Task {
+            var checkResults = IgnitionCheckResults()
+
+            do {
+                // Leer DTCs relacionados con encendido
+                let dtcs = try await connectionManager.readDTCs()
+                checkResults.coilCodes = dtcs.filter { $0.hasPrefix("P035") }
+                checkResults.misfireCodes = dtcs.filter { $0.hasPrefix("P030") }
+
+                // Leer timing
+                checkResults.timingAdvance = try await connectionManager.readTimingAdvance()
+
+                // Leer voltaje
+                checkResults.batteryVoltage = try await connectionManager.readVoltage()
+
+                // Determinar estado
+                checkResults.hasCoilProblem = !checkResults.coilCodes.isEmpty
+                checkResults.hasMisfire = !checkResults.misfireCodes.isEmpty
+                checkResults.lowVoltage = checkResults.batteryVoltage < 12.4
+
+            } catch {
+                checkResults.errorMessage = error.localizedDescription
+            }
+
+            await MainActor.run {
+                results = checkResults
+                isChecking = false
+            }
+        }
+    }
+}
+
+struct IgnitionCheckResults {
+    var coilCodes: [String] = []
+    var misfireCodes: [String] = []
+    var timingAdvance: Double = 0
+    var batteryVoltage: Double = 0
+    var hasCoilProblem: Bool = false
+    var hasMisfire: Bool = false
+    var lowVoltage: Bool = false
+    var errorMessage: String?
+
+    var overallStatus: String {
+        if hasCoilProblem || hasMisfire {
+            return "Problema Detectado"
+        } else if lowVoltage {
+            return "Voltaje Bajo"
+        }
+        return "OK"
+    }
+
+    var statusColor: Color {
+        if hasCoilProblem || hasMisfire { return .red }
+        if lowVoltage { return .orange }
+        return .green
+    }
+}
+
+struct IgnitionResultsView: View {
+    let results: IgnitionCheckResults
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Estado general
+            HStack {
+                Image(systemName: results.hasCoilProblem || results.hasMisfire ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.largeTitle)
+                    .foregroundColor(results.statusColor)
+
+                VStack(alignment: .leading) {
+                    Text("Sistema de Encendido")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text(results.overallStatus)
+                        .foregroundColor(results.statusColor)
+                }
+                Spacer()
+            }
+            .padding()
+            .background(results.statusColor.opacity(0.2))
+            .cornerRadius(12)
+
+            // Detalles
+            VStack(alignment: .leading, spacing: 12) {
+                DetailResultRow(label: "Timing Advance", value: String(format: "%.1f°", results.timingAdvance), status: true)
+                DetailResultRow(label: "Voltaje Batería", value: String(format: "%.1fV", results.batteryVoltage), status: !results.lowVoltage)
+
+                if !results.coilCodes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Códigos de Bobinas:")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                        ForEach(results.coilCodes, id: \.self) { code in
+                            Text("• \(code)")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+
+                if !results.misfireCodes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Códigos de Misfire:")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                        ForEach(results.misfireCodes, id: \.self) { code in
+                            Text("• \(code)")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.systemGray6).opacity(0.3))
+            .cornerRadius(12)
+
+            // Recomendaciones
+            if results.hasCoilProblem || results.hasMisfire {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recomendaciones:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.orange)
+
+                    Text("• Reemplazar las 4 bobinas de encendido")
+                    Text("• Cambiar las 4 bujías (NGK RE7C-L / RE9B-T)")
+                    Text("• Verificar cables de encendido")
+                    Text("• Las bobinas trailing suelen fallar silenciosamente")
+                }
+                .font(.caption)
+                .foregroundColor(.white)
+                .padding()
+                .background(Color.orange.opacity(0.2))
+                .cornerRadius(12)
+            }
+        }
+    }
+}
+
+struct FuelTrimAnalysisSheet: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Environment(\.dismiss) var dismiss
+    @State private var isAnalyzing = false
+    @State private var stft: Double = 0
+    @State private var ltft: Double = 0
+    @State private var maf: Double = 0
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Valores actuales
+                    HStack(spacing: 16) {
+                        FuelTrimGauge(title: "STFT", value: stft, unit: "%")
+                        FuelTrimGauge(title: "LTFT", value: ltft, unit: "%")
+                    }
+
+                    // MAF
+                    VStack {
+                        Text("MAF")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text(String(format: "%.1f g/s", maf))
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.3))
+                    .cornerRadius(12)
+
+                    // Interpretación
+                    FuelTrimInterpretation(stft: stft, ltft: ltft)
+
+                    // Botón actualizar
+                    Button(action: readValues) {
+                        HStack {
+                            if isAnalyzing {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                            Text(isAnalyzing ? "Leyendo..." : "Actualizar Valores")
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.green)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+                    .disabled(isAnalyzing)
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Análisis Fuel Trim")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+            .onAppear {
+                readValues()
+            }
+        }
+    }
+
+    func readValues() {
+        isAnalyzing = true
+        Task {
+            do {
+                stft = try await connectionManager.readFuelTrimShort()
+                ltft = try await connectionManager.readFuelTrimLong()
+                maf = try await connectionManager.readMAF()
+            } catch {
+                // Silencioso
+            }
+            await MainActor.run {
+                isAnalyzing = false
+            }
+        }
+    }
+}
+
+struct FuelTrimGauge: View {
+    let title: String
+    let value: Double
+    let unit: String
+
+    var color: Color {
+        if abs(value) > 15 { return .red }
+        if abs(value) > 10 { return .orange }
+        if abs(value) > 5 { return .yellow }
+        return .green
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            ZStack {
+                Circle()
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 8)
+                    .frame(width: 100, height: 100)
+
+                Circle()
+                    .trim(from: 0, to: min(abs(value) / 25, 1))
+                    .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: 100, height: 100)
+                    .rotationEffect(.degrees(-90))
+
+                VStack {
+                    Text(String(format: "%+.1f", value))
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    Text(unit)
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+            }
+
+            Text(value > 0 ? "Añadiendo" : "Quitando")
+                .font(.caption2)
+                .foregroundColor(color)
+        }
+        .padding()
+        .background(Color(.systemGray6).opacity(0.3))
+        .cornerRadius(12)
+    }
+}
+
+struct FuelTrimInterpretation: View {
+    let stft: Double
+    let ltft: Double
+
+    var interpretation: (title: String, description: String, color: Color) {
+        let total = stft + ltft
+
+        if abs(total) < 10 {
+            return ("Normal", "El sistema de combustible funciona correctamente", .green)
+        } else if total > 15 {
+            return ("Mezcla Pobre", "El motor está añadiendo combustible. Posibles causas: fuga de vacío, MAF sucio, bomba de combustible débil", .orange)
+        } else if total < -15 {
+            return ("Mezcla Rica", "El motor está quitando combustible. Posibles causas: inyectores con fuga, regulador de presión defectuoso, sensor O2 malo", .orange)
+        } else if abs(ltft) > 10 {
+            return ("Problema Crónico", "LTFT alto indica un problema persistente que requiere atención", .red)
+        }
+        return ("Aceptable", "Valores dentro del rango pero vigilar", .yellow)
+    }
+
+    var body: some View {
+        let result = interpretation
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Circle()
+                    .fill(result.color)
+                    .frame(width: 12, height: 12)
+                Text(result.title)
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            Text(result.description)
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(result.color.opacity(0.2))
+        .cornerRadius(12)
+    }
+}
+
+struct CatalystCheckSheet: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Environment(\.dismiss) var dismiss
+    @State private var hasCatalystCode = false
+    @State private var hasMisfireCodes = false
+    @State private var isChecking = false
+    @State private var checked = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    if !checked {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Verificación del Catalizador")
+                                .font(.headline)
+                                .foregroundColor(.white)
+
+                            Text("En el RX-8, los misfires (especialmente de bobinas trailing) destruyen rápidamente el catalizador.")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                CheckItem(text: "Buscar código P0420 (eficiencia baja)")
+                                CheckItem(text: "Verificar códigos de misfire P0300-P0302")
+                                CheckItem(text: "Los misfires de bobinas trailing son los más dañinos")
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6).opacity(0.3))
+                        .cornerRadius(16)
+
+                        Button(action: runCheck) {
+                            HStack {
+                                if isChecking {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "leaf.fill")
+                                }
+                                Text(isChecking ? "Verificando..." : "Verificar Catalizador")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.teal)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isChecking)
+                    } else {
+                        // Resultados
+                        VStack(spacing: 16) {
+                            HStack {
+                                Image(systemName: hasCatalystCode ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                                    .font(.largeTitle)
+                                    .foregroundColor(hasCatalystCode ? .red : .green)
+
+                                VStack(alignment: .leading) {
+                                    Text("Catalizador")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    Text(hasCatalystCode ? "Problema Detectado" : "OK")
+                                        .foregroundColor(hasCatalystCode ? .red : .green)
+                                }
+                                Spacer()
+                            }
+                            .padding()
+                            .background((hasCatalystCode ? Color.red : Color.green).opacity(0.2))
+                            .cornerRadius(12)
+
+                            if hasCatalystCode {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Código P0420 detectado")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.red)
+
+                                    Text("Acciones recomendadas:")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("1. PRIMERO: Verificar y reemplazar bobinas")
+                                        Text("2. Las bobinas dañan el catalizador")
+                                        Text("3. Solo reemplazar cat después de arreglar bobinas")
+                                        Text("4. Verificar sondas O2")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                }
+                                .padding()
+                                .background(Color.red.opacity(0.2))
+                                .cornerRadius(12)
+                            }
+
+                            if hasMisfireCodes {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("⚠️ Códigos de Misfire Detectados")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.orange)
+
+                                    Text("Los misfires están dañando activamente el catalizador. Reparar urgentemente.")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                }
+                                .padding()
+                                .background(Color.orange.opacity(0.2))
+                                .cornerRadius(12)
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Estado Catalizador")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    func runCheck() {
+        isChecking = true
+        Task {
+            do {
+                let dtcs = try await connectionManager.readDTCs()
+                await MainActor.run {
+                    hasCatalystCode = dtcs.contains("P0420")
+                    hasMisfireCodes = dtcs.contains(where: { $0.hasPrefix("P030") })
+                    checked = true
+                    isChecking = false
+                }
+            } catch {
+                await MainActor.run {
+                    isChecking = false
+                    checked = true
+                }
+            }
+        }
+    }
+}
+
+struct OMPCheckSheet: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Environment(\.dismiss) var dismiss
+    @State private var hasOMPCode = false
+    @State private var ompCodes: [String] = []
+    @State private var isChecking = false
+    @State private var checked = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Info sobre OMP
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "drop.fill")
+                                .foregroundColor(.purple)
+                            Text("Sistema OMP (Oil Metering Pump)")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                        }
+
+                        Text("El OMP inyecta aceite en las cámaras de combustión para lubricar los apex seals. Es CRÍTICO para la vida del motor.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+
+                        Divider()
+                            .background(Color.gray)
+
+                        Text("Códigos relacionados:")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("• P1520: Sensor de posición OMP")
+                            Text("• P0661: Solenoide OMP circuito bajo")
+                            Text("• P0662: Solenoide OMP circuito alto")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.white)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.3))
+                    .cornerRadius(16)
+
+                    if !checked {
+                        Button(action: runCheck) {
+                            HStack {
+                                if isChecking {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "drop.fill")
+                                }
+                                Text(isChecking ? "Verificando..." : "Verificar Sistema OMP")
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.purple)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isChecking)
+                    } else {
+                        // Resultado
+                        HStack {
+                            Image(systemName: hasOMPCode ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                                .font(.largeTitle)
+                                .foregroundColor(hasOMPCode ? .red : .green)
+
+                            VStack(alignment: .leading) {
+                                Text("Sistema OMP")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                Text(hasOMPCode ? "¡PROBLEMA DETECTADO!" : "Sin códigos de error")
+                                    .foregroundColor(hasOMPCode ? .red : .green)
+                            }
+                            Spacer()
+                        }
+                        .padding()
+                        .background((hasOMPCode ? Color.red : Color.green).opacity(0.2))
+                        .cornerRadius(12)
+
+                        if hasOMPCode {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("⚠️ ATENCIÓN: Problema en sistema OMP")
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.red)
+
+                                Text("Códigos encontrados: \(ompCodes.joined(separator: ", "))")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+
+                                Divider()
+                                    .background(Color.red)
+
+                                Text("ACCIÓN REQUERIDA:")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("• NO conducir hasta reparar")
+                                    Text("• La lubricación del motor está comprometida")
+                                    Text("• Añadir premix (aceite 2T) al combustible como medida temporal")
+                                    Text("• Verificar sensor y solenoide OMP")
+                                }
+                                .font(.caption)
+                                .foregroundColor(.white)
+                            }
+                            .padding()
+                            .background(Color.red.opacity(0.2))
+                            .cornerRadius(12)
+                        } else {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Recomendación preventiva:")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+
+                                Text("Muchos propietarios añaden premix (2-4 oz de aceite 2T por tanque) como seguro adicional para los apex seals.")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding()
+                            .background(Color.blue.opacity(0.2))
+                            .cornerRadius(12)
+                        }
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Sistema OMP")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    func runCheck() {
+        isChecking = true
+        Task {
+            do {
+                let dtcs = try await connectionManager.readDTCs()
+                await MainActor.run {
+                    ompCodes = dtcs.filter { $0 == "P1520" || $0 == "P0661" || $0 == "P0662" }
+                    hasOMPCode = !ompCodes.isEmpty
+                    checked = true
+                    isChecking = false
+                }
+            } catch {
+                await MainActor.run {
+                    isChecking = false
+                    checked = true
+                }
+            }
+        }
+    }
+}
+
+struct CheckItem: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top) {
+            Image(systemName: "checkmark.circle")
+                .foregroundColor(.green)
+                .font(.caption)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.white)
+        }
+    }
+}
+
+struct DetailResultRow: View {
+    let label: String
+    let value: String
+    let status: Bool
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.gray)
+            Spacer()
+            HStack(spacing: 4) {
+                Text(value)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                Image(systemName: status ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .foregroundColor(status ? .green : .orange)
+                    .font(.caption)
             }
         }
     }

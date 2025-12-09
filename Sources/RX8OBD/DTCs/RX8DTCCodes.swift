@@ -1196,6 +1196,499 @@ public struct RX8DTCDatabase {
         affectsApexSeals: true
     )
 
+    // MARK: - Códigos de Chasis (ABS/DSC/TCS)
+
+    public static let c0300 = DTCCode(
+        code: "C0300",
+        name: "ABS/DSC - Error de Sistema",
+        description: "Error general en el sistema ABS/DSC. El módulo ha detectado un fallo que afecta al funcionamiento del sistema de frenos antibloqueo o control de estabilidad.",
+        category: .chassis,
+        severity: .high,
+        causes: [
+            "Sensor de velocidad de rueda defectuoso",
+            "Cableado de sensor ABS dañado",
+            "Módulo ABS/DSC defectuoso",
+            "Bajo voltaje de batería",
+            "Conexión a tierra defectuosa",
+            "Anillo reluctor dañado o sucio"
+        ],
+        symptoms: [
+            "Luz ABS encendida en el tablero",
+            "Luz DSC/TCS encendida",
+            "Sistema ABS desactivado",
+            "Control de tracción desactivado",
+            "Frenado puede sentirse diferente"
+        ],
+        solutions: [
+            "Escanear módulo ABS específicamente",
+            "Verificar voltaje de batería (>12V)",
+            "Inspeccionar sensores de velocidad de ruedas",
+            "Verificar conexiones y cableado",
+            "Limpiar anillos reluctores",
+            "Revisar fusibles del sistema ABS"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c0700 = DTCCode(
+        code: "C0700",
+        name: "ABS - Fallo de Comunicación",
+        description: "Error de comunicación entre el módulo ABS y otros módulos del vehículo a través del bus CAN.",
+        category: .chassis,
+        severity: .medium,
+        causes: [
+            "Problema en el bus de comunicación CAN",
+            "Módulo ABS con fallo interno",
+            "Conexión defectuosa en módulo ABS",
+            "Fusible del bus CAN quemado",
+            "Interferencia eléctrica",
+            "Bajo voltaje de sistema"
+        ],
+        symptoms: [
+            "Múltiples luces de advertencia encendidas",
+            "ABS puede no funcionar",
+            "Velocímetro errático (algunos casos)",
+            "Otros sistemas pueden fallar"
+        ],
+        solutions: [
+            "Verificar voltaje de batería y alternador",
+            "Inspeccionar conexiones del módulo ABS",
+            "Verificar fusibles relacionados",
+            "Escanear todos los módulos por errores",
+            "Verificar integridad del bus CAN",
+            "Revisar tierra del módulo ABS"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1095 = DTCCode(
+        code: "C1095",
+        name: "Sensor ABS Delantero Izquierdo",
+        description: "El sensor de velocidad de rueda delantero izquierdo reporta señal incorrecta o ausente",
+        category: .chassis,
+        severity: .medium,
+        causes: [
+            "Sensor de velocidad defectuoso",
+            "Cableado dañado o desconectado",
+            "Anillo reluctor dañado",
+            "Suciedad o limaduras metálicas en sensor",
+            "Entrehierro incorrecto"
+        ],
+        symptoms: [
+            "Luz ABS encendida",
+            "ABS no funciona o funciona mal",
+            "Posible activación prematura del ABS"
+        ],
+        solutions: [
+            "Limpiar sensor y anillo reluctor",
+            "Verificar entrehierro del sensor",
+            "Inspeccionar cableado del sensor",
+            "Reemplazar sensor si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1096 = DTCCode(
+        code: "C1096",
+        name: "Sensor ABS Delantero Derecho",
+        description: "El sensor de velocidad de rueda delantero derecho reporta señal incorrecta o ausente",
+        category: .chassis,
+        severity: .medium,
+        causes: [
+            "Sensor de velocidad defectuoso",
+            "Cableado dañado o desconectado",
+            "Anillo reluctor dañado",
+            "Suciedad o limaduras metálicas en sensor"
+        ],
+        symptoms: [
+            "Luz ABS encendida",
+            "ABS no funciona correctamente"
+        ],
+        solutions: [
+            "Limpiar sensor y anillo reluctor",
+            "Verificar conexiones",
+            "Reemplazar sensor si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1097 = DTCCode(
+        code: "C1097",
+        name: "Sensor ABS Trasero Izquierdo",
+        description: "El sensor de velocidad de rueda trasero izquierdo reporta señal incorrecta o ausente",
+        category: .chassis,
+        severity: .medium,
+        causes: [
+            "Sensor de velocidad defectuoso",
+            "Cableado dañado",
+            "Anillo reluctor dañado o desalineado",
+            "Acumulación de suciedad"
+        ],
+        symptoms: [
+            "Luz ABS encendida",
+            "Sistema ABS desactivado"
+        ],
+        solutions: [
+            "Inspeccionar sensor trasero izquierdo",
+            "Limpiar área del sensor",
+            "Verificar cableado",
+            "Reemplazar sensor"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1098 = DTCCode(
+        code: "C1098",
+        name: "Sensor ABS Trasero Derecho",
+        description: "El sensor de velocidad de rueda trasero derecho reporta señal incorrecta o ausente",
+        category: .chassis,
+        severity: .medium,
+        causes: [
+            "Sensor de velocidad defectuoso",
+            "Cableado dañado",
+            "Anillo reluctor dañado"
+        ],
+        symptoms: [
+            "Luz ABS encendida",
+            "Sistema ABS no operativo"
+        ],
+        solutions: [
+            "Inspeccionar sensor trasero derecho",
+            "Verificar cableado y conexiones",
+            "Reemplazar sensor si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1145 = DTCCode(
+        code: "C1145",
+        name: "DSC - Sensor de Ángulo de Dirección",
+        description: "El sensor de ángulo del volante no proporciona señal correcta al sistema DSC",
+        category: .chassis,
+        severity: .medium,
+        causes: [
+            "Sensor de ángulo de dirección defectuoso",
+            "Sensor requiere calibración",
+            "Cableado dañado",
+            "Problema después de alineación"
+        ],
+        symptoms: [
+            "Luz DSC encendida",
+            "Control de estabilidad desactivado",
+            "DSC puede activarse incorrectamente"
+        ],
+        solutions: [
+            "Calibrar sensor de ángulo de dirección",
+            "Girar volante de tope a tope y centrar",
+            "Realizar alineación si es necesario",
+            "Reemplazar sensor si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1288 = DTCCode(
+        code: "C1288",
+        name: "DSC - Sensor de Presión de Freno",
+        description: "El sensor de presión del sistema de frenos reporta valores fuera de rango",
+        category: .chassis,
+        severity: .high,
+        causes: [
+            "Sensor de presión defectuoso",
+            "Fuga en el sistema hidráulico",
+            "Problema con bomba de frenos",
+            "Aire en el sistema de frenos"
+        ],
+        symptoms: [
+            "Luz de frenos encendida",
+            "Luz DSC encendida",
+            "Frenado puede sentirse esponjoso",
+            "ABS/DSC desactivado"
+        ],
+        solutions: [
+            "Verificar nivel de líquido de frenos",
+            "Inspeccionar sistema por fugas",
+            "Purgar sistema de frenos",
+            "Verificar sensor de presión"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Carrocería (Airbag/SRS)
+
+    public static let b1342 = DTCCode(
+        code: "B1342",
+        name: "SRS - Fallo de Módulo ECU",
+        description: "El módulo del sistema de airbags ha detectado un error interno",
+        category: .body,
+        severity: .critical,
+        causes: [
+            "Módulo SRS defectuoso",
+            "Voltaje de batería bajo",
+            "Problema de conexión del módulo",
+            "Daño por agua o corrosión"
+        ],
+        symptoms: [
+            "Luz de airbag encendida",
+            "Sistema de airbags desactivado",
+            "Airbags pueden no desplegarse en accidente"
+        ],
+        solutions: [
+            "Escanear módulo SRS específicamente",
+            "Verificar voltaje de batería",
+            "Inspeccionar conexiones del módulo",
+            "Puede requerir reemplazo del módulo SRS"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let b1884 = DTCCode(
+        code: "B1884",
+        name: "Airbag Conductor - Circuito",
+        description: "Problema en el circuito del airbag del conductor",
+        category: .body,
+        severity: .critical,
+        causes: [
+            "Muelle de reloj (clockspring) defectuoso",
+            "Conector del volante dañado",
+            "Airbag defectuoso",
+            "Cableado dañado"
+        ],
+        symptoms: [
+            "Luz de airbag encendida",
+            "Airbag del conductor puede no funcionar"
+        ],
+        solutions: [
+            "Verificar muelle de reloj",
+            "Inspeccionar conectores del volante",
+            "NO manipular sin desconectar batería 10+ minutos",
+            "Llevar a servicio profesional"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Red (Comunicación)
+
+    public static let u0100 = DTCCode(
+        code: "U0100",
+        name: "Sin Comunicación con ECM/PCM",
+        description: "Pérdida de comunicación con el módulo de control del motor",
+        category: .network,
+        severity: .critical,
+        causes: [
+            "Problema en el bus CAN",
+            "PCM defectuoso",
+            "Fusible quemado",
+            "Cableado del bus CAN dañado",
+            "Batería muy baja"
+        ],
+        symptoms: [
+            "Múltiples luces de advertencia",
+            "Motor puede no arrancar",
+            "Velocímetro/tacómetro no funcionan"
+        ],
+        solutions: [
+            "Verificar fusibles del PCM",
+            "Verificar voltaje de batería",
+            "Inspeccionar cableado del bus CAN",
+            "Verificar conexiones del PCM"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let u0121 = DTCCode(
+        code: "U0121",
+        name: "Sin Comunicación con ABS",
+        description: "Pérdida de comunicación con el módulo de frenos antibloqueo",
+        category: .network,
+        severity: .high,
+        causes: [
+            "Módulo ABS sin alimentación",
+            "Fusible del ABS quemado",
+            "Problema en bus CAN",
+            "Módulo ABS defectuoso"
+        ],
+        symptoms: [
+            "Luz ABS encendida",
+            "ABS no operativo",
+            "Posibles otros errores de comunicación"
+        ],
+        solutions: [
+            "Verificar fusibles del ABS",
+            "Inspeccionar conexiones del módulo ABS",
+            "Verificar integridad del bus CAN"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let u0140 = DTCCode(
+        code: "U0140",
+        name: "Sin Comunicación con BCM",
+        description: "Pérdida de comunicación con el módulo de control de carrocería",
+        category: .network,
+        severity: .medium,
+        causes: [
+            "BCM sin alimentación",
+            "Fusible quemado",
+            "Problema de cableado",
+            "BCM defectuoso"
+        ],
+        symptoms: [
+            "Luces interiores no funcionan",
+            "Problemas con cierre centralizado",
+            "Otros accesorios fallan"
+        ],
+        solutions: [
+            "Verificar fusibles del BCM",
+            "Inspeccionar conexiones",
+            "Verificar bus CAN"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Más códigos genéricos comunes
+
+    public static let p0133 = DTCCode(
+        code: "P0133",
+        name: "Sonda O2 B1S1 Respuesta Lenta",
+        description: "La sonda de oxígeno primaria tarda demasiado en cambiar entre rico y pobre",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sonda O2 envejecida",
+            "Contaminación de la sonda",
+            "Fuga de escape",
+            "Problema de mezcla aire/combustible"
+        ],
+        symptoms: [
+            "Mayor consumo de combustible",
+            "Emisiones elevadas",
+            "Posible fallo de catalizador"
+        ],
+        solutions: [
+            "Reemplazar sonda O2 (B1S1)",
+            "Verificar no hay fugas de escape",
+            "Verificar estado del motor"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0134 = DTCCode(
+        code: "P0134",
+        name: "Sonda O2 B1S1 Sin Actividad",
+        description: "La sonda de oxígeno primaria no muestra cambios de señal",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sonda O2 defectuosa",
+            "Calentador de sonda fallando",
+            "Circuito abierto en cableado",
+            "Fusible quemado"
+        ],
+        symptoms: [
+            "Alto consumo de combustible",
+            "Humo del escape",
+            "Motor funciona en modo abierto"
+        ],
+        solutions: [
+            "Verificar conexiones de la sonda",
+            "Medir resistencia del calentador",
+            "Reemplazar sonda O2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0141 = DTCCode(
+        code: "P0141",
+        name: "Calentador Sonda O2 B1S2",
+        description: "El calentador de la sonda O2 posterior no funciona correctamente",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Elemento calentador quemado",
+            "Fusible del calentador quemado",
+            "Cableado dañado"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "La sonda tarda en calentar",
+            "Emisiones ligeramente elevadas al arrancar"
+        ],
+        solutions: [
+            "Verificar fusibles relacionados",
+            "Medir resistencia del calentador",
+            "Reemplazar sonda O2 (B1S2)"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0455 = DTCCode(
+        code: "P0455",
+        name: "EVAP Fuga Grande Detectada",
+        description: "El sistema de control de emisiones evaporativas detecta una fuga grande",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Tapón de gasolina suelto o defectuoso",
+            "Manguera EVAP desconectada",
+            "Válvula de purga atascada",
+            "Bote de carbón dañado"
+        ],
+        symptoms: [
+            "Olor a gasolina",
+            "CEL encendido",
+            "Posible dificultad para repostar"
+        ],
+        solutions: [
+            "Verificar tapón de gasolina (apretar bien)",
+            "Inspeccionar mangueras del sistema EVAP",
+            "Verificar válvula de purga",
+            "Revisar bote de carbón"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0456 = DTCCode(
+        code: "P0456",
+        name: "EVAP Fuga Pequeña Detectada",
+        description: "El sistema EVAP detecta una fuga pequeña en el sistema de vapores",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Tapón de gasolina no sella bien",
+            "Junta del tapón deteriorada",
+            "Pequeña grieta en manguera EVAP",
+            "Válvula de venteo con fuga"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Generalmente sin síntomas notables"
+        ],
+        solutions: [
+            "Reemplazar tapón de gasolina",
+            "Realizar prueba de humo del sistema EVAP",
+            "Inspeccionar todas las conexiones"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
     // MARK: - Colección Completa
 
     public static let allCodes: [DTCCode] = [
@@ -1204,7 +1697,7 @@ public struct RX8DTCDatabase {
         // Sensores
         p0101, p0107, p0113,
         // O2/Catalizador
-        p0130, p0420,
+        p0130, p0133, p0134, p0141, p0420,
         // OMP
         p1520, p0661, p0662,
         // Combustible
@@ -1226,7 +1719,15 @@ public struct RX8DTCDatabase {
         // IAC (Idle Air Control)
         p0505, p0506, p0507,
         // Presión de aceite
-        p0520, p0524
+        p0520, p0524,
+        // EVAP
+        p0455, p0456,
+        // Chasis (ABS/DSC)
+        c0300, c0700, c1095, c1096, c1097, c1098, c1145, c1288,
+        // Carrocería (Airbag/SRS)
+        b1342, b1884,
+        // Red (Comunicación)
+        u0100, u0121, u0140
     ]
 
     /// Buscar código por string

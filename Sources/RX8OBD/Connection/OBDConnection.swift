@@ -781,8 +781,57 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     }
 
     public func clearDTCs() async throws {
-        _ = try await sendCommand("04", timeout: 5.0)
+        log("Iniciando borrado de DTCs...")
+
+        // Primero leemos los DTCs actuales
+        let dtcsBefore = try await readDTCs()
+        let pendingBefore = try await readPendingDTCs()
+        log("DTCs antes de borrar: \(dtcsBefore.count) activos, \(pendingBefore.count) pendientes")
+
+        // Enviar comando de borrado (Mode 04)
+        let response = try await sendCommand("04", timeout: 5.0)
+        log("Respuesta al borrado: \(response)")
+
+        // Esperar un momento para que el ECU procese
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+
+        // Verificar que se borraron
+        let dtcsAfter = try await readDTCs()
+        let pendingAfter = try await readPendingDTCs()
+        log("DTCs después de borrar: \(dtcsAfter.count) activos, \(pendingAfter.count) pendientes")
+
+        if !dtcsAfter.isEmpty {
+            log("ADVERTENCIA: Algunos DTCs permanecen después del borrado: \(dtcsAfter)")
+        }
+
+        // Publicar resultado
+        await MainActor.run {
+            self.dtcClearResult = DTCClearResult(
+                success: dtcsAfter.isEmpty,
+                dtcsCleared: dtcsBefore.count + pendingBefore.count,
+                dtcsRemaining: dtcsAfter + pendingAfter,
+                timestamp: Date()
+            )
+        }
     }
+
+    /// Resultado del borrado de DTCs
+    public struct DTCClearResult {
+        public let success: Bool
+        public let dtcsCleared: Int
+        public let dtcsRemaining: [String]
+        public let timestamp: Date
+
+        public var message: String {
+            if success {
+                return "Se borraron \(dtcsCleared) código(s) correctamente"
+            } else {
+                return "Algunos códigos no se pudieron borrar: \(dtcsRemaining.joined(separator: ", "))"
+            }
+        }
+    }
+
+    @Published public var dtcClearResult: DTCClearResult?
 
     // MARK: - VIN
 
