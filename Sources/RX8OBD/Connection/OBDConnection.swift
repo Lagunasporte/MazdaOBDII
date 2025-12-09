@@ -3,7 +3,7 @@ import CoreBluetooth
 import Combine
 
 // MARK: - Gestor de Conexión OBD2
-// Soporta Bluetooth LE y WiFi para adaptadores ELM327
+// Compatible con ELM327 v1.4+ vía Bluetooth
 
 public class OBDConnectionManager: NSObject, ObservableObject {
 
@@ -11,79 +11,57 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     @Published public var connectionState: ConnectionState = .disconnected
     @Published public var adapterInfo: OBDAdapterInfo?
     @Published public var vehicleProtocol: VehicleProtocol?
-    @Published public var signalStrength: Int = 0 // 0-100
     @Published public var isScanning: Bool = false
     @Published public var discoveredDevices: [OBDDevice] = []
     @Published public var lastError: OBDError?
+    @Published public var lastResponse: String = ""
 
     // MARK: - Bluetooth
-    private var centralManager: CBCentralManager!
+    private var centralManager: CBCentralManager?
     private var connectedPeripheral: CBPeripheral?
     private var writeCharacteristic: CBCharacteristic?
     private var notifyCharacteristic: CBCharacteristic?
 
-    // UUIDs comunes de adaptadores OBD2 BLE
-    private let obdServiceUUIDs = [
-        CBUUID(string: "FFF0"),      // Común en muchos adaptadores
-        CBUUID(string: "FFE0"),      // Veepeak, LELink
-        CBUUID(string: "18F0"),      // OBDLink
-        CBUUID(string: "E7810A71-73AE-499D-8C15-FAA9AEF0C3F2") // vLinker
-    ]
-
-    private let writeCharacteristicUUIDs = [
-        CBUUID(string: "FFF2"),
-        CBUUID(string: "FFE1"),
-        CBUUID(string: "18F1")
-    ]
-
-    private let notifyCharacteristicUUIDs = [
-        CBUUID(string: "FFF1"),
-        CBUUID(string: "FFE1"),
-        CBUUID(string: "18F2")
-    ]
-
     // MARK: - Buffer y Cola de Comandos
-    private var responseBuffer = Data()
+    private var responseBuffer = ""
     private var commandQueue: [(command: String, completion: (Result<String, OBDError>) -> Void)] = []
     private var isProcessingCommand = false
     private var responseCompletion: ((Result<String, OBDError>) -> Void)?
     private var responseTimer: Timer?
 
-    // MARK: - Combine
-    private var cancellables = Set<AnyCancellable>()
-
     // MARK: - Inicialización
 
     public override init() {
         super.init()
-        centralManager = CBCentralManager(delegate: self, queue: .main)
+        DispatchQueue.main.async { [weak self] in
+            self?.centralManager = CBCentralManager(delegate: self, queue: .main)
+        }
     }
 
     // MARK: - Escaneo de Dispositivos
 
     public func startScanning() {
-        guard centralManager.state == .poweredOn else {
+        guard let central = centralManager, central.state == .poweredOn else {
             lastError = .bluetoothNotAvailable
             return
         }
 
         isScanning = true
         discoveredDevices.removeAll()
+        lastError = nil
 
-        // Escanear por UUIDs específicos de OBD2 y también sin filtro
-        centralManager.scanForPeripherals(
-            withServices: nil, // Sin filtro para encontrar más dispositivos
+        central.scanForPeripherals(
+            withServices: nil,
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
         )
 
-        // Detener escaneo después de 30 segundos
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
             self?.stopScanning()
         }
     }
 
     public func stopScanning() {
-        centralManager.stopScan()
+        centralManager?.stopScan()
         isScanning = false
     }
 
@@ -95,233 +73,357 @@ public class OBDConnectionManager: NSObject, ObservableObject {
             return
         }
 
+        stopScanning()
         connectionState = .connecting
-        centralManager.connect(peripheral, options: nil)
+        lastError = nil
+        centralManager?.connect(peripheral, options: nil)
     }
 
     public func disconnect() {
         if let peripheral = connectedPeripheral {
-            centralManager.cancelPeripheralConnection(peripheral)
+            centralManager?.cancelPeripheralConnection(peripheral)
         }
         cleanup()
     }
 
     private func cleanup() {
+        responseTimer?.invalidate()
+        responseTimer = nil
         connectedPeripheral = nil
         writeCharacteristic = nil
         notifyCharacteristic = nil
-        responseBuffer.removeAll()
+        responseBuffer = ""
         commandQueue.removeAll()
         isProcessingCommand = false
+        responseCompletion = nil
         connectionState = .disconnected
         adapterInfo = nil
         vehicleProtocol = nil
     }
 
-    // MARK: - Inicialización del Adaptador ELM327
+    // MARK: - Inicialización del Adaptador ELM327 v1.4
 
-    public func initializeAdapter() async throws {
+    public func initializeAdapter() {
         connectionState = .initializing
 
-        // Reset del adaptador
-        let _ = try await sendCommand("ATZ", timeout: 3.0)
-        try await Task.sleep(nanoseconds: 500_000_000)
+        Task { @MainActor in
+            do {
+                // Reset
+                _ = try await sendCommand("ATZ", timeout: 4.0)
+                try await Task.sleep(nanoseconds: 1_000_000_000)
 
-        // Desactivar echo
-        let _ = try await sendCommand("ATE0")
+                // Echo off
+                _ = try await sendCommand("ATE0", timeout: 2.0)
+                try await Task.sleep(nanoseconds: 200_000_000)
 
-        // Desactivar espacios
-        let _ = try await sendCommand("ATS0")
+                // Linefeed off
+                _ = try await sendCommand("ATL0", timeout: 2.0)
 
-        // Desactivar headers
-        let _ = try await sendCommand("ATH0")
+                // Spaces off
+                _ = try await sendCommand("ATS0", timeout: 2.0)
 
-        // Obtener versión
-        let version = try await sendCommand("ATI")
-        adapterInfo = OBDAdapterInfo(version: version.trimmingCharacters(in: .whitespacesAndNewlines))
+                // Headers off
+                _ = try await sendCommand("ATH0", timeout: 2.0)
 
-        // Auto-detectar protocolo
-        let _ = try await sendCommand("ATSP0") // Auto
-        let protocolResponse = try await sendCommand("ATDPN")
-        vehicleProtocol = VehicleProtocol.from(elm327Code: protocolResponse)
+                // Versión
+                let version = try await sendCommand("ATI", timeout: 2.0)
+                adapterInfo = OBDAdapterInfo(version: version)
 
-        // Establecer header para Mazda PCM
-        let _ = try await sendCommand("ATSH7E0")
+                // Auto protocolo
+                _ = try await sendCommand("ATSP0", timeout: 2.0)
+                try await Task.sleep(nanoseconds: 500_000_000)
 
-        connectionState = .connectedToVehicle
-    }
+                // Test conexión con vehículo
+                let testResponse = try await sendCommand("0100", timeout: 5.0)
 
-    // MARK: - Envío de Comandos
+                if testResponse.contains("NO DATA") || testResponse.contains("UNABLE") || testResponse.contains("ERROR") {
+                    _ = try await sendCommand("ATSP6", timeout: 2.0)
+                    try await Task.sleep(nanoseconds: 500_000_000)
+                }
 
-    public func sendCommand(_ command: String, timeout: TimeInterval = 2.0) async throws -> String {
-        return try await withCheckedThrowingContinuation { continuation in
-            sendCommand(command, timeout: timeout) { result in
-                continuation.resume(with: result)
+                let protocolResponse = try await sendCommand("ATDPN", timeout: 2.0)
+                vehicleProtocol = VehicleProtocol.from(elm327Code: protocolResponse)
+
+                connectionState = .connectedToVehicle
+
+            } catch {
+                lastError = .initializationFailed(error.localizedDescription)
+                connectionState = .connectedToAdapter
             }
         }
     }
 
-    private func sendCommand(_ command: String, timeout: TimeInterval = 2.0, completion: @escaping (Result<String, OBDError>) -> Void) {
-        commandQueue.append((command, completion))
-        processNextCommand()
+    // MARK: - Envío de Comandos
+
+    public func sendCommand(_ command: String, timeout: TimeInterval = 3.0) async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.main.async { [weak self] in
+                self?.sendCommandInternal(command, timeout: timeout) { result in
+                    continuation.resume(with: result)
+                }
+            }
+        }
     }
 
-    private func processNextCommand() {
+    private func sendCommandInternal(_ command: String, timeout: TimeInterval, completion: @escaping (Result<String, OBDError>) -> Void) {
+        commandQueue.append((command, completion))
+        processNextCommand(timeout: timeout)
+    }
+
+    private func processNextCommand(timeout: TimeInterval = 3.0) {
         guard !isProcessingCommand, !commandQueue.isEmpty else { return }
+
         guard let writeChar = writeCharacteristic, let peripheral = connectedPeripheral else {
-            let pending = commandQueue.removeFirst()
-            pending.completion(.failure(.notConnected))
+            if !commandQueue.isEmpty {
+                let pending = commandQueue.removeFirst()
+                pending.completion(.failure(.notConnected))
+            }
             return
         }
 
         isProcessingCommand = true
         let (command, completion) = commandQueue.removeFirst()
         responseCompletion = completion
-        responseBuffer.removeAll()
+        responseBuffer = ""
 
-        // Agregar retorno de carro
         let commandWithCR = command + "\r"
-        guard let data = commandWithCR.data(using: .utf8) else {
+        guard let data = commandWithCR.data(using: .ascii) else {
             isProcessingCommand = false
             completion(.failure(.invalidCommand))
+            processNextCommand()
             return
         }
 
-        // Enviar comando
-        peripheral.writeValue(data, for: writeChar, type: .withResponse)
+        let writeType: CBCharacteristicWriteType = writeChar.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
+        peripheral.writeValue(data, for: writeChar, type: writeType)
 
-        // Timeout
-        responseTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+        responseTimer?.invalidate()
+        responseTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
             self?.handleTimeout()
         }
     }
 
     private func handleTimeout() {
+        guard isProcessingCommand else { return }
         isProcessingCommand = false
-        responseCompletion?(.failure(.timeout))
+
+        if !responseBuffer.isEmpty {
+            let response = cleanResponse(responseBuffer)
+            responseCompletion?(.success(response))
+        } else {
+            responseCompletion?(.failure(.timeout))
+        }
         responseCompletion = nil
         processNextCommand()
     }
 
     private func handleResponse(_ data: Data) {
-        responseBuffer.append(data)
+        guard let str = String(data: data, encoding: .ascii) ?? String(data: data, encoding: .utf8) else {
+            return
+        }
 
-        // Verificar si la respuesta está completa (termina con >)
-        if let responseString = String(data: responseBuffer, encoding: .utf8),
-           responseString.contains(">") {
+        responseBuffer += str
 
+        if responseBuffer.contains(">") {
             responseTimer?.invalidate()
             responseTimer = nil
 
-            // Limpiar respuesta
-            let cleanResponse = responseString
-                .replacingOccurrences(of: ">", with: "")
-                .replacingOccurrences(of: "\r", with: "")
-                .replacingOccurrences(of: "\n", with: " ")
-                .trimmingCharacters(in: .whitespaces)
+            let response = cleanResponse(responseBuffer)
+            lastResponse = response
 
             isProcessingCommand = false
-            responseCompletion?(.success(cleanResponse))
+            responseCompletion?(.success(response))
             responseCompletion = nil
 
             processNextCommand()
         }
     }
 
+    private func cleanResponse(_ raw: String) -> String {
+        return raw
+            .replacingOccurrences(of: ">", with: "")
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "SEARCHING...", with: "")
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
     // MARK: - Lectura de PIDs
 
-    public func readPID(mode: UInt8, pid: UInt8) async throws -> Data {
+    public func readPID(_ pid: String) async throws -> String {
+        let response = try await sendCommand(pid, timeout: 3.0)
+        if response.contains("NO DATA") || response.contains("ERROR") {
+            throw OBDError.noData
+        }
+        return response
+    }
+
+    public func readStandardPID(mode: UInt8, pid: UInt8) async throws -> [UInt8] {
         let command = String(format: "%02X%02X", mode, pid)
-        let response = try await sendCommand(command)
-        return parseOBDResponse(response)
+        let response = try await readPID(command)
+        return parseHexResponse(response)
     }
 
-    public func readExtendedPID(code: String, header: String) async throws -> Data {
-        // Cambiar header si es necesario
-        if header != "7E0" {
-            let _ = try await sendCommand("ATSH\(header)")
-        }
+    private func parseHexResponse(_ response: String) -> [UInt8] {
+        let hexOnly = response.components(separatedBy: .whitespaces).joined()
+        var bytes: [UInt8] = []
+        var index = hexOnly.startIndex
 
-        let response = try await sendCommand(code)
-
-        // Restaurar header por defecto
-        if header != "7E0" {
-            let _ = try await sendCommand("ATSH7E0")
-        }
-
-        return parseOBDResponse(response)
-    }
-
-    public func readCANMessage(canID: UInt16) async throws -> Data {
-        // Configurar filtro CAN
-        let idHex = String(format: "%03X", canID)
-        let _ = try await sendCommand("ATCF\(idHex)")
-        let _ = try await sendCommand("ATCM7FF") // Máscara
-
-        let response = try await sendCommand("ATMA", timeout: 1.0) // Monitor
-        let _ = try await sendCommand("") // Detener monitor
-
-        return parseCANResponse(response)
-    }
-
-    private func parseOBDResponse(_ response: String) -> Data {
-        // Eliminar espacios y parsear hex
-        let hexString = response.replacingOccurrences(of: " ", with: "")
-
-        var data = Data()
-        var index = hexString.startIndex
-
-        while index < hexString.endIndex {
-            let nextIndex = hexString.index(index, offsetBy: 2, limitedBy: hexString.endIndex) ?? hexString.endIndex
-            let byteString = String(hexString[index..<nextIndex])
+        while index < hexOnly.endIndex {
+            guard let nextIndex = hexOnly.index(index, offsetBy: 2, limitedBy: hexOnly.endIndex) else { break }
+            let byteString = String(hexOnly[index..<nextIndex])
             if let byte = UInt8(byteString, radix: 16) {
-                data.append(byte)
+                bytes.append(byte)
             }
             index = nextIndex
         }
 
-        // Saltar bytes de cabecera (típicamente 2-3 bytes)
-        if data.count > 2 {
-            return data.dropFirst(2)
+        if bytes.count > 2 {
+            return Array(bytes.dropFirst(2))
         }
-        return data
+        return bytes
     }
 
-    private func parseCANResponse(_ response: String) -> Data {
-        // Similar pero para mensajes CAN
-        return parseOBDResponse(response)
+    // MARK: - Funciones de Lectura Comunes
+
+    public func readRPM() async throws -> Int {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x0C)
+        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+        return (Int(bytes[0]) * 256 + Int(bytes[1])) / 4
     }
 
-    // MARK: - Lectura/Borrado de DTCs
+    public func readSpeed() async throws -> Int {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x0D)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Int(bytes[0])
+    }
+
+    public func readCoolantTemp() async throws -> Int {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x05)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Int(bytes[0]) - 40
+    }
+
+    public func readThrottlePosition() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x11)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) * 100.0 / 255.0
+    }
+
+    public func readMAF() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x10)
+        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+        return (Double(bytes[0]) * 256.0 + Double(bytes[1])) / 100.0
+    }
+
+    public func readIntakeTemp() async throws -> Int {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x0F)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Int(bytes[0]) - 40
+    }
+
+    public func readFuelTrimShort() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x06)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return (Double(bytes[0]) - 128.0) * 100.0 / 128.0
+    }
+
+    public func readFuelTrimLong() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x07)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return (Double(bytes[0]) - 128.0) * 100.0 / 128.0
+    }
+
+    public func readTimingAdvance() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x0E)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return (Double(bytes[0]) - 128.0) / 2.0
+    }
+
+    public func readVoltage() async throws -> Double {
+        let response = try await sendCommand("ATRV", timeout: 2.0)
+        let digits = response.filter { $0.isNumber || $0 == "." }
+        return Double(digits) ?? 0.0
+    }
+
+    // MARK: - DTCs
 
     public func readDTCs() async throws -> [String] {
-        let response = try await sendCommand("03") // Mode 03: Read DTCs
-        let data = parseOBDResponse(response)
-        return DTCParser.parseDTCResponse(data)
+        let response = try await sendCommand("03", timeout: 5.0)
+        if response.contains("NO DATA") { return [] }
+        let bytes = parseHexResponse(response)
+        return parseDTCBytes(bytes)
     }
 
     public func readPendingDTCs() async throws -> [String] {
-        let response = try await sendCommand("07") // Mode 07: Pending DTCs
-        let data = parseOBDResponse(response)
-        return DTCParser.parseDTCResponse(data)
+        let response = try await sendCommand("07", timeout: 5.0)
+        if response.contains("NO DATA") { return [] }
+        let bytes = parseHexResponse(response)
+        return parseDTCBytes(bytes)
+    }
+
+    private func parseDTCBytes(_ bytes: [UInt8]) -> [String] {
+        var dtcs: [String] = []
+        var i = 0
+
+        while i + 1 < bytes.count {
+            let byte1 = bytes[i]
+            let byte2 = bytes[i + 1]
+
+            if byte1 == 0 && byte2 == 0 {
+                i += 2
+                continue
+            }
+
+            let firstChar: String
+            switch (byte1 >> 6) & 0x03 {
+            case 0: firstChar = "P"
+            case 1: firstChar = "C"
+            case 2: firstChar = "B"
+            default: firstChar = "U"
+            }
+
+            let secondDigit = (byte1 >> 4) & 0x03
+            let thirdDigit = byte1 & 0x0F
+            let fourthDigit = (byte2 >> 4) & 0x0F
+            let fifthDigit = byte2 & 0x0F
+
+            let dtc = "\(firstChar)\(String(format: "%X%X%X%X", secondDigit, thirdDigit, fourthDigit, fifthDigit))"
+
+            if dtc != "P0000" {
+                dtcs.append(dtc)
+            }
+            i += 2
+        }
+        return dtcs
     }
 
     public func clearDTCs() async throws {
-        let _ = try await sendCommand("04") // Mode 04: Clear DTCs
+        _ = try await sendCommand("04", timeout: 5.0)
     }
 
     // MARK: - VIN
 
     public func readVIN() async throws -> String {
-        let response = try await sendCommand("0902") // Mode 09, PID 02
-        let data = parseOBDResponse(response)
-
-        // VIN son 17 caracteres ASCII después del byte de cuenta
-        if data.count > 1 {
-            let vinData = data.dropFirst()
-            return String(data: vinData, encoding: .ascii) ?? ""
+        let response = try await sendCommand("0902", timeout: 5.0)
+        if response.contains("NO DATA") { throw OBDError.noData }
+        let bytes = parseHexResponse(response)
+        let vinBytes = bytes.count > 17 ? Array(bytes.dropFirst()) : bytes
+        if let vin = String(bytes: vinBytes.prefix(17), encoding: .ascii) {
+            return vin.trimmingCharacters(in: .whitespaces)
         }
-        return ""
+        throw OBDError.invalidResponse
+    }
+
+    public func testConnection() async -> Bool {
+        do {
+            _ = try await sendCommand("0100", timeout: 3.0)
+            return true
+        } catch {
+            return false
+        }
     }
 }
 
@@ -332,7 +434,7 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
         case .poweredOn:
-            break
+            lastError = nil
         case .poweredOff:
             lastError = .bluetoothNotAvailable
             connectionState = .disconnected
@@ -347,13 +449,13 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
 
     public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
                                advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown"
+        let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Desconocido"
 
-        // Filtrar solo dispositivos que parezcan OBD2
-        let obdKeywords = ["OBD", "ELM", "OBDII", "Vgate", "Veepeak", "BAFX", "LELink", "Carista", "OBDLink", "vLinker"]
-        let isOBDDevice = obdKeywords.contains { name.uppercased().contains($0.uppercased()) }
+        let obdKeywords = ["OBD", "ELM", "OBDII", "Vgate", "Veepeak", "BAFX", "LELink", "vLinker", "BT"]
+        let nameUpper = name.uppercased()
+        let isOBDDevice = obdKeywords.contains { nameUpper.contains($0.uppercased()) }
 
-        if isOBDDevice || advertisementData[CBAdvertisementDataServiceUUIDsKey] != nil {
+        if isOBDDevice || name != "Desconocido" {
             let device = OBDDevice(
                 id: peripheral.identifier,
                 name: name,
@@ -361,8 +463,11 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
                 peripheral: peripheral
             )
 
-            if !discoveredDevices.contains(where: { $0.id == device.id }) {
-                discoveredDevices.append(device)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                if !self.discoveredDevices.contains(where: { $0.id == device.id }) {
+                    self.discoveredDevices.append(device)
+                }
             }
         }
     }
@@ -370,20 +475,20 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         connectedPeripheral = peripheral
         peripheral.delegate = self
-        peripheral.discoverServices(nil) // Descubrir todos los servicios
+        peripheral.discoverServices(nil)
         connectionState = .connectedToAdapter
     }
 
     public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        lastError = .connectionFailed(error?.localizedDescription ?? "Unknown error")
+        lastError = .connectionFailed(error?.localizedDescription ?? "Error desconocido")
         connectionState = .disconnected
     }
 
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        cleanup()
         if error != nil {
             lastError = .disconnected
         }
+        cleanup()
     }
 }
 
@@ -392,8 +497,10 @@ extension OBDConnectionManager: CBCentralManagerDelegate {
 extension OBDConnectionManager: CBPeripheralDelegate {
 
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard error == nil, let services = peripheral.services else { return }
-
+        guard error == nil, let services = peripheral.services else {
+            lastError = .initializationFailed("No se encontraron servicios")
+            return
+        }
         for service in services {
             peripheral.discoverCharacteristics(nil, for: service)
         }
@@ -403,33 +510,31 @@ extension OBDConnectionManager: CBPeripheralDelegate {
         guard error == nil, let characteristics = service.characteristics else { return }
 
         for characteristic in characteristics {
-            // Buscar característica de escritura
             if characteristic.properties.contains(.write) || characteristic.properties.contains(.writeWithoutResponse) {
-                writeCharacteristic = characteristic
+                if writeCharacteristic == nil {
+                    writeCharacteristic = characteristic
+                }
             }
-
-            // Buscar característica de notificación
             if characteristic.properties.contains(.notify) {
                 notifyCharacteristic = characteristic
                 peripheral.setNotifyValue(true, for: characteristic)
+            } else if characteristic.properties.contains(.read) && notifyCharacteristic == nil {
+                notifyCharacteristic = characteristic
             }
         }
 
-        // Si tenemos ambas características, intentar inicializar
         if writeCharacteristic != nil && notifyCharacteristic != nil {
-            Task {
-                do {
-                    try await initializeAdapter()
-                } catch {
-                    lastError = .initializationFailed(error.localizedDescription)
-                }
-            }
+            initializeAdapter()
         }
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard error == nil, let data = characteristic.value else { return }
         handleResponse(data)
+    }
+
+    public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        // Silently handle write errors
     }
 }
 
@@ -445,7 +550,7 @@ public enum ConnectionState: String, Sendable {
 
     public var isConnected: Bool {
         switch self {
-        case .connectedToAdapter, .connectedToVehicle:
+        case .connectedToAdapter, .connectedToVehicle, .initializing:
             return true
         default:
             return false
@@ -486,27 +591,27 @@ public enum SignalStrength: String {
 public struct OBDAdapterInfo: Sendable {
     public let version: String
     public var chipType: String {
-        if version.contains("ELM327") { return "ELM327" }
-        if version.contains("STN") { return "STN1110" }
-        if version.contains("OBDLink") { return "OBDLink" }
-        return "Unknown"
+        if version.uppercased().contains("ELM327") { return "ELM327" }
+        if version.uppercased().contains("STN") { return "STN1110" }
+        if version.uppercased().contains("OBDLINK") { return "OBDLink" }
+        return "Compatible"
     }
 }
 
 public enum VehicleProtocol: String, Sendable {
     case auto = "Auto"
     case iso9141_2 = "ISO 9141-2"
-    case iso14230_4_kwp_slow = "ISO 14230-4 KWP (Slow)"
-    case iso14230_4_kwp_fast = "ISO 14230-4 KWP (Fast)"
-    case iso15765_4_can_11bit_500k = "ISO 15765-4 CAN (11bit, 500kbps)"
-    case iso15765_4_can_29bit_500k = "ISO 15765-4 CAN (29bit, 500kbps)"
-    case iso15765_4_can_11bit_250k = "ISO 15765-4 CAN (11bit, 250kbps)"
-    case iso15765_4_can_29bit_250k = "ISO 15765-4 CAN (29bit, 250kbps)"
-    case sae_j1850_pwm = "SAE J1850 PWM"
-    case sae_j1850_vpw = "SAE J1850 VPW"
+    case iso14230_4_kwp_slow = "KWP Slow"
+    case iso14230_4_kwp_fast = "KWP Fast"
+    case iso15765_4_can_11bit_500k = "CAN 500k"
+    case iso15765_4_can_29bit_500k = "CAN 500k 29-bit"
+    case iso15765_4_can_11bit_250k = "CAN 250k"
+    case iso15765_4_can_29bit_250k = "CAN 250k 29-bit"
+    case sae_j1850_pwm = "J1850 PWM"
+    case sae_j1850_vpw = "J1850 VPW"
 
     public static func from(elm327Code: String) -> VehicleProtocol {
-        let code = elm327Code.trimmingCharacters(in: .whitespacesAndNewlines)
+        let code = elm327Code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased().replacingOccurrences(of: "A", with: "")
         switch code {
         case "0": return .auto
         case "1": return .sae_j1850_pwm
@@ -514,19 +619,18 @@ public enum VehicleProtocol: String, Sendable {
         case "3": return .iso9141_2
         case "4": return .iso14230_4_kwp_slow
         case "5": return .iso14230_4_kwp_fast
-        case "6", "A6": return .iso15765_4_can_11bit_500k
-        case "7", "A7": return .iso15765_4_can_29bit_500k
-        case "8", "A8": return .iso15765_4_can_11bit_250k
-        case "9", "A9": return .iso15765_4_can_29bit_250k
+        case "6": return .iso15765_4_can_11bit_500k
+        case "7": return .iso15765_4_can_29bit_500k
+        case "8": return .iso15765_4_can_11bit_250k
+        case "9": return .iso15765_4_can_29bit_250k
         default: return .auto
         }
     }
 
-    /// El RX-8 usa CAN 11-bit 500kbps
     public static let rx8Default: VehicleProtocol = .iso15765_4_can_11bit_500k
 }
 
-public enum OBDError: Error, Sendable {
+public enum OBDError: Error, LocalizedError, Sendable {
     case bluetoothNotAvailable
     case bluetoothNotAuthorized
     case bluetoothNotSupported
@@ -542,36 +646,46 @@ public enum OBDError: Error, Sendable {
     case canError
     case busError
 
-    public var localizedDescription: String {
+    public var errorDescription: String? {
         switch self {
-        case .bluetoothNotAvailable:
-            return "Bluetooth no disponible. Activa Bluetooth en Ajustes."
-        case .bluetoothNotAuthorized:
-            return "Permiso de Bluetooth denegado. Autoriza en Ajustes > Privacidad."
-        case .bluetoothNotSupported:
-            return "Este dispositivo no soporta Bluetooth LE."
-        case .deviceNotFound:
-            return "Dispositivo OBD2 no encontrado."
-        case .connectionFailed(let reason):
-            return "Error de conexión: \(reason)"
-        case .notConnected:
-            return "No conectado al adaptador OBD2."
-        case .timeout:
-            return "Tiempo de espera agotado. Verifica la conexión."
-        case .invalidCommand:
-            return "Comando inválido."
-        case .invalidResponse:
-            return "Respuesta inválida del vehículo."
-        case .noData:
-            return "Sin datos. El vehículo puede no soportar este PID."
-        case .disconnected:
-            return "Conexión perdida con el adaptador."
-        case .initializationFailed(let reason):
-            return "Error de inicialización: \(reason)"
-        case .canError:
-            return "Error en bus CAN."
-        case .busError:
-            return "Error en bus OBD."
+        case .bluetoothNotAvailable: return "Bluetooth no disponible"
+        case .bluetoothNotAuthorized: return "Permiso de Bluetooth denegado"
+        case .bluetoothNotSupported: return "Bluetooth LE no soportado"
+        case .deviceNotFound: return "Dispositivo no encontrado"
+        case .connectionFailed(let reason): return "Error: \(reason)"
+        case .notConnected: return "No conectado"
+        case .timeout: return "Tiempo agotado"
+        case .invalidCommand: return "Comando inválido"
+        case .invalidResponse: return "Respuesta inválida"
+        case .noData: return "Sin datos"
+        case .disconnected: return "Desconectado"
+        case .initializationFailed(let reason): return "Init error: \(reason)"
+        case .canError: return "Error CAN"
+        case .busError: return "Error BUS"
         }
+    }
+}
+
+public struct DTCParser {
+    public static func parseDTCResponse(_ data: Data) -> [String] {
+        var dtcs: [String] = []
+        let bytes = Array(data)
+        var i = 0
+        while i + 1 < bytes.count {
+            let byte1 = bytes[i]
+            let byte2 = bytes[i + 1]
+            if byte1 == 0 && byte2 == 0 { i += 2; continue }
+            let firstChar: String
+            switch (byte1 >> 6) & 0x03 {
+            case 0: firstChar = "P"
+            case 1: firstChar = "C"
+            case 2: firstChar = "B"
+            default: firstChar = "U"
+            }
+            let dtc = "\(firstChar)\(String(format: "%X%X%X%X", (byte1 >> 4) & 0x03, byte1 & 0x0F, (byte2 >> 4) & 0x0F, byte2 & 0x0F))"
+            if dtc != "P0000" { dtcs.append(dtc) }
+            i += 2
+        }
+        return dtcs
     }
 }
