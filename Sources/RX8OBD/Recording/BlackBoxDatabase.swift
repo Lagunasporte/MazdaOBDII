@@ -597,7 +597,7 @@ public class BlackBoxDatabase {
         let alerts = getSessionAlerts(sessionId)
         let dtcs = getSessionDTCs(sessionId)
 
-        // Calcular estadísticas detalladas
+        // Calcular estadísticas detalladas (pre-calculadas para evitar problemas de compilación)
         let rpmValues = snapshots.map { $0.rpm }
         let coolantValues = snapshots.map { $0.coolantTemp }
         let oilValues = snapshots.map { $0.oilTemp }
@@ -610,68 +610,90 @@ public class BlackBoxDatabase {
         let stftB2Values = snapshots.map { $0.stftB2 }
         let ltftB2Values = snapshots.map { $0.ltftB2 }
 
+        // Pre-calcular promedios
+        let rpmAvg = rpmValues.isEmpty ? 0 : rpmValues.reduce(0, +) / rpmValues.count
+        let coolantAvg = coolantValues.isEmpty ? 0 : coolantValues.reduce(0, +) / Double(coolantValues.count)
+        let oilAvg = oilValues.isEmpty ? 0 : oilValues.reduce(0, +) / Double(oilValues.count)
+        let stftAvg = stftValues.isEmpty ? 0 : stftValues.reduce(0, +) / Double(stftValues.count)
+        let ltftAvg = ltftValues.isEmpty ? 0 : ltftValues.reduce(0, +) / Double(ltftValues.count)
+        let o2s1Avg = o2s1Values.isEmpty ? 0 : o2s1Values.reduce(0, +) / Double(o2s1Values.count)
+        let o2s2Avg = o2s2Values.isEmpty ? 0 : o2s2Values.reduce(0, +) / Double(o2s2Values.count)
+        let mapAvg = mapValues.isEmpty ? 0 : mapValues.reduce(0, +) / Double(mapValues.count)
+        let loadAvg = loadValues.isEmpty ? 0 : loadValues.reduce(0, +) / Double(loadValues.count)
+        let stftB2Avg = stftB2Values.isEmpty ? 0 : stftB2Values.reduce(0, +) / Double(stftB2Values.count)
+        let ltftB2Avg = ltftB2Values.isEmpty ? 0 : ltftB2Values.reduce(0, +) / Double(ltftB2Values.count)
+        let ltftDiff = abs(ltftAvg - ltftB2Avg)
+
+        // Pre-calcular conteos
+        let redlineCount = snapshots.filter { $0.rpm > 8500 }.count
+        let idleCount = snapshots.filter { $0.rpm > 0 && $0.rpm < 1000 }.count
+        let coolantOverheatCount = snapshots.filter { $0.coolantTemp > 100 }.count
+        let oilOverheatCount = snapshots.filter { $0.oilTemp > 120 }.count
+        let stftOutOfRange = snapshots.filter { abs($0.stft) > 10 }.count
+        let ltftOutOfRange = snapshots.filter { abs($0.ltft) > 10 }.count
+        let o2Cycles = countO2Cycles(o2s1Values)
+
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd/MM/yyyy HH:mm"
+        let sessionDate = dateFormatter.string(from: session.startTime)
 
-        var report = """
-        # Análisis Forense - Mazda RX-8 Motor Rotativo 13B-MSP Renesis
+        // Construir reporte en partes para evitar errores de compilación
+        var report = "# Análisis Forense - Mazda RX-8 Motor Rotativo 13B-MSP Renesis\n\n"
 
-        ## Información de la Sesión
-        - Fecha: \(dateFormatter.string(from: session.startTime))
-        - Duración: \(session.durationFormatted)
-        - Distancia: \(String(format: "%.1f", session.totalDistance)) km
-        - Muestras registradas: \(snapshots.count)
+        report += "## Información de la Sesión\n"
+        report += "- Fecha: \(sessionDate)\n"
+        report += "- Duración: \(session.durationFormatted)\n"
+        report += "- Distancia: \(String(format: "%.1f", session.totalDistance)) km\n"
+        report += "- Muestras registradas: \(snapshots.count)\n\n"
 
-        ## Estadísticas del Motor
+        report += "## Estadísticas del Motor\n\n"
 
-        ### RPM
-        - Máximo: \(session.maxRPM)
-        - Promedio: \(rpmValues.isEmpty ? 0 : rpmValues.reduce(0, +) / rpmValues.count)
-        - Tiempo en zona roja (>8500): \(snapshots.filter { $0.rpm > 8500 }.count) muestras
-        - Tiempo en idle (<1000): \(snapshots.filter { $0.rpm > 0 && $0.rpm < 1000 }.count) muestras
+        report += "### RPM\n"
+        report += "- Máximo: \(session.maxRPM)\n"
+        report += "- Promedio: \(rpmAvg)\n"
+        report += "- Tiempo en zona roja (>8500): \(redlineCount) muestras\n"
+        report += "- Tiempo en idle (<1000): \(idleCount) muestras\n\n"
 
-        ### Carga del Motor
-        - Carga máxima: \(String(format: "%.1f", loadValues.max() ?? 0))%
-        - Carga promedio: \(String(format: "%.1f", loadValues.isEmpty ? 0 : loadValues.reduce(0, +) / Double(loadValues.count)))%
+        report += "### Carga del Motor\n"
+        report += "- Carga máxima: \(String(format: "%.1f", loadValues.max() ?? 0))%\n"
+        report += "- Carga promedio: \(String(format: "%.1f", loadAvg))%\n\n"
 
-        ### Temperaturas
-        - Refrigerante máx: \(String(format: "%.1f", session.maxCoolantTemp))°C
-        - Refrigerante promedio: \(String(format: "%.1f", coolantValues.isEmpty ? 0 : coolantValues.reduce(0, +) / Double(coolantValues.count)))°C
-        - Aceite máx: \(String(format: "%.1f", session.maxOilTemp))°C
-        - Aceite promedio: \(String(format: "%.1f", oilValues.isEmpty ? 0 : oilValues.reduce(0, +) / Double(oilValues.count)))°C
-        - Tiempo sobrecalentamiento ref. (>100°C): \(snapshots.filter { $0.coolantTemp > 100 }.count) muestras
-        - Tiempo sobrecalentamiento aceite (>120°C): \(snapshots.filter { $0.oilTemp > 120 }.count) muestras
+        report += "### Temperaturas\n"
+        report += "- Refrigerante máx: \(String(format: "%.1f", session.maxCoolantTemp))°C\n"
+        report += "- Refrigerante promedio: \(String(format: "%.1f", coolantAvg))°C\n"
+        report += "- Aceite máx: \(String(format: "%.1f", session.maxOilTemp))°C\n"
+        report += "- Aceite promedio: \(String(format: "%.1f", oilAvg))°C\n"
+        report += "- Tiempo sobrecalentamiento ref. (>100°C): \(coolantOverheatCount) muestras\n"
+        report += "- Tiempo sobrecalentamiento aceite (>120°C): \(oilOverheatCount) muestras\n\n"
 
-        ### Fuel Trims Bank 1 (Rotor Delantero)
-        - STFT promedio: \(String(format: "%+.1f", stftValues.isEmpty ? 0 : stftValues.reduce(0, +) / Double(stftValues.count)))%
-        - STFT máx: \(String(format: "%+.1f", stftValues.max() ?? 0))%
-        - STFT mín: \(String(format: "%+.1f", stftValues.min() ?? 0))%
-        - LTFT promedio: \(String(format: "%+.1f", ltftValues.isEmpty ? 0 : ltftValues.reduce(0, +) / Double(ltftValues.count)))%
-        - STFT fuera de rango (>±10%): \(snapshots.filter { abs($0.stft) > 10 }.count) muestras
-        - LTFT fuera de rango (>±10%): \(snapshots.filter { abs($0.ltft) > 10 }.count) muestras
+        report += "### Fuel Trims Bank 1 (Rotor Delantero)\n"
+        report += "- STFT promedio: \(String(format: "%+.1f", stftAvg))%\n"
+        report += "- STFT máx: \(String(format: "%+.1f", stftValues.max() ?? 0))%\n"
+        report += "- STFT mín: \(String(format: "%+.1f", stftValues.min() ?? 0))%\n"
+        report += "- LTFT promedio: \(String(format: "%+.1f", ltftAvg))%\n"
+        report += "- STFT fuera de rango (>±10%): \(stftOutOfRange) muestras\n"
+        report += "- LTFT fuera de rango (>±10%): \(ltftOutOfRange) muestras\n\n"
 
-        ### Fuel Trims Bank 2 (Rotor Trasero)
-        - STFT B2 promedio: \(String(format: "%+.1f", stftB2Values.isEmpty ? 0 : stftB2Values.reduce(0, +) / Double(stftB2Values.count)))%
-        - LTFT B2 promedio: \(String(format: "%+.1f", ltftB2Values.isEmpty ? 0 : ltftB2Values.reduce(0, +) / Double(ltftB2Values.count)))%
-        - Diferencia LTFT entre rotores: \(String(format: "%.1f", abs((ltftValues.isEmpty ? 0 : ltftValues.reduce(0, +) / Double(ltftValues.count)) - (ltftB2Values.isEmpty ? 0 : ltftB2Values.reduce(0, +) / Double(ltftB2Values.count)))))%
+        report += "### Fuel Trims Bank 2 (Rotor Trasero)\n"
+        report += "- STFT B2 promedio: \(String(format: "%+.1f", stftB2Avg))%\n"
+        report += "- LTFT B2 promedio: \(String(format: "%+.1f", ltftB2Avg))%\n"
+        report += "- Diferencia LTFT entre rotores: \(String(format: "%.1f", ltftDiff))%\n\n"
 
-        ### Sensores de Oxígeno
-        - O2 B1S1 (pre-cat) promedio: \(String(format: "%.3f", o2s1Values.isEmpty ? 0 : o2s1Values.reduce(0, +) / Double(o2s1Values.count)))V
-        - O2 B1S1 máx: \(String(format: "%.3f", o2s1Values.max() ?? 0))V
-        - O2 B1S1 mín: \(String(format: "%.3f", o2s1Values.min() ?? 0))V
-        - O2 B1S2 (post-cat) promedio: \(String(format: "%.3f", o2s2Values.isEmpty ? 0 : o2s2Values.reduce(0, +) / Double(o2s2Values.count)))V
-        - Ciclos O2 (cruces 0.45V): \(countO2Cycles(o2s1Values))
+        report += "### Sensores de Oxígeno\n"
+        report += "- O2 B1S1 (pre-cat) promedio: \(String(format: "%.3f", o2s1Avg))V\n"
+        report += "- O2 B1S1 máx: \(String(format: "%.3f", o2s1Values.max() ?? 0))V\n"
+        report += "- O2 B1S1 mín: \(String(format: "%.3f", o2s1Values.min() ?? 0))V\n"
+        report += "- O2 B1S2 (post-cat) promedio: \(String(format: "%.3f", o2s2Avg))V\n"
+        report += "- Ciclos O2 (cruces 0.45V): \(o2Cycles)\n\n"
 
-        ### Presión del Colector (MAP)
-        - MAP promedio: \(String(format: "%.1f", mapValues.isEmpty ? 0 : mapValues.reduce(0, +) / Double(mapValues.count))) kPa
-        - MAP máxima (aceleración): \(String(format: "%.1f", mapValues.max() ?? 0)) kPa
-        - MAP mínima (vacío): \(String(format: "%.1f", mapValues.min() ?? 0)) kPa
+        report += "### Presión del Colector (MAP)\n"
+        report += "- MAP promedio: \(String(format: "%.1f", mapAvg)) kPa\n"
+        report += "- MAP máxima (aceleración): \(String(format: "%.1f", mapValues.max() ?? 0)) kPa\n"
+        report += "- MAP mínima (vacío): \(String(format: "%.1f", mapValues.min() ?? 0)) kPa\n\n"
 
-        ### Consumo
-        - Consumo medio estimado: \(String(format: "%.1f", session.avgConsumption)) L/100km
-        - Velocidad máxima: \(String(format: "%.0f", session.maxSpeed)) km/h
-
-        """
+        report += "### Consumo\n"
+        report += "- Consumo medio estimado: \(String(format: "%.1f", session.avgConsumption)) L/100km\n"
+        report += "- Velocidad máxima: \(String(format: "%.0f", session.maxSpeed)) km/h\n\n"
 
         // DTCs
         if !dtcs.isEmpty {
@@ -712,79 +734,73 @@ public class BlackBoxDatabase {
         // Análisis automático de indicadores
         report += "\n## Indicadores de Diagnóstico Automático\n"
 
-        // Análisis de fuel trims
-        let avgStft = stftValues.isEmpty ? 0 : stftValues.reduce(0, +) / Double(stftValues.count)
-        let avgLtft = ltftValues.isEmpty ? 0 : ltftValues.reduce(0, +) / Double(ltftValues.count)
-
-        if abs(avgLtft) > 15 {
-            report += "- **ALERTA**: LTFT muy fuera de rango (\(String(format: "%+.1f", avgLtft))%) - Posible problema de sellos (apex/corner) o MAF\n"
-        } else if abs(avgLtft) > 10 {
-            report += "- **ADVERTENCIA**: LTFT elevado (\(String(format: "%+.1f", avgLtft))%) - Monitorear evolución\n"
+        // Análisis de fuel trims (usar variables ya calculadas)
+        if abs(ltftAvg) > 15 {
+            report += "- **ALERTA**: LTFT muy fuera de rango (\(String(format: "%+.1f", ltftAvg))%) - Posible problema de sellos (apex/corner) o MAF\n"
+        } else if abs(ltftAvg) > 10 {
+            report += "- **ADVERTENCIA**: LTFT elevado (\(String(format: "%+.1f", ltftAvg))%) - Monitorear evolución\n"
         } else {
             report += "- Fuel trims dentro de rangos normales\n"
         }
 
-        // Análisis de sensores O2
-        let avgO2 = o2s1Values.isEmpty ? 0 : o2s1Values.reduce(0, +) / Double(o2s1Values.count)
+        // Análisis de sensores O2 (usar variable ya calculada)
         if o2s1Values.count > 10 {
-            if avgO2 < 0.3 {
+            if o2s1Avg < 0.3 {
                 report += "- **ADVERTENCIA**: Sensor O2 indica mezcla pobre constante - Verificar fugas de vacío o inyectores\n"
-            } else if avgO2 > 0.7 {
+            } else if o2s1Avg > 0.7 {
                 report += "- **ADVERTENCIA**: Sensor O2 indica mezcla rica constante - Verificar MAF, presión combustible\n"
             }
         }
 
         // Análisis de temperaturas
         if session.maxCoolantTemp > 105 {
-            report += "- **ALERTA**: Sobrecalentamiento detectado (\(String(format: "%.0f", session.maxCoolantTemp))°C) - Verificar sistema de refrigeración\n"
+            let maxCoolantStr = String(format: "%.0f", session.maxCoolantTemp)
+            report += "- **ALERTA**: Sobrecalentamiento detectado (\(maxCoolantStr)°C) - Verificar sistema de refrigeración\n"
         }
         if session.maxOilTemp > 130 {
-            report += "- **ALERTA**: Temperatura de aceite crítica (\(String(format: "%.0f", session.maxOilTemp))°C)\n"
+            let maxOilStr = String(format: "%.0f", session.maxOilTemp)
+            report += "- **ALERTA**: Temperatura de aceite crítica (\(maxOilStr)°C)\n"
         }
 
-        report += """
+        // Solicitud de análisis forense (construida incrementalmente)
+        report += "\n---\n\n"
+        report += "## Solicitud de Análisis Forense\n\n"
+        report += "Eres un experto en diagnóstico de motores rotativos Mazda Wankel (13B-MSP Renesis).\n"
+        report += "Analiza estos datos considerando las características específicas del motor rotativo:\n\n"
 
-        ---
+        report += "### Consideraciones Específicas del Motor Rotativo:\n"
+        report += "1. **Apex Seals**: Los fuel trims son indicadores clave del estado de los sellos apex\n"
+        report += "   - LTFT >+10%: Posible fuga de compresión (apex seals desgastados)\n"
+        report += "   - LTFT <-10%: Posible problema de inyección o MAF\n"
+        report += "   - Diferencia entre Bank1/Bank2: Un rotor más desgastado que otro\n\n"
 
-        ## Solicitud de Análisis Forense
+        report += "2. **Corner Seals y Side Seals**: Afectan la compresión igual que los apex\n"
+        report += "   - Síntomas similares pero distribución diferente entre cámaras\n\n"
 
-        Eres un experto en diagnóstico de motores rotativos Mazda Wankel (13B-MSP Renesis).
-        Analiza estos datos considerando las características específicas del motor rotativo:
+        report += "3. **Sistema de Refrigeración**: El RX-8 es muy sensible\n"
+        report += "   - Temperatura normal: 85-95°C\n"
+        report += "   - >100°C: Riesgo de daño a sellos\n"
+        report += "   - El sobrecalentamiento acelera el desgaste de apex seals\n\n"
 
-        ### Consideraciones Específicas del Motor Rotativo:
-        1. **Apex Seals**: Los fuel trims son indicadores clave del estado de los sellos apex
-           - LTFT >+10%: Posible fuga de compresión (apex seals desgastados)
-           - LTFT <-10%: Posible problema de inyección o MAF
-           - Diferencia entre Bank1/Bank2: Un rotor más desgastado que otro
+        report += "4. **Sistema OMP (Oil Metering Pump)**: Crítico para lubricación de sellos\n"
+        report += "   - Fallo de OMP = destrucción rápida del motor\n"
+        report += "   - LTFT elevado + humo azul = posible problema OMP\n\n"
 
-        2. **Corner Seals y Side Seals**: Afectan la compresión igual que los apex
-           - Síntomas similares pero distribución diferente entre cámaras
+        report += "5. **Bobinas de Encendido**: El rotativo es muy exigente\n"
+        report += "   - Catalizador caliente + mezcla rica = bobinas fallando\n"
+        report += "   - Recomendación: Cambiar cada 50,000 km\n\n"
 
-        3. **Sistema de Refrigeración**: El RX-8 es muy sensible
-           - Temperatura normal: 85-95°C
-           - >100°C: Riesgo de daño a sellos
-           - El sobrecalentamiento acelera el desgaste de apex seals
+        report += "6. **Sensores O2**:\n"
+        report += "   - Debe ciclar entre 0.1V y 0.9V\n"
+        report += "   - Pocos ciclos = sensor lento o mezcla estancada\n\n"
 
-        4. **Sistema OMP (Oil Metering Pump)**: Crítico para lubricación de sellos
-           - Fallo de OMP = destrucción rápida del motor
-           - LTFT elevado + humo azul = posible problema OMP
-
-        5. **Bobinas de Encendido**: El rotativo es muy exigente
-           - Catalizador caliente + mezcla rica = bobinas fallando
-           - Recomendación: Cambiar cada 50,000 km
-
-        6. **Sensores O2**:
-           - Debe ciclar entre 0.1V y 0.9V
-           - Pocos ciclos = sensor lento o mezcla estancada
-
-        ### Proporciona:
-        - **Puntuación de salud del motor** (0-100)
-        - **Diagnóstico principal** con nivel de severidad
-        - **Problemas identificados** con probabilidad y causa raíz
-        - **Recomendaciones de mantenimiento** inmediatas y a medio plazo
-        - **Estimación de vida útil restante** si hay desgaste evidente
-        - **Acciones urgentes** si las hay
-        """
+        report += "### Proporciona:\n"
+        report += "- **Puntuación de salud del motor** (0-100)\n"
+        report += "- **Diagnóstico principal** con nivel de severidad\n"
+        report += "- **Problemas identificados** con probabilidad y causa raíz\n"
+        report += "- **Recomendaciones de mantenimiento** inmediatas y a medio plazo\n"
+        report += "- **Estimación de vida útil restante** si hay desgaste evidente\n"
+        report += "- **Acciones urgentes** si las hay\n"
 
         return report
     }
