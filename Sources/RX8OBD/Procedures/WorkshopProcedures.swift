@@ -32,12 +32,13 @@ public enum ProcedureDifficulty: String, Codable {
 
 /// Tool required for a procedure
 public struct RequiredTool: Identifiable, Codable {
-    public let id = UUID()
+    public let id: UUID
     public let name: String
     public let partNumber: String?
     public let alternative: String?
 
     public init(name: String, partNumber: String? = nil, alternative: String? = nil) {
+        self.id = UUID()
         self.name = name
         self.partNumber = partNumber
         self.alternative = alternative
@@ -46,24 +47,25 @@ public struct RequiredTool: Identifiable, Codable {
 
 /// Step in a procedure
 public struct ProcedureStep: Identifiable, Codable {
-    public let id = UUID()
+    public let id: UUID
     public let number: Int
     public let instruction: String
     public let warning: String?
     public let tip: String?
     public let imageRef: String?
-    public let expectedValue: String?
     public let pidToMonitor: String?
+    public let expectedValue: String?
 
     public init(number: Int, instruction: String, warning: String? = nil, tip: String? = nil,
-                imageRef: String? = nil, expectedValue: String? = nil, pidToMonitor: String? = nil) {
+                imageRef: String? = nil, pidToMonitor: String? = nil, expectedValue: String? = nil) {
+        self.id = UUID()
         self.number = number
         self.instruction = instruction
         self.warning = warning
         self.tip = tip
         self.imageRef = imageRef
-        self.expectedValue = expectedValue
         self.pidToMonitor = pidToMonitor
+        self.expectedValue = expectedValue
     }
 }
 
