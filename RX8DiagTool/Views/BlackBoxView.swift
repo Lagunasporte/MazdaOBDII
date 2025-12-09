@@ -5,6 +5,7 @@ import SwiftUI
 
 struct BlackBoxView: View {
     @EnvironmentObject var blackBoxRecorder: BlackBoxRecorder
+    @EnvironmentObject var connectionManager: OBDConnectionManager
     @State private var selectedSession: BlackBoxSession?
     @State private var showingAnalysis = false
     @State private var showingAPIKeySheet = false
@@ -20,20 +21,20 @@ struct BlackBoxView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Estado de grabación actual
-                RecordingStatusHeader()
+                RecordingStatusHeader(isConnected: connectionManager.connectionState == .connectedToVehicle)
 
                 // Lista de sesiones
                 List {
                     if blackBoxRecorder.sessions.isEmpty {
                         Section {
                             VStack(spacing: 12) {
-                                Image(systemName: "car.side")
+                                Image(systemName: "externaldrive.fill")
                                     .font(.system(size: 48))
                                     .foregroundColor(.gray)
                                 Text("Sin sesiones grabadas")
                                     .font(.headline)
                                     .foregroundColor(.white)
-                                Text("La grabación comienza automáticamente cuando el motor arranca")
+                                Text("La grabación comienza automáticamente cuando el motor arranca (RPM > 400)")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                                     .multilineTextAlignment(.center)
@@ -83,7 +84,7 @@ struct BlackBoxView: View {
                             }
                         }
 
-                        Text("El análisis enviará los datos de la sesión a Claude para obtener un diagnóstico experto del motor rotativo")
+                        Text("Selecciona una sesión para ver el resumen y enviarla a Claude para análisis experto")
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
@@ -114,12 +115,13 @@ struct BlackBoxView: View {
 
 struct RecordingStatusHeader: View {
     @EnvironmentObject var blackBoxRecorder: BlackBoxRecorder
+    let isConnected: Bool
 
     var body: some View {
         HStack {
             // Indicador de grabación
             Circle()
-                .fill(blackBoxRecorder.isRecording ? Color.red : Color.gray)
+                .fill(statusColor)
                 .frame(width: 12, height: 12)
                 .overlay(
                     Circle()
@@ -152,15 +154,43 @@ struct RecordingStatusHeader: View {
                         .font(.caption2)
                         .foregroundColor(.gray)
                 }
-            } else {
-                Text("Esperando motor...")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+            } else if isConnected {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Conectado")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.green)
+                    Text("Esperando motor en marcha...")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
                 Spacer()
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sin conexión OBD")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Text("Consulta sesiones anteriores abajo")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+                Spacer()
+                Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                    .foregroundColor(.gray)
             }
         }
         .padding()
         .background(Color(.systemGray6).opacity(0.3))
+    }
+
+    private var statusColor: Color {
+        if blackBoxRecorder.isRecording {
+            return .red
+        } else if isConnected {
+            return .green
+        } else {
+            return .gray
+        }
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -483,9 +513,9 @@ struct SessionSummaryCard: View {
                 .background(Color.gray)
 
             HStack(spacing: 24) {
-                StatItem(title: "Distancia", value: String(format: "%.1f", session.totalDistance), unit: "km")
-                StatItem(title: "Vel. Máx", value: String(format: "%.0f", session.maxSpeed), unit: "km/h")
-                StatItem(title: "Consumo", value: String(format: "%.1f", session.avgConsumption), unit: "L/100")
+                BBStatItem(title: "Distancia", value: String(format: "%.1f", session.totalDistance), unit: "km")
+                BBStatItem(title: "Vel. Máx", value: String(format: "%.0f", session.maxSpeed), unit: "km/h")
+                BBStatItem(title: "Consumo", value: String(format: "%.1f", session.avgConsumption), unit: "L/100")
             }
         }
         .padding()
@@ -494,7 +524,7 @@ struct SessionSummaryCard: View {
     }
 }
 
-struct StatItem: View {
+struct BBStatItem: View {
     let title: String
     let value: String
     let unit: String
@@ -751,4 +781,5 @@ struct APIKeyConfigSheet: View {
 #Preview {
     BlackBoxView()
         .environmentObject(BlackBoxRecorder())
+        .environmentObject(OBDConnectionManager())
 }
