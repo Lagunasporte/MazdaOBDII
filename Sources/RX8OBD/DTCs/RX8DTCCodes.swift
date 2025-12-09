@@ -683,7 +683,7 @@ public struct DTCParser {
         let fourthDigit = (byte2 >> 4) & 0x0F
         let fifthDigit = byte2 & 0x0F
 
-        return String(format: "%c%X%X%X%X", prefix, secondDigit, thirdDigit, fourthDigit, fifthDigit)
+        return "\(prefix)\(String(format: "%X%X%X%X", secondDigit, thirdDigit, fourthDigit, fifthDigit))"
     }
 }
 

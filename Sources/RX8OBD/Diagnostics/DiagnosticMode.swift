@@ -54,32 +54,37 @@ public class DiagnosticMode: ObservableObject {
         // Fase 3: Capturar datos en ralentí
         currentPhase = .idleCapture
         progress = 0.25
-        report.idleData = await captureIdleData(duration: 30)
-        analyzeIdleData(report.idleData)
+        let idleData = await captureIdleData(duration: 30)
+        report.idleData = idleData
+        analyzeIdleData(idleData)
 
         // Fase 4: Análisis de temperaturas
         currentPhase = .temperatureAnalysis
         progress = 0.45
-        report.temperatureData = await captureTemperatureData()
-        analyzeTemperatures(report.temperatureData)
+        let temperatureData = await captureTemperatureData()
+        report.temperatureData = temperatureData
+        analyzeTemperatures(temperatureData)
 
         // Fase 5: Análisis del sistema de combustible
         currentPhase = .fuelSystemAnalysis
         progress = 0.60
-        report.fuelSystemData = await captureFuelSystemData()
-        analyzeFuelSystem(report.fuelSystemData)
+        let fuelSystemData = await captureFuelSystemData()
+        report.fuelSystemData = fuelSystemData
+        analyzeFuelSystem(fuelSystemData)
 
         // Fase 6: Análisis del sistema de encendido
         currentPhase = .ignitionAnalysis
         progress = 0.75
-        report.ignitionData = await captureIgnitionData()
-        analyzeIgnition(report.ignitionData)
+        let ignitionData = await captureIgnitionData()
+        report.ignitionData = ignitionData
+        analyzeIgnition(ignitionData)
 
         // Fase 7: Verificar OMP
         currentPhase = .ompCheck
         progress = 0.85
-        report.ompData = await captureOMPData()
-        analyzeOMP(report.ompData)
+        let ompData = await captureOMPData()
+        report.ompData = ompData
+        analyzeOMP(ompData)
 
         // Fase 8: Generar informe
         currentPhase = .generatingReport
@@ -105,9 +110,10 @@ public class DiagnosticMode: ObservableObject {
 
     private func captureIdleData(duration: Int) async -> IdleCaptureData {
         // Captura datos durante X segundos en ralentí
-        var rpmReadings: [Double] = []
-        var loadReadings: [Double] = []
-        var vacuumReadings: [Double] = []
+        // En implementación real, estas arrays se llenarían con lecturas OBD2
+        // var rpmReadings: [Double] = []
+        // var loadReadings: [Double] = []
+        // var vacuumReadings: [Double] = []
 
         // Simulación
         for i in 0..<duration {
