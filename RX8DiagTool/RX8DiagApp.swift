@@ -839,6 +839,15 @@ public class EngineMonitor: ObservableObject {
                     currentState.intakeAirTemperature = Double(iat)
                 }
 
+                // Leer nivel de combustible y tiempo de ejecución
+                if let fuelLevel = try? await cm.readFuelLevel() {
+                    currentState.fuelLevel = fuelLevel
+                    fuelTracker?.updateFuelLevel(fuelLevel)
+                }
+                if let runtime = try? await cm.readRuntimeSinceStart() {
+                    fuelTracker?.updateOBDData(runtime: runtime, distanceSinceClear: 0)
+                }
+
             default:
                 break
             }

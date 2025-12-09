@@ -15,10 +15,20 @@ public class FuelConsumptionTracker: ObservableObject {
     @Published public var fuelCost: Double = 0 // € o moneda local
     @Published public var co2Emissions: Double = 0 // g/km
 
+    // MARK: - Nivel de Combustible
+    @Published public var fuelLevel: Double = 50.0 // % del tanque (default 50%)
+    @Published public var fuelLevelLiters: Double = 30.0 // Litros restantes
+    @Published public var fuelLevelAvailable: Bool = false // Si el sensor está disponible
+
+    // MARK: - Datos de tiempo y distancia
+    @Published public var runtimeSeconds: Int = 0 // Tiempo desde arranque
+    @Published public var distanceSinceDTCClear: Int = 0 // km desde último borrado
+
     // MARK: - Configuración
     public var tankCapacity: Double = 60.0 // Litros (RX-8 tiene 60L)
     public var fuelPricePerLiter: Double = 1.50 // €/L
     public var fuelType: FuelType = .gasoline95
+    public var manualFuelLevel: Double? = nil // Si el usuario quiere poner nivel manual
 
     // MARK: - Datos Internos
     private var mafReadings: [MAFReading] = []
@@ -171,6 +181,60 @@ public class FuelConsumptionTracker: ObservableObject {
 
         // Autonomía = (Litros restantes / (L/100km)) * 100
         estimatedRange = (fuelRemaining / consumptionToUse) * 100
+    }
+
+    /// Actualiza el nivel de combustible desde el sensor OBD2
+    public func updateFuelLevel(_ level: Double) {
+        fuelLevel = level
+        fuelLevelLiters = tankCapacity * (level / 100)
+        fuelLevelAvailable = true
+        calculateRangeAutomatically()
+    }
+
+    /// Establece nivel manual (cuando el sensor no está disponible)
+    public func setManualFuelLevel(_ liters: Double) {
+        manualFuelLevel = liters
+        fuelLevelLiters = liters
+        fuelLevel = (liters / tankCapacity) * 100
+        calculateRangeAutomatically()
+    }
+
+    /// Calcula la autonomía automáticamente basándose en el nivel actual
+    private func calculateRangeAutomatically() {
+        let effectiveLevel = manualFuelLevel ?? fuelLevelLiters
+
+        // Usar consumo del viaje actual si hay datos, si no usar promedio o típico
+        var consumptionToUse: Double
+        if tripConsumption > 0 && distanceTrip > 5 {
+            // Consumo del viaje actual (más preciso para condiciones actuales)
+            consumptionToUse = tripConsumption
+        } else if averageConsumption > 0 {
+            consumptionToUse = averageConsumption
+        } else {
+            consumptionToUse = 13.0 // Consumo típico RX-8
+        }
+
+        // Autonomía = (Litros restantes / (L/100km)) * 100
+        if consumptionToUse > 0 {
+            estimatedRange = (effectiveLevel / consumptionToUse) * 100
+        }
+    }
+
+    /// Actualiza datos adicionales del OBD
+    public func updateOBDData(runtime: Int, distanceSinceClear: Int) {
+        runtimeSeconds = runtime
+        distanceSinceDTCClear = distanceSinceClear
+    }
+
+    /// Formato de tiempo de ejecución
+    public var runtimeFormatted: String {
+        let hours = runtimeSeconds / 3600
+        let minutes = (runtimeSeconds % 3600) / 60
+        let seconds = runtimeSeconds % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 
     // MARK: - Consumo Medio Histórico

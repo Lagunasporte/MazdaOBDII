@@ -245,41 +245,124 @@ struct TripStatItem: View {
 
 struct RangeCard: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
+    @State private var showFuelInput = false
+    @State private var manualFuelInput: String = ""
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Image(systemName: "fuelpump.fill")
-                        .foregroundColor(.green)
-                    Text("Autonomía Estimada")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "fuelpump.fill")
+                            .foregroundColor(.green)
+                        Text("Autonomía Estimada")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+
+                        if !fuelTracker.fuelLevelAvailable {
+                            Image(systemName: "exclamationmark.circle")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                        }
+                    }
+
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(String(format: "%.0f", fuelTracker.estimatedRange))
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        Text("km")
+                            .font(.body)
+                            .foregroundColor(.gray)
+                    }
                 }
 
-                HStack(alignment: .firstTextBaseline) {
-                    Text(String(format: "%.0f", fuelTracker.estimatedRange))
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                    Text("km")
-                        .font(.body)
+                Spacer()
+
+                // Indicador de nivel
+                FuelLevelIndicator(level: fuelTracker.fuelLevel)
+            }
+
+            // Información del combustible
+            HStack(spacing: 16) {
+                VStack(alignment: .leading) {
+                    Text("Nivel")
+                        .font(.caption2)
                         .foregroundColor(.gray)
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(String(format: "%.0f", fuelTracker.fuelLevel))
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Text("%")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+
+                VStack(alignment: .leading) {
+                    Text("Restante")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(String(format: "%.1f", fuelTracker.fuelLevelLiters))
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Text("L")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+
+                Spacer()
+
+                // Botón para establecer nivel manual
+                if !fuelTracker.fuelLevelAvailable {
+                    Button(action: { showFuelInput = true }) {
+                        HStack {
+                            Image(systemName: "pencil")
+                            Text("Ajustar")
+                        }
+                        .font(.caption)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.3))
+                        .cornerRadius(8)
+                    }
                 }
             }
 
-            Spacer()
-
-            // Indicador de nivel
-            FuelLevelIndicator(level: fuelTracker.fuelUsedTrip / fuelTracker.tankCapacity * 100)
+            // Tiempo de motor encendido
+            if fuelTracker.runtimeSeconds > 0 {
+                HStack {
+                    Image(systemName: "clock")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                    Text("Motor encendido: \(fuelTracker.runtimeFormatted)")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Spacer()
+                }
+            }
         }
         .padding()
         .background(Color(.systemGray6).opacity(0.3))
         .cornerRadius(16)
+        .alert("Nivel de Combustible", isPresented: $showFuelInput) {
+            TextField("Litros", text: $manualFuelInput)
+                .keyboardType(.decimalPad)
+            Button("Cancelar", role: .cancel) {}
+            Button("Guardar") {
+                if let liters = Double(manualFuelInput) {
+                    fuelTracker.setManualFuelLevel(liters)
+                }
+            }
+        } message: {
+            Text("Introduce los litros de combustible restantes (tanque: \(Int(fuelTracker.tankCapacity))L)")
+        }
     }
 }
 
 struct FuelLevelIndicator: View {
-    let level: Double // 0-100
+    let level: Double // 0-100 (porcentaje de combustible restante)
 
     var body: some View {
         ZStack {
@@ -288,26 +371,36 @@ struct FuelLevelIndicator: View {
                 .stroke(Color.gray.opacity(0.3), lineWidth: 2)
                 .frame(width: 50, height: 80)
 
-            // Nivel de combustible
+            // Nivel de combustible (llena desde abajo)
             VStack {
                 Spacer()
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(levelColor)
-                    .frame(width: 44, height: max(4, 74 * (1 - level / 100)))
+                    .fill(
+                        LinearGradient(
+                            colors: [levelColor.opacity(0.8), levelColor],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 44, height: max(4, 74 * level / 100))
             }
             .frame(width: 50, height: 80)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            // Icono
-            Image(systemName: "fuelpump")
-                .foregroundColor(.white)
-                .font(.caption)
+            // Icono y porcentaje
+            VStack(spacing: 2) {
+                Image(systemName: "fuelpump")
+                    .foregroundColor(.white)
+                    .font(.caption)
+                Text("\(Int(level))%")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+            }
         }
     }
 
     var levelColor: Color {
-        if level > 75 { return .green }
-        if level > 50 { return .teal }
+        if level > 50 { return .green }
         if level > 25 { return .yellow }
         if level > 10 { return .orange }
         return .red

@@ -728,6 +728,38 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return Double(bytes[0]) * 100.0 / 255.0
     }
 
+    /// Lee nivel de combustible (PID 0x2F)
+    /// Retorna porcentaje 0-100%
+    public func readFuelLevel() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x2F)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) * 100.0 / 255.0
+    }
+
+    /// Lee presión del sistema de combustible (PID 0x0A)
+    /// Retorna presión en kPa
+    public func readFuelPressure() async throws -> Double {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x0A)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) * 3.0
+    }
+
+    /// Lee distancia recorrida desde borrado de DTCs (PID 0x31)
+    /// Retorna distancia en km
+    public func readDistanceSinceDTCClear() async throws -> Int {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x31)
+        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+        return Int(bytes[0]) * 256 + Int(bytes[1])
+    }
+
+    /// Lee tiempo desde arranque del motor (PID 0x1F)
+    /// Retorna segundos
+    public func readRuntimeSinceStart() async throws -> Int {
+        let bytes = try await readStandardPID(mode: 0x01, pid: 0x1F)
+        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+        return Int(bytes[0]) * 256 + Int(bytes[1])
+    }
+
     public func readFuelTrimShort() async throws -> Double {
         let bytes = try await readStandardPID(mode: 0x01, pid: 0x06)
         guard bytes.count >= 1 else { throw OBDError.invalidResponse }
