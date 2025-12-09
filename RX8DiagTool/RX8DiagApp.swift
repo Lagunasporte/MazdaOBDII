@@ -874,11 +874,38 @@ public class EngineMonitor: ObservableObject {
                     currentState.intakeAirTemperature = Double(iat)
                 }
 
-                // Leer nivel de combustible y tiempo de ejecución
-                if let fuelLevel = try? await cm.readFuelLevel() {
+                // Leer nivel de combustible con sistema dual de sondas
+                // El RX-8 tiene un saddle tank con dos sondas independientes
+                if let dualReading = try? await cm.readDualFuelLevel() {
+                    // Guardar lecturas individuales de cada sonda
+                    currentState.fuelLevelLeftSender = dualReading.leftSender
+                    currentState.fuelLevelRightSender = dualReading.rightSender
+
+                    // Usar nivel calculado (compensado si hay sonda defectuosa)
+                    currentState.fuelLevel = dualReading.calculatedLevel
+                    fuelTracker?.updateFuelLevel(dualReading.calculatedLevel)
+
+                    // Estado y advertencias de las sondas
+                    switch dualReading.senderStatus {
+                    case .normal:
+                        currentState.fuelSenderStatus = "normal"
+                        currentState.fuelSenderWarning = nil
+                    case .leftUnavailable, .rightUnavailable, .bothUnavailable:
+                        currentState.fuelSenderStatus = "unavailable"
+                        currentState.fuelSenderWarning = dualReading.warningMessage
+                    case .leftSuspect, .rightSuspect, .stuckLeft, .stuckRight:
+                        currentState.fuelSenderStatus = "suspect"
+                        currentState.fuelSenderWarning = dualReading.warningMessage
+                    case .mismatch:
+                        currentState.fuelSenderStatus = "mismatch"
+                        currentState.fuelSenderWarning = dualReading.warningMessage
+                    }
+                } else if let fuelLevel = try? await cm.readFuelLevel() {
+                    // Fallback a lectura estándar si dual no está disponible
                     currentState.fuelLevel = fuelLevel
                     fuelTracker?.updateFuelLevel(fuelLevel)
                 }
+
                 if let runtime = try? await cm.readRuntimeSinceStart() {
                     fuelTracker?.updateOBDData(runtime: runtime, distanceSinceClear: 0)
                 }

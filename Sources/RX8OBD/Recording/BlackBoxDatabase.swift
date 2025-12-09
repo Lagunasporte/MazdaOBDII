@@ -93,7 +93,10 @@ public class BlackBoxDatabase {
             "ALTER TABLE snapshots ADD COLUMN map REAL DEFAULT 0;",
             "ALTER TABLE snapshots ADD COLUMN accelerator REAL DEFAULT 0;",
             "ALTER TABLE snapshots ADD COLUMN stft_b2 REAL DEFAULT 0;",
-            "ALTER TABLE snapshots ADD COLUMN ltft_b2 REAL DEFAULT 0;"
+            "ALTER TABLE snapshots ADD COLUMN ltft_b2 REAL DEFAULT 0;",
+            // Sondas de combustible duales (RX-8 saddle tank)
+            "ALTER TABLE snapshots ADD COLUMN fuel_level_left REAL;",
+            "ALTER TABLE snapshots ADD COLUMN fuel_level_right REAL;"
         ]
 
         // Tabla de alertas
@@ -444,8 +447,8 @@ public class BlackBoxDatabase {
         INSERT INTO snapshots (
             session_id, timestamp, rpm, speed, coolant_temp, oil_temp, intake_temp,
             catalyst_temp, throttle, maf, stft, ltft, timing, voltage, fuel_level, load,
-            o2b1s1, o2b1s2, map, accelerator, stft_b2, ltft_b2
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            o2b1s1, o2b1s2, map, accelerator, stft_b2, ltft_b2, fuel_level_left, fuel_level_right
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
 
         var stmt: OpaquePointer?
@@ -472,6 +475,17 @@ public class BlackBoxDatabase {
             sqlite3_bind_double(stmt, 20, data.accelerator)
             sqlite3_bind_double(stmt, 21, data.stftB2)
             sqlite3_bind_double(stmt, 22, data.ltftB2)
+            // Sondas de combustible duales - pueden ser nil
+            if let leftLevel = data.fuelLevelLeft {
+                sqlite3_bind_double(stmt, 23, leftLevel)
+            } else {
+                sqlite3_bind_null(stmt, 23)
+            }
+            if let rightLevel = data.fuelLevelRight {
+                sqlite3_bind_double(stmt, 24, rightLevel)
+            } else {
+                sqlite3_bind_null(stmt, 24)
+            }
             sqlite3_step(stmt)
         }
         sqlite3_finalize(stmt)
@@ -572,7 +586,8 @@ public class BlackBoxDatabase {
         let sql = """
         SELECT timestamp, rpm, speed, coolant_temp, oil_temp, intake_temp,
                catalyst_temp, throttle, maf, stft, ltft, timing, voltage, fuel_level, load,
-               o2b1s1, o2b1s2, map, accelerator, stft_b2, ltft_b2
+               o2b1s1, o2b1s2, map, accelerator, stft_b2, ltft_b2,
+               fuel_level_left, fuel_level_right
         FROM snapshots WHERE session_id = ? ORDER BY timestamp;
         """
 
@@ -580,6 +595,10 @@ public class BlackBoxDatabase {
         if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
             sqlite3_bind_text(stmt, 1, sessionId, -1, SQLITE_TRANSIENT)
             while sqlite3_step(stmt) == SQLITE_ROW {
+                // Leer sondas de combustible duales (pueden ser NULL)
+                let fuelLeft: Double? = sqlite3_column_type(stmt, 21) != SQLITE_NULL ? sqlite3_column_double(stmt, 21) : nil
+                let fuelRight: Double? = sqlite3_column_type(stmt, 22) != SQLITE_NULL ? sqlite3_column_double(stmt, 22) : nil
+
                 let snapshot = EngineSnapshot(
                     timestamp: sqlite3_column_double(stmt, 0),
                     rpm: Int(sqlite3_column_int(stmt, 1)),
@@ -601,7 +620,9 @@ public class BlackBoxDatabase {
                     map: sqlite3_column_double(stmt, 17),
                     accelerator: sqlite3_column_double(stmt, 18),
                     stftB2: sqlite3_column_double(stmt, 19),
-                    ltftB2: sqlite3_column_double(stmt, 20)
+                    ltftB2: sqlite3_column_double(stmt, 20),
+                    fuelLevelLeft: fuelLeft,
+                    fuelLevelRight: fuelRight
                 )
                 snapshots.append(snapshot)
             }
@@ -957,6 +978,10 @@ public struct EngineSnapshot {
     public let stftB2: Double      // STFT Bank 2 (%)
     public let ltftB2: Double      // LTFT Bank 2 (%)
 
+    // Sondas de combustible duales (RX-8 saddle tank)
+    public let fuelLevelLeft: Double?  // Sonda izquierda (%)
+    public let fuelLevelRight: Double? // Sonda derecha (%)
+
     public init(
         timestamp: Double = Date().timeIntervalSince1970,
         rpm: Int = 0,
@@ -978,7 +1003,9 @@ public struct EngineSnapshot {
         map: Double = 0,
         accelerator: Double = 0,
         stftB2: Double = 0,
-        ltftB2: Double = 0
+        ltftB2: Double = 0,
+        fuelLevelLeft: Double? = nil,
+        fuelLevelRight: Double? = nil
     ) {
         self.timestamp = timestamp
         self.rpm = rpm
@@ -1001,6 +1028,8 @@ public struct EngineSnapshot {
         self.accelerator = accelerator
         self.stftB2 = stftB2
         self.ltftB2 = ltftB2
+        self.fuelLevelLeft = fuelLevelLeft
+        self.fuelLevelRight = fuelLevelRight
     }
 }
 

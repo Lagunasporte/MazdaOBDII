@@ -907,6 +907,58 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return rawValue / 3700.0
     }
 
+    // MARK: - Fuel Level Senders (RX-8 Dual Tank)
+
+    /// El RX-8 tiene un depósito dividido en dos secciones con dos sondas independientes.
+    /// Esto permite detectar cuando una sonda falla y calcular el nivel real.
+
+    /// Lee el nivel de combustible del tanque izquierdo (Mode 22 PID 1170)
+    /// El RX-8 tiene un "saddle tank" con dos sondas separadas
+    /// Fórmula: A * 100 / 255 = % (estimado, puede variar)
+    public func readFuelLevelLeftMazda() async throws -> Double {
+        // Intentar PID 1170 para sonda izquierda
+        let bytes = try await readEnhancedPID(0x1170)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) * 100.0 / 255.0
+    }
+
+    /// Lee el nivel de combustible del tanque derecho (Mode 22 PID 1171)
+    public func readFuelLevelRightMazda() async throws -> Double {
+        // Intentar PID 1171 para sonda derecha
+        let bytes = try await readEnhancedPID(0x1171)
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        return Double(bytes[0]) * 100.0 / 255.0
+    }
+
+    /// Lee ambas sondas de combustible y devuelve el estado completo
+    /// Incluye detección de sonda defectuosa
+    public func readDualFuelLevel() async throws -> DualFuelLevelReading {
+        var leftLevel: Double?
+        var rightLevel: Double?
+        var standardLevel: Double?
+
+        // Intentar leer sonda izquierda
+        if let left = try? await readFuelLevelLeftMazda() {
+            leftLevel = left
+        }
+
+        // Intentar leer sonda derecha
+        if let right = try? await readFuelLevelRightMazda() {
+            rightLevel = right
+        }
+
+        // Leer nivel estándar como referencia/fallback
+        if let standard = try? await readFuelLevel() {
+            standardLevel = Double(standard)
+        }
+
+        return DualFuelLevelReading(
+            leftSender: leftLevel,
+            rightSender: rightLevel,
+            standardReading: standardLevel
+        )
+    }
+
     // MARK: - DTCs
 
     public func readDTCs() async throws -> [String] {
@@ -1775,5 +1827,169 @@ public struct ProtocolTestResult: Sendable {
         self.name = name
         self.response = response
         self.success = success
+    }
+}
+
+// MARK: - Dual Fuel Level Reading (RX-8 Saddle Tank)
+
+/// Lectura del sistema de combustible dual del RX-8
+/// El RX-8 tiene un depósito "saddle tank" dividido en dos secciones
+/// con una sonda de nivel independiente en cada lado.
+public struct DualFuelLevelReading: Sendable {
+    /// Nivel de la sonda izquierda (0-100%), nil si no disponible
+    public let leftSender: Double?
+    /// Nivel de la sonda derecha (0-100%), nil si no disponible
+    public let rightSender: Double?
+    /// Lectura estándar OBD (PID 0x2F) como referencia
+    public let standardReading: Double?
+    /// Timestamp de la lectura
+    public let timestamp: Date
+
+    // Historial para detección de sonda atascada
+    private static var leftHistory: [Double] = []
+    private static var rightHistory: [Double] = []
+    private static let historySize = 30  // ~30 segundos de historial
+
+    public init(leftSender: Double?, rightSender: Double?, standardReading: Double?, timestamp: Date = Date()) {
+        self.leftSender = leftSender
+        self.rightSender = rightSender
+        self.standardReading = standardReading
+        self.timestamp = timestamp
+    }
+
+    /// Nivel de combustible calculado combinando ambas sondas
+    /// Usa lógica inteligente para compensar sondas defectuosas
+    public var calculatedLevel: Double {
+        // Si tenemos ambas sondas, promediar
+        if let left = leftSender, let right = rightSender {
+            // Si una está en valor extremo sospechoso y la otra no, usar la válida
+            if isSuspiciousValue(left) && !isSuspiciousValue(right) {
+                return right
+            }
+            if isSuspiciousValue(right) && !isSuspiciousValue(left) {
+                return left
+            }
+            // Ambas válidas: promediar (el tanque tiene forma irregular)
+            return (left + right) / 2.0
+        }
+
+        // Solo una sonda disponible
+        if let left = leftSender { return left }
+        if let right = rightSender { return right }
+
+        // Fallback a lectura estándar
+        return standardReading ?? 0
+    }
+
+    /// Estado de salud del sistema de combustible
+    public var senderStatus: FuelSenderStatus {
+        guard let left = leftSender, let right = rightSender else {
+            if leftSender == nil && rightSender == nil {
+                return .bothUnavailable
+            }
+            return leftSender == nil ? .leftUnavailable : .rightUnavailable
+        }
+
+        // Detectar sonda atascada en valor extremo
+        if isSuspiciousValue(left) && !isSuspiciousValue(right) {
+            return .leftSuspect(reason: left < 5 ? "Atascada en vacío" : "Atascada en lleno")
+        }
+        if isSuspiciousValue(right) && !isSuspiciousValue(left) {
+            return .rightSuspect(reason: right < 5 ? "Atascada en vacío" : "Atascada en lleno")
+        }
+
+        // Detectar discrepancia grande entre sondas
+        let difference = abs(left - right)
+        if difference > 30 {
+            // Más de 30% de diferencia es sospechoso
+            return .mismatch(difference: difference)
+        }
+
+        return .normal
+    }
+
+    /// Mensaje de advertencia para el usuario
+    public var warningMessage: String? {
+        switch senderStatus {
+        case .normal:
+            return nil
+        case .leftUnavailable:
+            return "Sonda izquierda no responde"
+        case .rightUnavailable:
+            return "Sonda derecha no responde"
+        case .bothUnavailable:
+            return "Ambas sondas no responden"
+        case .leftSuspect(let reason):
+            return "⚠️ Sonda izquierda: \(reason)"
+        case .rightSuspect(let reason):
+            return "⚠️ Sonda derecha: \(reason)"
+        case .mismatch(let diff):
+            return "⚠️ Discrepancia entre sondas: \(Int(diff))%"
+        case .stuckLeft, .stuckRight:
+            return "⚠️ Sonda posiblemente atascada"
+        }
+    }
+
+    /// Verifica si un valor es sospechoso (extremos)
+    private func isSuspiciousValue(_ value: Double) -> Bool {
+        // Valores muy cerca de 0 o 100 son sospechosos si la otra sonda difiere mucho
+        return value < 2 || value > 98
+    }
+
+    /// Descripción legible del nivel
+    public var levelDescription: String {
+        let level = calculatedLevel
+        if level < 10 {
+            return "Reserva"
+        } else if level < 25 {
+            return "Bajo"
+        } else if level < 50 {
+            return "1/4 - 1/2"
+        } else if level < 75 {
+            return "1/2 - 3/4"
+        } else {
+            return "Lleno"
+        }
+    }
+
+    /// Litros estimados (depósito RX-8: 60L total, ~55L útiles)
+    public var estimatedLiters: Double {
+        return calculatedLevel * 0.55  // 55L capacidad útil
+    }
+
+    /// Autonomía estimada basada en consumo promedio
+    /// - Parameter avgConsumption: Consumo medio en L/100km
+    public func estimatedRange(avgConsumption: Double) -> Double {
+        guard avgConsumption > 0 else { return 0 }
+        return (estimatedLiters / avgConsumption) * 100
+    }
+}
+
+/// Estado del sistema de sondas de combustible
+public enum FuelSenderStatus: Sendable, Equatable {
+    case normal
+    case leftUnavailable
+    case rightUnavailable
+    case bothUnavailable
+    case leftSuspect(reason: String)
+    case rightSuspect(reason: String)
+    case mismatch(difference: Double)
+    case stuckLeft
+    case stuckRight
+
+    public var isHealthy: Bool {
+        if case .normal = self { return true }
+        return false
+    }
+
+    public var requiresAttention: Bool {
+        switch self {
+        case .normal:
+            return false
+        case .leftUnavailable, .rightUnavailable, .bothUnavailable:
+            return true
+        case .leftSuspect, .rightSuspect, .mismatch, .stuckLeft, .stuckRight:
+            return true
+        }
     }
 }

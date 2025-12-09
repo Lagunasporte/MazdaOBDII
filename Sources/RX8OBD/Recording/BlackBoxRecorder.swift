@@ -178,7 +178,9 @@ public class BlackBoxRecorder: ObservableObject {
             map: state.manifoldPressure,
             accelerator: state.acceleratorPosition,
             stftB2: state.shortTermFuelTrimB2,
-            ltftB2: state.longTermFuelTrimB2
+            ltftB2: state.longTermFuelTrimB2,
+            fuelLevelLeft: state.fuelLevelLeftSender,
+            fuelLevelRight: state.fuelLevelRightSender
         )
 
         database.recordSnapshot(sessionId, data: snapshot)
@@ -289,6 +291,17 @@ public class BlackBoxRecorder: ObservableObject {
             recordAlert(sessionId: sessionId, type: "Eléctrico", severity: "Advertencia",
                        parameter: "Voltaje", value: state.batteryVoltage, threshold: 12.0,
                        message: "Voltaje de batería bajo")
+        }
+
+        // Sondas de combustible duales
+        if let warning = state.fuelSenderWarning {
+            // Solo registrar si hay un problema detectado
+            let leftLevel = state.fuelLevelLeftSender ?? -1
+            let rightLevel = state.fuelLevelRightSender ?? -1
+            let diff = abs(leftLevel - rightLevel)
+            recordAlert(sessionId: sessionId, type: "Combustible", severity: "Advertencia",
+                       parameter: "Sonda", value: diff, threshold: 30,
+                       message: warning)
         }
     }
 

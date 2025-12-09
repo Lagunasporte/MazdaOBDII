@@ -29,7 +29,13 @@ public struct RotaryEngineState: Codable, Sendable {
     public var longTermFuelTrim: Double = 0 // % Bank 1
     public var shortTermFuelTrimB2: Double = 0 // % Bank 2 (rotor trasero)
     public var longTermFuelTrimB2: Double = 0 // % Bank 2 (rotor trasero)
-    public var fuelLevel: Double = 0 // %
+    public var fuelLevel: Double = 0 // % (combinado/corregido)
+
+    // MARK: - Sondas de Combustible Duales (Saddle Tank RX-8)
+    public var fuelLevelLeftSender: Double? = nil  // % sonda izquierda
+    public var fuelLevelRightSender: Double? = nil // % sonda derecha
+    public var fuelSenderStatus: String = "normal" // Estado de las sondas
+    public var fuelSenderWarning: String? = nil    // Mensaje de advertencia si hay problema
 
     // MARK: - Carga y Presión del Motor
     public var engineLoad: Double = 0 // % (calculado por ECU)
