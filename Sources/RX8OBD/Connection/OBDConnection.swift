@@ -101,53 +101,117 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         vehicleProtocol = nil
     }
 
-    // MARK: - Inicialización del Adaptador ELM327 v1.4
+    // MARK: - Inicialización del Adaptador ELM327/STN compatible
 
     public func initializeAdapter() {
         connectionState = .initializing
 
         Task { @MainActor in
             do {
-                // Reset
-                _ = try await sendCommand("ATZ", timeout: 4.0)
-                try await Task.sleep(nanoseconds: 1_000_000_000)
+                // Intento 1: Reset completo con timeout largo
+                var resetOK = false
+                for attempt in 1...3 {
+                    do {
+                        let resetResponse = try await sendCommand("ATZ", timeout: 8.0)
+                        if resetResponse.contains("ELM") || resetResponse.contains("STN") || resetResponse.contains("OK") || !resetResponse.isEmpty {
+                            resetOK = true
+                            break
+                        }
+                    } catch {
+                        if attempt < 3 {
+                            try await Task.sleep(nanoseconds: 1_000_000_000)
+                        }
+                    }
+                }
 
-                // Echo off
-                _ = try await sendCommand("ATE0", timeout: 2.0)
-                try await Task.sleep(nanoseconds: 200_000_000)
+                // Si ATZ no funcionó, intentar warm start
+                if !resetOK {
+                    _ = try? await sendCommand("ATWS", timeout: 5.0)
+                }
+
+                try await Task.sleep(nanoseconds: 1_500_000_000)
+
+                // Echo off - intentar varias veces
+                for _ in 1...2 {
+                    let echoResp = try? await sendCommand("ATE0", timeout: 3.0)
+                    if echoResp != nil { break }
+                    try await Task.sleep(nanoseconds: 300_000_000)
+                }
+                try await Task.sleep(nanoseconds: 300_000_000)
 
                 // Linefeed off
-                _ = try await sendCommand("ATL0", timeout: 2.0)
+                _ = try? await sendCommand("ATL0", timeout: 3.0)
+                try await Task.sleep(nanoseconds: 200_000_000)
 
-                // Spaces off
-                _ = try await sendCommand("ATS0", timeout: 2.0)
+                // Spaces off (algunos adaptadores no lo soportan)
+                _ = try? await sendCommand("ATS0", timeout: 3.0)
+                try await Task.sleep(nanoseconds: 200_000_000)
 
                 // Headers off
-                _ = try await sendCommand("ATH0", timeout: 2.0)
+                _ = try? await sendCommand("ATH0", timeout: 3.0)
+                try await Task.sleep(nanoseconds: 200_000_000)
 
-                // Versión
-                let version = try await sendCommand("ATI", timeout: 2.0)
+                // Adaptive timing auto
+                _ = try? await sendCommand("ATAT1", timeout: 3.0)
+                try await Task.sleep(nanoseconds: 200_000_000)
+
+                // Timeout máximo para respuestas del vehículo (FF = máximo)
+                _ = try? await sendCommand("ATST96", timeout: 3.0)
+                try await Task.sleep(nanoseconds: 200_000_000)
+
+                // Versión del adaptador
+                let version = try await sendCommand("ATI", timeout: 3.0)
                 adapterInfo = OBDAdapterInfo(version: version)
 
                 // Auto protocolo
-                _ = try await sendCommand("ATSP0", timeout: 2.0)
-                try await Task.sleep(nanoseconds: 500_000_000)
+                _ = try await sendCommand("ATSP0", timeout: 3.0)
+                try await Task.sleep(nanoseconds: 1_000_000_000)
 
-                // Test conexión con vehículo
-                let testResponse = try await sendCommand("0100", timeout: 5.0)
+                // Test conexión con vehículo - varios intentos
+                var vehicleConnected = false
+                for attempt in 1...3 {
+                    do {
+                        let testResponse = try await sendCommand("0100", timeout: 10.0)
 
-                if testResponse.contains("NO DATA") || testResponse.contains("UNABLE") || testResponse.contains("ERROR") {
-                    _ = try await sendCommand("ATSP6", timeout: 2.0)
-                    try await Task.sleep(nanoseconds: 500_000_000)
+                        if !testResponse.contains("NO DATA") &&
+                           !testResponse.contains("UNABLE") &&
+                           !testResponse.contains("ERROR") &&
+                           !testResponse.contains("?") &&
+                           testResponse.contains("41") {
+                            vehicleConnected = true
+                            break
+                        }
+
+                        // Si falla, intentar protocolo específico para Mazda (ISO 15765-4 CAN 500kbps 11bit)
+                        if attempt == 2 {
+                            _ = try? await sendCommand("ATSP6", timeout: 3.0)
+                            try await Task.sleep(nanoseconds: 1_000_000_000)
+                        }
+                        // Último intento con protocolo automático de nuevo
+                        if attempt == 3 {
+                            _ = try? await sendCommand("ATSP0", timeout: 3.0)
+                            try await Task.sleep(nanoseconds: 1_000_000_000)
+                        }
+                    } catch {
+                        if attempt < 3 {
+                            try await Task.sleep(nanoseconds: 1_000_000_000)
+                        }
+                    }
                 }
 
-                let protocolResponse = try await sendCommand("ATDPN", timeout: 2.0)
-                vehicleProtocol = VehicleProtocol.from(elm327Code: protocolResponse)
-
-                connectionState = .connectedToVehicle
+                if vehicleConnected {
+                    let protocolResponse = try await sendCommand("ATDPN", timeout: 3.0)
+                    vehicleProtocol = VehicleProtocol.from(elm327Code: protocolResponse)
+                    connectionState = .connectedToVehicle
+                } else {
+                    // Conectado al adaptador pero no al vehículo
+                    // Puede ser que el motor no esté en contacto
+                    connectionState = .connectedToAdapter
+                    lastError = .initializationFailed("Adaptador OK. Verifica: 1) Contacto puesto (no hace falta arrancar) 2) Adaptador bien conectado al puerto OBD")
+                }
 
             } catch {
-                lastError = .initializationFailed(error.localizedDescription)
+                lastError = .initializationFailed("Error: \(error.localizedDescription). Verifica que el adaptador esté emparejado en Ajustes Bluetooth.")
                 connectionState = .connectedToAdapter
             }
         }
