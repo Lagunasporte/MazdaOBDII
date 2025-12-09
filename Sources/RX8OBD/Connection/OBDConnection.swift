@@ -7,16 +7,16 @@ import Combine
 
 // MARK: - UUIDs de Servicios BLE para Adaptadores OBD conocidos
 public struct OBDServiceUUIDs {
-    // ELM327 estándar / Genéricos
+    // ELM327 estándar / Genéricos (una sola característica para todo)
     static let elm327Service = CBUUID(string: "FFE0")
     static let elm327Characteristic = CBUUID(string: "FFE1")
 
-    // Carista / STN1110 / STN2120
+    // Carista / STN1110 / STN2120 - IMPORTANTE: FFF1=RX(notify), FFF2=TX(write)
     static let stnService = CBUUID(string: "FFF0")
-    static let stnWriteCharacteristic = CBUUID(string: "FFF1")
-    static let stnNotifyCharacteristic = CBUUID(string: "FFF2")
+    static let stnReadCharacteristic = CBUUID(string: "FFF1")  // Notify/Read - recibimos aquí
+    static let stnWriteCharacteristic = CBUUID(string: "FFF2") // Write - enviamos aquí
 
-    // Alternativo STN
+    // Alternativo STN (algunos modelos)
     static let stnAltService = CBUUID(string: "E7810A71-73AE-499D-8C15-FAA9AEF0C3F2")
 
     // vLinker / vGate
@@ -35,7 +35,7 @@ public struct OBDServiceUUIDs {
     // BAFX
     static let bafxService = CBUUID(string: "0000FFE0-0000-1000-8000-00805F9B34FB")
 
-    // Konnwei
+    // Konnwei (usa mismo esquema que STN)
     static let konnweiService = CBUUID(string: "FFF0")
 
     // Lista de todos los servicios conocidos para escaneo
@@ -1207,68 +1207,83 @@ extension OBDConnectionManager: CBPeripheralDelegate {
 
         log("Servicio: \(service.uuid) - \(characteristics.count) características")
 
-        // Priorizar características conocidas de OBD
-        let knownWriteUUIDs = [
-            OBDServiceUUIDs.elm327Characteristic,
-            OBDServiceUUIDs.stnWriteCharacteristic,
-            CBUUID(string: "FFF1"),
-            CBUUID(string: "FFE1")
-        ]
+        // Detectar si es un servicio STN/Carista (FFF0) o ELM327 (FFE0)
+        let isSTNService = service.uuid == OBDServiceUUIDs.stnService ||
+                          service.uuid == CBUUID(string: "0000FFF0-0000-1000-8000-00805F9B34FB")
+        let isELMService = service.uuid == OBDServiceUUIDs.elm327Service ||
+                          service.uuid == CBUUID(string: "0000FFE0-0000-1000-8000-00805F9B34FB")
 
-        let knownNotifyUUIDs = [
-            OBDServiceUUIDs.elm327Characteristic,
-            OBDServiceUUIDs.stnNotifyCharacteristic,
-            CBUUID(string: "FFF2"),
-            CBUUID(string: "FFE1")
-        ]
+        if isSTNService {
+            log("Detectado servicio STN/Carista (FFF0)")
+        } else if isELMService {
+            log("Detectado servicio ELM327 (FFE0)")
+        }
 
         for characteristic in characteristics {
             let props = characteristic.properties
             let uuid = characteristic.uuid
             log("  Característica: \(uuid) - Props: \(props.rawValue)")
 
-            // Buscar característica de escritura
-            if props.contains(.write) || props.contains(.writeWithoutResponse) {
-                // Priorizar UUIDs conocidos
-                if knownWriteUUIDs.contains(uuid) {
-                    writeCharacteristic = characteristic
-                    log("  -> Write (conocida): \(uuid)")
-                } else if writeCharacteristic == nil {
-                    writeCharacteristic = characteristic
-                    log("  -> Write (genérica): \(uuid)")
+            // Para STN/Carista: FFF1=Read/Notify, FFF2=Write
+            if isSTNService {
+                if uuid == OBDServiceUUIDs.stnReadCharacteristic || uuid == CBUUID(string: "FFF1") {
+                    // FFF1 es para recibir datos (notify)
+                    if props.contains(.notify) || props.contains(.indicate) || props.contains(.read) {
+                        notifyCharacteristic = characteristic
+                        peripheral.setNotifyValue(true, for: characteristic)
+                        log("  -> STN Notify/Read (FFF1): \(uuid)")
+                    }
+                } else if uuid == OBDServiceUUIDs.stnWriteCharacteristic || uuid == CBUUID(string: "FFF2") {
+                    // FFF2 es para enviar comandos (write)
+                    if props.contains(.write) || props.contains(.writeWithoutResponse) {
+                        writeCharacteristic = characteristic
+                        log("  -> STN Write (FFF2): \(uuid)")
+                    }
                 }
             }
-
-            // Buscar característica de notificación
-            if props.contains(.notify) || props.contains(.indicate) {
-                if knownNotifyUUIDs.contains(uuid) {
-                    notifyCharacteristic = characteristic
-                    peripheral.setNotifyValue(true, for: characteristic)
-                    log("  -> Notify (conocida): \(uuid)")
-                } else if notifyCharacteristic == nil {
-                    notifyCharacteristic = characteristic
-                    peripheral.setNotifyValue(true, for: characteristic)
-                    log("  -> Notify (genérica): \(uuid)")
+            // Para ELM327: FFE1 sirve para todo
+            else if isELMService {
+                if uuid == OBDServiceUUIDs.elm327Characteristic || uuid == CBUUID(string: "FFE1") {
+                    if props.contains(.write) || props.contains(.writeWithoutResponse) {
+                        writeCharacteristic = characteristic
+                        log("  -> ELM Write (FFE1): \(uuid)")
+                    }
+                    if props.contains(.notify) || props.contains(.indicate) {
+                        notifyCharacteristic = characteristic
+                        peripheral.setNotifyValue(true, for: characteristic)
+                        log("  -> ELM Notify (FFE1): \(uuid)")
+                    }
+                }
+            }
+            // Fallback genérico para otros servicios
+            else {
+                if props.contains(.write) || props.contains(.writeWithoutResponse) {
+                    if writeCharacteristic == nil {
+                        writeCharacteristic = characteristic
+                        log("  -> Write (genérica): \(uuid)")
+                    }
+                }
+                if props.contains(.notify) || props.contains(.indicate) {
+                    if notifyCharacteristic == nil {
+                        notifyCharacteristic = characteristic
+                        peripheral.setNotifyValue(true, for: characteristic)
+                        log("  -> Notify (genérica): \(uuid)")
+                    }
                 }
             }
         }
 
-        // Para STN/Carista: a veces la misma característica es write+notify
-        if writeCharacteristic != nil && notifyCharacteristic == nil {
-            for characteristic in characteristics {
-                if characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate) {
-                    notifyCharacteristic = characteristic
-                    peripheral.setNotifyValue(true, for: characteristic)
-                    log("  -> Notify (fallback): \(characteristic.uuid)")
-                    break
-                }
-            }
-        }
-
-        // Inicializar solo cuando tenemos ambas características
-        if writeCharacteristic != nil && notifyCharacteristic != nil {
-            log("Características OK - Iniciando adaptador")
+        // Verificar que tenemos las características necesarias
+        if let wc = writeCharacteristic, let nc = notifyCharacteristic {
+            log("Características configuradas:")
+            log("  Write: \(wc.uuid)")
+            log("  Notify: \(nc.uuid)")
+            log("Iniciando adaptador...")
             initializeAdapter()
+        } else {
+            log("ADVERTENCIA: Faltan características")
+            log("  Write: \(writeCharacteristic?.uuid.uuidString ?? "NO")")
+            log("  Notify: \(notifyCharacteristic?.uuid.uuidString ?? "NO")")
         }
     }
 
