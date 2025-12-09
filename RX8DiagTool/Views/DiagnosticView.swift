@@ -917,7 +917,7 @@ struct DTCListSheet: View {
                     if !dtcs.isEmpty {
                         Section("Códigos Activos") {
                             ForEach(dtcs, id: \.self) { dtc in
-                                DTCRow(code: dtc)
+                                DTCCodeRow(code: dtc)
                             }
                         }
                     }
@@ -925,7 +925,7 @@ struct DTCListSheet: View {
                     if !pendingDtcs.isEmpty {
                         Section("Códigos Pendientes") {
                             ForEach(pendingDtcs, id: \.self) { dtc in
-                                DTCRow(code: dtc)
+                                DTCCodeRow(code: dtc)
                             }
                         }
                     }
@@ -967,7 +967,7 @@ struct DTCListSheet: View {
     }
 }
 
-struct DTCRow: View {
+struct DTCCodeRow: View {
     let code: String
 
     var body: some View {
@@ -1384,23 +1384,23 @@ struct VehicleInfoSheet: View {
 
                     if !vin.isEmpty {
                         Section("Decodificado") {
-                            InfoRow(label: "Fabricante", value: decodeManufacturer())
-                            InfoRow(label: "Modelo", value: "RX-8")
-                            InfoRow(label: "Año", value: decodeYear())
-                            InfoRow(label: "Motor", value: "13B-MSP Renesis")
+                            VehicleInfoRow(label: "Fabricante", value: decodeManufacturer())
+                            VehicleInfoRow(label: "Modelo", value: "RX-8")
+                            VehicleInfoRow(label: "Año", value: decodeYear())
+                            VehicleInfoRow(label: "Motor", value: "13B-MSP Renesis")
                         }
                     }
 
                     Section("Adaptador") {
                         if let adapter = connectionManager.adapterInfo {
-                            InfoRow(label: "Tipo", value: adapter.chipType)
-                            InfoRow(label: "Versión", value: adapter.version)
+                            VehicleInfoRow(label: "Tipo", value: adapter.chipType)
+                            VehicleInfoRow(label: "Versión", value: adapter.version)
                         }
                     }
 
                     Section("Protocolo") {
                         if let proto = connectionManager.vehicleProtocol {
-                            InfoRow(label: "Protocolo", value: proto.rawValue)
+                            VehicleInfoRow(label: "Protocolo", value: proto.rawValue)
                         }
                     }
                 }
@@ -1449,7 +1449,7 @@ struct VehicleInfoSheet: View {
     }
 }
 
-struct InfoRow: View {
+struct VehicleInfoRow: View {
     let label: String
     let value: String
 
