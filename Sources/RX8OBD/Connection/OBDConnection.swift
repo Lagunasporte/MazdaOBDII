@@ -830,6 +830,83 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return (Double(bytes[0]) - 128.0) * 100.0 / 128.0
     }
 
+    // MARK: - Mode 22 (Enhanced/Manufacturer Specific PIDs)
+
+    /// Lee un PID en Mode 22 (Enhanced Diagnostics - Mazda específico)
+    /// El PID se envía como 22XXXX y la respuesta es 62XXXX + datos
+    public func readEnhancedPID(_ pid: UInt16) async throws -> [UInt8] {
+        // Configurar header para ECU del motor (7E0 para Mazda)
+        _ = try? await sendCommand("ATSH7E0", timeout: 2.0)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Enviar comando Mode 22
+        let command = String(format: "22%04X", pid)
+        let response = try await sendCommand(command, timeout: 3.0)
+
+        if response.contains("NO DATA") || response.contains("ERROR") || response.contains("?") {
+            throw OBDError.noData
+        }
+
+        // Parsear respuesta - buscar 62 seguido del PID
+        let expectedPrefix = String(format: "62%04X", pid).uppercased()
+        let bytes = parseEnhancedResponse(response, expectedPrefix: expectedPrefix)
+
+        if bytes.isEmpty {
+            throw OBDError.invalidResponse
+        }
+
+        return bytes
+    }
+
+    private func parseEnhancedResponse(_ response: String, expectedPrefix: String) -> [UInt8] {
+        // Limpiar respuesta y convertir a bytes
+        let hexOnly = response.uppercased()
+            .components(separatedBy: .whitespaces)
+            .joined()
+
+        // Buscar el prefijo esperado (62XXXX)
+        guard let range = hexOnly.range(of: expectedPrefix) else {
+            return []
+        }
+
+        // Extraer bytes después del prefijo
+        let dataStart = hexOnly[range.upperBound...]
+        var bytes: [UInt8] = []
+        var index = dataStart.startIndex
+
+        while index < dataStart.endIndex {
+            guard let nextIndex = dataStart.index(index, offsetBy: 2, limitedBy: dataStart.endIndex) else { break }
+            let byteString = String(dataStart[index..<nextIndex])
+            if let byte = UInt8(byteString, radix: 16) {
+                bytes.append(byte)
+            }
+            index = nextIndex
+        }
+
+        return bytes
+    }
+
+    /// Lee temperatura del aceite vía Mode 22 PID 1310 (Mazda RX-8)
+    /// Nota: En RX-8 es un valor CALCULADO por la ECU, no un sensor físico
+    /// Fórmula: (((A*256)+B)/100) - 40 = °C
+    public func readOilTempMazda() async throws -> Double {
+        let bytes = try await readEnhancedPID(0x1310)
+        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+
+        let rawValue = Double(bytes[0]) * 256.0 + Double(bytes[1])
+        return (rawValue / 100.0) - 40.0
+    }
+
+    /// Lee voltaje MAF vía Mode 22 PID 1177 (Mazda específico)
+    /// Fórmula: ((A*256)+B)/3700 = V
+    public func readMAFVoltageMazda() async throws -> Double {
+        let bytes = try await readEnhancedPID(0x1177)
+        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+
+        let rawValue = Double(bytes[0]) * 256.0 + Double(bytes[1])
+        return rawValue / 3700.0
+    }
+
     // MARK: - DTCs
 
     public func readDTCs() async throws -> [String] {

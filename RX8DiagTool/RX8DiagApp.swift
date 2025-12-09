@@ -859,9 +859,14 @@ public class EngineMonitor: ObservableObject {
 
             case 5:
                 // Ciclo 5: temperaturas adicionales (aceite, catalizador, IAT)
-                if let oilTemp = try? await cm.readOilTemp() {
+                // Primero intentar Mode 22 (Mazda específico) para temp aceite
+                // Si falla, intentar PID estándar 0x5C
+                if let oilTemp = try? await cm.readOilTempMazda() {
+                    currentState.oilTemperature = oilTemp
+                } else if let oilTemp = try? await cm.readOilTemp() {
                     currentState.oilTemperature = Double(oilTemp)
                 }
+
                 if let catTemp = try? await cm.readCatalystTemp() {
                     currentState.catalystTemperature = catTemp
                 }
