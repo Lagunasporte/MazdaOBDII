@@ -16,14 +16,12 @@ struct SettingsView: View {
         switch connectionManager.connectionState {
         case .connectedToVehicle:
             return .green
-        case .connectedToAdapter, .connecting:
+        case .connectedToAdapter, .connecting, .initializing:
             return .orange
         case .disconnected:
             return .gray
         case .scanning:
             return .blue
-        case .error:
-            return .red
         }
     }
 
