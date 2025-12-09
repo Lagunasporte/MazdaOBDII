@@ -8,6 +8,7 @@ struct AdapterDiagnosticView: View {
     @State private var rawCommand = ""
     @State private var rawResponse = ""
     @State private var showDebugLog = false
+    @State private var showBLEInfo = false
 
     var body: some View {
         NavigationStack {
@@ -154,6 +155,34 @@ struct AdapterDiagnosticView: View {
                     Text("Comandos Rápidos")
                 }
 
+                // Diagnóstico BLE
+                Section {
+                    Button {
+                        showBLEInfo = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                                .foregroundColor(.purple)
+                            Text("Ver características BLE")
+                        }
+                    }
+
+                    Button {
+                        connectionManager.reconnectBLE()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(.orange)
+                            Text("Redescubrir servicios BLE")
+                        }
+                    }
+                    .disabled(!connectionManager.connectionState.isConnected)
+                } header: {
+                    Text("Diagnóstico BLE")
+                } footer: {
+                    Text("Si no recibes respuestas, prueba redescubrir servicios BLE")
+                }
+
                 // Log de debug
                 Section {
                     Button {
@@ -204,6 +233,9 @@ struct AdapterDiagnosticView: View {
             .navigationTitle("Diagnóstico Adaptador")
             .sheet(isPresented: $showDebugLog) {
                 DebugLogView(logs: connectionManager.debugLog)
+            }
+            .sheet(isPresented: $showBLEInfo) {
+                BLEInfoView()
             }
         }
     }
@@ -372,6 +404,68 @@ struct DebugLogView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+struct BLEInfoView: View {
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(connectionManager.getBLEDiagnosticInfo())
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.green)
+
+                    Divider()
+
+                    Text("Solución de problemas:")
+                        .font(.headline)
+                        .foregroundColor(.white)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        BLETipRow(tip: "Si no hay respuestas (RX), la característica de notificación puede ser incorrecta")
+                        BLETipRow(tip: "Adaptadores STN/Carista usan FFF0 (servicio), FFF1 (write), FFF2 (notify)")
+                        BLETipRow(tip: "ELM327 estándar usa FFE0 (servicio), FFE1 (read/write/notify)")
+                        BLETipRow(tip: "Prueba 'Redescubrir servicios BLE' si no funciona")
+                        BLETipRow(tip: "El log debe mostrar 'RX raw' cuando lleguen datos")
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Características BLE")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        UIPasteboard.general.string = connectionManager.getBLEDiagnosticInfo()
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct BLETipRow: View {
+    let tip: String
+
+    var body: some View {
+        HStack(alignment: .top) {
+            Image(systemName: "lightbulb.fill")
+                .foregroundColor(.yellow)
+                .font(.caption)
+            Text(tip)
+                .font(.caption)
+                .foregroundColor(.gray)
         }
     }
 }

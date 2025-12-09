@@ -549,7 +549,17 @@ public class OBDConnectionManager: NSObject, ObservableObject {
             return
         }
 
-        let writeType: CBCharacteristicWriteType = writeChar.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
+        // Log detalles de escritura
+        log("TX[\(writeChar.uuid)]: \(command)")
+
+        // Intentar primero con writeWithResponse para mejor fiabilidad
+        let writeType: CBCharacteristicWriteType
+        if writeChar.properties.contains(.write) {
+            writeType = .withResponse
+        } else {
+            writeType = .withoutResponse
+        }
+
         peripheral.writeValue(data, for: writeChar, type: writeType)
 
         responseTimer?.invalidate()
@@ -573,18 +583,33 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     }
 
     private func handleResponse(_ data: Data) {
+        // Log datos raw recibidos
+        let hexString = data.map { String(format: "%02X", $0) }.joined(separator: " ")
+        log("RX raw (\(data.count) bytes): \(hexString)")
+
         guard let str = String(data: data, encoding: .ascii) ?? String(data: data, encoding: .utf8) else {
+            log("RX: No se pudo decodificar")
             return
         }
 
+        log("RX: \(str.replacingOccurrences(of: "\r", with: "\\r").replacingOccurrences(of: "\n", with: "\\n"))")
+
         responseBuffer += str
 
-        if responseBuffer.contains(">") {
+        // Detectar fin de respuesta - múltiples terminadores posibles
+        let hasPrompt = responseBuffer.contains(">")
+        let hasOK = responseBuffer.hasSuffix("OK\r") || responseBuffer.hasSuffix("OK\r\n")
+        let hasError = responseBuffer.contains("?") && responseBuffer.contains("\r")
+        let hasELM = responseBuffer.contains("ELM") && responseBuffer.contains("\r")
+        let hasSTN = responseBuffer.contains("STN") && responseBuffer.contains("\r")
+
+        if hasPrompt || hasOK || hasError || hasELM || hasSTN {
             responseTimer?.invalidate()
             responseTimer = nil
 
             let response = cleanResponse(responseBuffer)
             lastResponse = response
+            log("Respuesta completa: \(response)")
 
             isProcessingCommand = false
             responseCompletion?(.success(response))
@@ -920,6 +945,148 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         let response = try await sendCommand(command, timeout: 5.0)
         log("Raw RSP: \(response)")
         return response
+    }
+
+    // MARK: - Diagnóstico de características BLE
+
+    public func getBLEDiagnosticInfo() -> String {
+        var info = "=== BLE Diagnostic Info ===\n"
+
+        if let peripheral = connectedPeripheral {
+            info += "Peripheral: \(peripheral.name ?? "Unknown")\n"
+            info += "UUID: \(peripheral.identifier)\n"
+            info += "State: \(peripheral.state.rawValue)\n\n"
+
+            if let services = peripheral.services {
+                for service in services {
+                    info += "Service: \(service.uuid)\n"
+                    if let chars = service.characteristics {
+                        for char in chars {
+                            let props = describeProperties(char.properties)
+                            info += "  Char: \(char.uuid) [\(props)]\n"
+                            if char == writeCharacteristic {
+                                info += "    ^ WRITE SELECTED\n"
+                            }
+                            if char == notifyCharacteristic {
+                                info += "    ^ NOTIFY SELECTED\n"
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            info += "No peripheral connected\n"
+        }
+
+        return info
+    }
+
+    private func describeProperties(_ props: CBCharacteristicProperties) -> String {
+        var desc: [String] = []
+        if props.contains(.read) { desc.append("R") }
+        if props.contains(.write) { desc.append("W") }
+        if props.contains(.writeWithoutResponse) { desc.append("WnR") }
+        if props.contains(.notify) { desc.append("N") }
+        if props.contains(.indicate) { desc.append("I") }
+        return desc.joined(separator: ",")
+    }
+
+    // Test de escritura directo a una característica específica
+    public func testWriteToCharacteristic(serviceUUID: String, charUUID: String, data: String) async -> String {
+        guard let peripheral = connectedPeripheral,
+              let services = peripheral.services else {
+            return "Error: No hay peripheral conectado"
+        }
+
+        let serviceUUIDObj = CBUUID(string: serviceUUID)
+        let charUUIDObj = CBUUID(string: charUUID)
+
+        guard let service = services.first(where: { $0.uuid == serviceUUIDObj }),
+              let chars = service.characteristics,
+              let char = chars.first(where: { $0.uuid == charUUIDObj }) else {
+            return "Error: Característica no encontrada"
+        }
+
+        let testData = (data + "\r").data(using: .ascii)!
+
+        log("Test write to \(charUUID): \(data)")
+
+        // Intentar write
+        if char.properties.contains(.write) {
+            peripheral.writeValue(testData, for: char, type: .withResponse)
+            return "Enviado con writeWithResponse a \(charUUID)"
+        } else if char.properties.contains(.writeWithoutResponse) {
+            peripheral.writeValue(testData, for: char, type: .withoutResponse)
+            return "Enviado con writeWithoutResponse a \(charUUID)"
+        }
+
+        return "Error: Característica no soporta escritura"
+    }
+
+    // Cambiar característica de escritura activa
+    public func switchWriteCharacteristic(to uuid: String) -> Bool {
+        guard let peripheral = connectedPeripheral,
+              let services = peripheral.services else {
+            return false
+        }
+
+        let targetUUID = CBUUID(string: uuid)
+
+        for service in services {
+            if let chars = service.characteristics {
+                for char in chars where char.uuid == targetUUID {
+                    if char.properties.contains(.write) || char.properties.contains(.writeWithoutResponse) {
+                        writeCharacteristic = char
+                        log("Write characteristic cambiado a: \(uuid)")
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    // Cambiar característica de notificación activa
+    public func switchNotifyCharacteristic(to uuid: String) -> Bool {
+        guard let peripheral = connectedPeripheral,
+              let services = peripheral.services else {
+            return false
+        }
+
+        let targetUUID = CBUUID(string: uuid)
+
+        for service in services {
+            if let chars = service.characteristics {
+                for char in chars where char.uuid == targetUUID {
+                    if char.properties.contains(.notify) || char.properties.contains(.indicate) {
+                        // Desuscribir de la anterior
+                        if let oldChar = notifyCharacteristic {
+                            peripheral.setNotifyValue(false, for: oldChar)
+                        }
+                        // Suscribir a la nueva
+                        notifyCharacteristic = char
+                        peripheral.setNotifyValue(true, for: char)
+                        log("Notify characteristic cambiado a: \(uuid)")
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    // Reiniciar conexión BLE manteniendo el mismo peripheral
+    public func reconnectBLE() {
+        guard let peripheral = connectedPeripheral else { return }
+
+        log("Reconectando BLE...")
+
+        // Limpiar características
+        writeCharacteristic = nil
+        notifyCharacteristic = nil
+
+        // Redescubrir servicios
+        peripheral.discoverServices(nil)
     }
 }
 
