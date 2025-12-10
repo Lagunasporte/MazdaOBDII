@@ -216,16 +216,17 @@ struct CarPlayStatRow: View {
     let unit: String
 
     var body: some View {
-        HStack {
+        HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.caption2)
                 .foregroundColor(.blue)
-                .frame(width: 16)
+                .frame(width: 14)
 
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.gray)
-                .frame(width: 40, alignment: .leading)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             Spacer()
 
@@ -233,12 +234,14 @@ struct CarPlayStatRow: View {
                 .font(.system(.subheadline, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundColor(value == "-" ? .gray : .white)
-                .frame(width: 50, alignment: .trailing)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             Text(unit)
                 .font(.caption2)
                 .foregroundColor(.gray)
-                .frame(width: 35, alignment: .leading)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 }
