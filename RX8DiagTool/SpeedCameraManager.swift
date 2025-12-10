@@ -5,19 +5,19 @@ import SwiftUI
 
 // MARK: - Modelo de Radar/Cámara de Velocidad
 
-struct SpeedCamera: Codable, Identifiable, Equatable {
-    let id: String
-    let latitude: Double
-    let longitude: Double
-    let maxSpeed: Int?  // Límite de velocidad si está disponible
-    let type: CameraType
-    let direction: Double?  // Dirección en grados si está disponible
+public struct SpeedCamera: Codable, Identifiable, Equatable {
+    public let id: String
+    public let latitude: Double
+    public let longitude: Double
+    public let maxSpeed: Int?  // Límite de velocidad si está disponible
+    public let type: CameraType
+    public let direction: Double?  // Dirección en grados si está disponible
 
-    var coordinate: CLLocationCoordinate2D {
+    public var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    enum CameraType: String, Codable {
+    public enum CameraType: String, Codable {
         case fixed = "fixed"           // Radar fijo
         case mobile = "mobile"         // Zona de radar móvil
         case trafficLight = "traffic"  // Cámara de semáforo
@@ -25,14 +25,14 @@ struct SpeedCamera: Codable, Identifiable, Equatable {
         case unknown = "unknown"
     }
 
-    static func == (lhs: SpeedCamera, rhs: SpeedCamera) -> Bool {
+    public static func == (lhs: SpeedCamera, rhs: SpeedCamera) -> Bool {
         lhs.id == rhs.id
     }
 }
 
 // MARK: - Estado de Alerta de Radar
 
-enum RadarAlertState: Equatable {
+public enum RadarAlertState: Equatable {
     case none
     case approaching(camera: SpeedCamera, distance: Double)
     case passing(camera: SpeedCamera)
