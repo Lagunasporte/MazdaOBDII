@@ -5,6 +5,8 @@ import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var connectionManager: OBDConnectionManager
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var localizationManager: LocalizationManager
     @AppStorage("unitSystem") private var unitSystem = UnitSystem.metric
     @AppStorage("temperatureUnit") private var temperatureUnit = TemperatureUnit.celsius
     @AppStorage("alertsEnabled") private var alertsEnabled = true
@@ -17,6 +19,7 @@ struct SettingsView: View {
     @State private var showAdapterTest = false
     @State private var isTestingAdapter = false
     @State private var adapterTestResults: AdapterTestResults?
+    @State private var showPaywall = false
 
     // Color según estado de conexión
     private var connectionStateColor: Color {
@@ -35,6 +38,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // Suscripción / Premium
+                Section {
+                    SubscriptionStatusRow()
+                } header: {
+                    Text("settings.subscription".localized)
+                }
+
                 // Información del vehículo
                 Section {
                     Button(action: { showVehicleInfo = true }) {
@@ -58,7 +68,14 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Vehículo")
+                    Text("vehicle.title".localized)
+                }
+
+                // Idioma
+                Section {
+                    LanguagePicker()
+                } header: {
+                    Text("settings.language".localized)
                 }
 
                 // Unidades
@@ -1361,6 +1378,98 @@ struct CreditRow: View {
             Text(source)
                 .font(.caption)
                 .foregroundColor(.orange)
+        }
+    }
+}
+
+// MARK: - Subscription Status Row
+
+struct SubscriptionStatusRow: View {
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
+
+    var body: some View {
+        Button(action: { subscriptionManager.showPaywall = true }) {
+            HStack {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(statusColor.opacity(0.2))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: statusIcon)
+                        .foregroundColor(statusColor)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(statusTitle)
+                        .font(.headline)
+                        .foregroundColor(.white)
+
+                    Text(subscriptionManager.subscriptionStatus.displayText)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                if !subscriptionManager.hasFullAccess {
+                    Text("subscription.upgrade".localized)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.orange)
+                        .cornerRadius(12)
+                } else {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundColor(.green)
+                        .font(.title2)
+                }
+            }
+        }
+    }
+
+    private var statusColor: Color {
+        switch subscriptionManager.subscriptionStatus {
+        case .trial:
+            return .orange
+        case .trialExpired, .notSubscribed:
+            return .red
+        case .subscribed, .lifetime:
+            return .green
+        case .unknown:
+            return .gray
+        }
+    }
+
+    private var statusIcon: String {
+        switch subscriptionManager.subscriptionStatus {
+        case .trial:
+            return "clock.fill"
+        case .trialExpired, .notSubscribed:
+            return "exclamationmark.triangle.fill"
+        case .subscribed, .lifetime:
+            return "star.fill"
+        case .unknown:
+            return "questionmark.circle.fill"
+        }
+    }
+
+    private var statusTitle: String {
+        switch subscriptionManager.subscriptionStatus {
+        case .trial:
+            return "subscription.trial_title".localized
+        case .trialExpired:
+            return "subscription.trial_expired".localized
+        case .subscribed:
+            return "subscription.premium".localized
+        case .lifetime:
+            return "subscription.lifetime".localized
+        case .notSubscribed:
+            return "subscription.not_subscribed".localized
+        case .unknown:
+            return "common.loading".localized
         }
     }
 }

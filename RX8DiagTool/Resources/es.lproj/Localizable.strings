@@ -275,3 +275,9 @@
 "language.restart_title" = "Reinicio Necesario";
 "language.restart_message" = "Por favor reinicia la app para aplicar el cambio de idioma.";
 "language.restart_note" = "Algunos cambios requieren reiniciar la app para tener efecto.";
+
+// MARK: - Settings Extra
+"settings.subscription" = "Suscripción";
+"vehicle.title" = "Vehículo";
+"subscription.upgrade" = "Mejorar";
+"subscription.lifetime" = "De por vida";

@@ -12,6 +12,8 @@ struct RX8DiagApp: App {
     @StateObject private var fuelTracker = FuelConsumptionTracker()
     @StateObject private var blackBoxRecorder = BlackBoxRecorder()
     @StateObject private var radarManager = SpeedCameraManager()
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @StateObject private var localizationManager = LocalizationManager.shared
 
     var body: some Scene {
         WindowGroup {
@@ -22,6 +24,8 @@ struct RX8DiagApp: App {
                 .environmentObject(fuelTracker)
                 .environmentObject(blackBoxRecorder)
                 .environmentObject(radarManager)
+                .environmentObject(subscriptionManager)
+                .environmentObject(localizationManager)
                 .preferredColorScheme(.dark)
                 .onAppear {
                     // Configurar el monitor con todas las dependencias
@@ -39,6 +43,11 @@ struct RX8DiagApp: App {
                     // Aplicar configuración de pantalla guardada
                     let keepScreenOn = UserDefaults.standard.bool(forKey: "keepScreenOn")
                     UIApplication.shared.isIdleTimerDisabled = keepScreenOn
+
+                    // Verificar estado de suscripción
+                    Task {
+                        await subscriptionManager.updateSubscriptionStatus()
+                    }
                 }
                 .onChange(of: connectionManager.connectionState) { oldState, newState in
                     // Auto-iniciar monitoreo al conectar al vehículo
@@ -49,6 +58,10 @@ struct RX8DiagApp: App {
                     if newState == .disconnected && engineMonitor.isMonitoring {
                         engineMonitor.stopMonitoring()
                     }
+                }
+                .sheet(isPresented: $subscriptionManager.showPaywall) {
+                    PaywallView()
+                        .environmentObject(subscriptionManager)
                 }
         }
     }
