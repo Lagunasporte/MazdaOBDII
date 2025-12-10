@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		8DA2A13F2EE847C30009FC5F /* AdapterDiagnosticView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DA2A13E2EE847C30009FC5F /* AdapterDiagnosticView.swift */; };
 		A100001D001 /* BlackBoxDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001D000 /* BlackBoxDatabase.swift */; };
+		A100001E001 /* SpeedCameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001E000 /* SpeedCameraManager.swift */; };
+		A100001F001 /* RadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001F000 /* RadarView.swift */; };
 		A1000001001 /* RX8DiagApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RX8DiagApp.swift */; };
 		A1000002001 /* DiagnosticView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* DiagnosticView.swift */; };
 		A1000003001 /* DTCView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003000 /* DTCView.swift */; };
@@ -40,6 +42,8 @@
 /* Begin PBXFileReference section */
 		8DA2A13E2EE847C30009FC5F /* AdapterDiagnosticView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdapterDiagnosticView.swift; sourceTree = "<group>"; };
 		A100001D000 /* BlackBoxDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlackBoxDatabase.swift; sourceTree = "<group>"; };
+		A100001E000 /* SpeedCameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedCameraManager.swift; sourceTree = "<group>"; };
+		A100001F000 /* RadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarView.swift; sourceTree = "<group>"; };
 		A1000001000 /* RX8DiagApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RX8DiagApp.swift; sourceTree = "<group>"; };
 		A1000002000 /* DiagnosticView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticView.swift; sourceTree = "<group>"; };
 		A1000003000 /* DTCView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTCView.swift; sourceTree = "<group>"; };
@@ -99,6 +103,7 @@
 			children = (
 				A1000001000 /* RX8DiagApp.swift */,
 				A100001C000 /* SceneDelegate.swift */,
+				A100001E000 /* SpeedCameraManager.swift */,
 				A1000065000 /* Views */,
 				A1000066000 /* CarPlay */,
 				A1000020000 /* Assets.xcassets */,
@@ -144,6 +149,7 @@
 				A1000005000 /* SettingsView.swift */,
 				A1000008000 /* ProceduresView.swift */,
 				A1000009000 /* BlackBoxView.swift */,
+				A100001F000 /* RadarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -352,6 +358,8 @@
 				A100001B001 /* AIAnalysisService.swift in Sources */,
 				A100001C001 /* SceneDelegate.swift in Sources */,
 				A100001D001 /* BlackBoxDatabase.swift in Sources */,
+				A100001E001 /* SpeedCameraManager.swift in Sources */,
+				A100001F001 /* RadarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
