@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Vista de Configuración
 
@@ -8,6 +9,7 @@ struct SettingsView: View {
     @AppStorage("temperatureUnit") private var temperatureUnit = TemperatureUnit.celsius
     @AppStorage("alertsEnabled") private var alertsEnabled = true
     @AppStorage("hapticFeedback") private var hapticFeedback = true
+    @AppStorage("keepScreenOn") private var keepScreenOn = false
     @State private var showVehicleInfo = false
     @State private var showAbout = false
 
@@ -74,6 +76,18 @@ struct SettingsView: View {
                     Text("Alertas")
                 } footer: {
                     Text("Las alertas te avisarán cuando la temperatura o el voltaje estén fuera de rango")
+                }
+
+                // Pantalla
+                Section {
+                    Toggle("Mantener pantalla encendida", isOn: $keepScreenOn)
+                        .onChange(of: keepScreenOn) { _, newValue in
+                            UIApplication.shared.isIdleTimerDisabled = newValue
+                        }
+                } header: {
+                    Text("Pantalla")
+                } footer: {
+                    Text("Evita que la pantalla se apague automáticamente mientras usas la app")
                 }
 
                 // Conexión

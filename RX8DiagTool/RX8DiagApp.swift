@@ -35,6 +35,10 @@ struct RX8DiagApp: App {
 
                     // Solicitar permisos de ubicación para radares
                     radarManager.requestLocationPermission()
+
+                    // Aplicar configuración de pantalla guardada
+                    let keepScreenOn = UserDefaults.standard.bool(forKey: "keepScreenOn")
+                    UIApplication.shared.isIdleTimerDisabled = keepScreenOn
                 }
                 .onChange(of: connectionManager.connectionState) { oldState, newState in
                     // Auto-iniciar monitoreo al conectar al vehículo
