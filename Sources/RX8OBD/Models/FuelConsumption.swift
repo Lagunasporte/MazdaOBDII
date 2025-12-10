@@ -24,6 +24,9 @@ public class FuelConsumptionTracker: ObservableObject {
     // MARK: - Datos de tiempo y distancia
     @Published public var runtimeSeconds: Int = 0 // Tiempo desde arranque
     @Published public var distanceSinceDTCClear: Int = 0 // km desde último borrado
+    @Published public var odometerKm: Int = 0 // Odómetro total del vehículo
+    @Published public var odometerAvailable: Bool = false // Si el odómetro está disponible
+    @Published public var tripStartOdometerKm: Int = 0 // Odómetro al inicio del viaje
 
     // MARK: - Parciales de consumo
     @Published public var partial1: TripPartial = TripPartial(id: 1) // Viaje actual
@@ -303,9 +306,30 @@ public class FuelConsumptionTracker: ObservableObject {
     }
 
     /// Actualiza datos adicionales del OBD
-    public func updateOBDData(runtime: Int, distanceSinceClear: Int) {
+    public func updateOBDData(runtime: Int, distanceSinceClear: Int, odometer: Int? = nil) {
         runtimeSeconds = runtime
         distanceSinceDTCClear = distanceSinceClear
+
+        // Actualizar odómetro si está disponible
+        if let odo = odometer, odo > 0 {
+            odometerKm = odo
+            odometerAvailable = true
+
+            // Si tenemos odómetro de inicio, calcular distancia real
+            if tripStartOdometerKm > 0 {
+                let realDistance = Double(odo - tripStartOdometerKm)
+                if realDistance >= 0 && realDistance < 10000 { // Validar rango razonable
+                    distanceTrip = realDistance
+                }
+            }
+        }
+    }
+
+    /// Actualiza el odómetro al inicio del viaje
+    public func setTripStartOdometer(_ odometer: Int) {
+        tripStartOdometerKm = odometer
+        odometerKm = odometer
+        odometerAvailable = true
     }
 
     /// Formato de tiempo de ejecución

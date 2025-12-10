@@ -752,6 +752,39 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return Int(bytes[0]) * 256 + Int(bytes[1])
     }
 
+    /// Lee odómetro total del vehículo (PID 0xA6 - Service 01)
+    /// Retorna kilómetros totales del vehículo
+    /// Nota: Este PID no está soportado por todas las ECUs
+    public func readOdometer() async throws -> Int {
+        // Primero intentar PID estándar 0xA6 (4 bytes)
+        if let bytes = try? await readStandardPID(mode: 0x01, pid: 0xA6), bytes.count >= 4 {
+            let km = Int(bytes[0]) * 16777216 + Int(bytes[1]) * 65536 + Int(bytes[2]) * 256 + Int(bytes[3])
+            // Validar rango razonable (0 - 1,000,000 km)
+            if km > 0 && km < 1_000_000 {
+                return km
+            }
+        }
+
+        // Intentar Mode 22 PIDs de Mazda para odómetro
+        // PID 0x1254 - Odómetro común en Mazda
+        if let bytes = try? await readEnhancedPID(0x1254), bytes.count >= 3 {
+            let km = Int(bytes[0]) * 65536 + Int(bytes[1]) * 256 + Int(bytes[2])
+            if km > 0 && km < 1_000_000 {
+                return km
+            }
+        }
+
+        // PID 0x1001 - Otro posible PID de odómetro Mazda
+        if let bytes = try? await readEnhancedPID(0x1001), bytes.count >= 3 {
+            let km = Int(bytes[0]) * 65536 + Int(bytes[1]) * 256 + Int(bytes[2])
+            if km > 0 && km < 1_000_000 {
+                return km
+            }
+        }
+
+        throw OBDError.noData
+    }
+
     /// Lee tiempo desde arranque del motor (PID 0x1F)
     /// Retorna segundos
     public func readRuntimeSinceStart() async throws -> Int {

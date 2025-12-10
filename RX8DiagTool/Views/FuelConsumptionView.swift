@@ -223,14 +223,17 @@ struct TripStatItem: View {
                 .foregroundColor(.blue)
                 .font(.caption)
 
+            // Usar fuente monoespaciada y anchos fijos para evitar desalineación
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value)
-                    .font(.title3)
+                    .font(.system(.title3, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
+                    .frame(minWidth: 45, alignment: .trailing)
                 Text(unit)
                     .font(.caption2)
                     .foregroundColor(.gray)
+                    .frame(width: 35, alignment: .leading)
             }
 
             Text(label)
@@ -245,8 +248,8 @@ struct TripStatItem: View {
 
 struct RangeCard: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
-    @State private var showFuelInput = false
-    @State private var manualFuelInput: String = ""
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    @State private var showFuelSenderConfig = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -282,14 +285,13 @@ struct RangeCard: View {
                 // Indicador de nivel
                 FuelLevelIndicator(
                     level: fuelTracker.fuelLevel,
-                    available: fuelTracker.fuelLevelAvailable || fuelTracker.manualFuelLevel != nil
+                    available: fuelTracker.fuelLevelAvailable
                 )
             }
 
             // Información del combustible
             HStack(spacing: 16) {
-                // Mostrar nivel si está disponible o es manual
-                if fuelTracker.fuelLevelAvailable || fuelTracker.manualFuelLevel != nil {
+                if fuelTracker.fuelLevelAvailable {
                     VStack(alignment: .leading) {
                         Text("Nivel")
                             .font(.caption2)
@@ -318,12 +320,11 @@ struct RangeCard: View {
                         }
                     }
                 } else {
-                    // Sin sensor - mostrar mensaje
                     VStack(alignment: .leading) {
                         Text("Sin sensor de nivel")
                             .font(.caption)
                             .foregroundColor(.orange)
-                        Text("Introduce litros manualmente")
+                        Text("Configura las sondas")
                             .font(.caption2)
                             .foregroundColor(.gray)
                     }
@@ -331,17 +332,30 @@ struct RangeCard: View {
 
                 Spacer()
 
-                // Botón para establecer nivel manual
-                Button(action: { showFuelInput = true }) {
+                // Botón para configurar sondas de combustible
+                Button(action: { showFuelSenderConfig = true }) {
                     HStack {
-                        Image(systemName: "fuelpump.circle")
-                        Text(fuelTracker.fuelLevelAvailable || fuelTracker.manualFuelLevel != nil ? "Cambiar" : "Añadir")
+                        Image(systemName: "gauge.with.dots.needle.bottom.50percent")
+                        Text("Sondas")
                     }
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.blue.opacity(0.3))
+                    .background(Color.orange.opacity(0.3))
                     .cornerRadius(8)
+                }
+            }
+
+            // Advertencia de sonda si hay problema
+            if let warning = engineMonitor.currentState.fuelSenderWarning {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    Text(warning)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Spacer()
                 }
             }
 
@@ -372,17 +386,8 @@ struct RangeCard: View {
         .padding()
         .background(Color(.systemGray6).opacity(0.3))
         .cornerRadius(16)
-        .alert("Nivel de Combustible", isPresented: $showFuelInput) {
-            TextField("Litros", text: $manualFuelInput)
-                .keyboardType(.decimalPad)
-            Button("Cancelar", role: .cancel) {}
-            Button("Guardar") {
-                if let liters = Double(manualFuelInput) {
-                    fuelTracker.setManualFuelLevel(liters)
-                }
-            }
-        } message: {
-            Text("Introduce los litros de combustible restantes (tanque: \(Int(fuelTracker.tankCapacity))L)")
+        .sheet(isPresented: $showFuelSenderConfig) {
+            FuelSenderConfigView()
         }
     }
 
@@ -393,6 +398,173 @@ struct RangeCard: View {
             return fuelTracker.averageConsumption
         }
         return 13.0
+    }
+}
+
+// MARK: - Configuración de Sondas de Combustible
+
+struct FuelSenderConfigView: View {
+    @EnvironmentObject var fuelTracker: FuelConsumptionTracker
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    @Environment(\.dismiss) var dismiss
+    @AppStorage("fuelSenderMode") private var senderMode: String = "both"
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("El RX-8 tiene un depósito 'saddle tank' dividido en dos secciones con sondas independientes. Si una falla, puedes usar solo la otra.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+
+                Section("Lecturas Actuales") {
+                    // Sonda Izquierda
+                    HStack {
+                        Image(systemName: "l.circle.fill")
+                            .foregroundColor(.blue)
+                        Text("Sonda Izquierda")
+                        Spacer()
+                        if let left = engineMonitor.currentState.fuelLevelLeftSender {
+                            Text(String(format: "%.0f%%", left))
+                                .foregroundColor(.white)
+                                .fontWeight(.semibold)
+                        } else {
+                            Text("No disponible")
+                                .foregroundColor(.orange)
+                        }
+                    }
+
+                    // Sonda Derecha
+                    HStack {
+                        Image(systemName: "r.circle.fill")
+                            .foregroundColor(.purple)
+                        Text("Sonda Derecha")
+                        Spacer()
+                        if let right = engineMonitor.currentState.fuelLevelRightSender {
+                            Text(String(format: "%.0f%%", right))
+                                .foregroundColor(.white)
+                                .fontWeight(.semibold)
+                        } else {
+                            Text("No disponible")
+                                .foregroundColor(.orange)
+                        }
+                    }
+
+                    // Lectura OBD Estándar
+                    HStack {
+                        Image(systemName: "car.fill")
+                            .foregroundColor(.green)
+                        Text("OBD Estándar")
+                        Spacer()
+                        Text(String(format: "%.0f%%", fuelTracker.fuelLevel))
+                            .foregroundColor(.white)
+                            .fontWeight(.semibold)
+                    }
+                }
+
+                Section("Sonda a Utilizar") {
+                    Picker("Modo", selection: $senderMode) {
+                        HStack {
+                            Image(systemName: "l.circle.fill")
+                            Text("Solo Izquierda")
+                        }.tag("left")
+
+                        HStack {
+                            Image(systemName: "r.circle.fill")
+                            Text("Solo Derecha")
+                        }.tag("right")
+
+                        HStack {
+                            Image(systemName: "circle.lefthalf.filled")
+                            Text("Ambas (Promedio)")
+                        }.tag("both")
+
+                        HStack {
+                            Image(systemName: "car.fill")
+                            Text("OBD Estándar")
+                        }.tag("standard")
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+
+                Section {
+                    // Nivel resultante
+                    HStack {
+                        Text("Nivel Calculado")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text(String(format: "%.0f%%", calculatedLevel))
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+                    }
+
+                    HStack {
+                        Text("Litros Restantes")
+                        Spacer()
+                        Text(String(format: "%.1f L", calculatedLevel * 0.6))
+                            .foregroundColor(.white)
+                    }
+
+                    HStack {
+                        Text("Autonomía Estimada")
+                        Spacer()
+                        let range = (calculatedLevel * 0.6 / 13.0) * 100
+                        Text(String(format: "%.0f km", range))
+                            .foregroundColor(.white)
+                    }
+                }
+
+                Section {
+                    Text("Si tu indicador de combustible está atascado, probablemente una de las sondas esté defectuosa. Selecciona solo la sonda que funcione correctamente.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            }
+            .navigationTitle("Sondas de Combustible")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") {
+                        // Aplicar configuración antes de cerrar
+                        applyConfiguration()
+                        dismiss()
+                    }
+                }
+            }
+            .onChange(of: senderMode) { _, _ in
+                applyConfiguration()
+            }
+        }
+    }
+
+    var calculatedLevel: Double {
+        let left = engineMonitor.currentState.fuelLevelLeftSender
+        let right = engineMonitor.currentState.fuelLevelRightSender
+        let standard = fuelTracker.fuelLevel
+
+        switch senderMode {
+        case "left":
+            return left ?? standard
+        case "right":
+            return right ?? standard
+        case "both":
+            if let l = left, let r = right {
+                return (l + r) / 2
+            }
+            return left ?? right ?? standard
+        case "standard":
+            return standard
+        default:
+            return standard
+        }
+    }
+
+    func applyConfiguration() {
+        // Actualizar el nivel de combustible según la configuración
+        fuelTracker.updateFuelLevel(calculatedLevel)
     }
 }
 
@@ -612,19 +784,23 @@ struct PartialStatItem: View {
 
     var body: some View {
         VStack(spacing: 2) {
+            // Usar ancho fijo para que los números no desalineen la UI
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 Text(value)
-                    .font(.subheadline)
+                    .font(.system(.subheadline, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
+                    .frame(minWidth: 40, alignment: .trailing)
                 Text(unit)
                     .font(.caption2)
                     .foregroundColor(.gray)
+                    .frame(width: 30, alignment: .leading)
             }
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.gray)
         }
+        .frame(maxWidth: .infinity)
     }
 }
 

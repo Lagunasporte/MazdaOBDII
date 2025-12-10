@@ -920,9 +920,16 @@ public class EngineMonitor: ObservableObject {
                     fuelTracker?.updateFuelLevel(fuelLevel)
                 }
 
-                if let runtime = try? await cm.readRuntimeSinceStart() {
-                    fuelTracker?.updateOBDData(runtime: runtime, distanceSinceClear: 0)
-                }
+                // Leer runtime y odómetro
+                let runtime = try? await cm.readRuntimeSinceStart()
+                let odometer = try? await cm.readOdometer()
+                let distSinceClear = try? await cm.readDistanceSinceDTCClear()
+
+                fuelTracker?.updateOBDData(
+                    runtime: runtime ?? 0,
+                    distanceSinceClear: distSinceClear ?? 0,
+                    odometer: odometer
+                )
 
             default:
                 break
