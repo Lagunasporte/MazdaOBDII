@@ -1,10 +1,11 @@
 import SwiftUI
 
-// MARK: - Vista de Diagnóstico Completo
+// MARK: - Vista de Diagnóstico Completo (Responsive: Vertical=Móvil, Horizontal=CarPlay)
 
 struct DiagnosticView: View {
     @EnvironmentObject var diagnosticMode: DiagnosticMode
     @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     @State private var showReport = false
     @State private var lastReport: DiagnosticReport?
     @State private var showDTCList = false
@@ -17,99 +18,89 @@ struct DiagnosticView: View {
     @State private var showBlackBox = false
     @State private var errorMessage: String?
     @State private var showError = false
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Cabecera con estado
-                    DiagnosticHeaderCard()
-
-                    if diagnosticMode.isRunning {
-                        // Progreso del diagnóstico
-                        DiagnosticProgressCard()
-                    } else {
-                        // Botón de inicio
-                        StartDiagnosticButton()
-
-                        // Hallazgos anteriores
-                        if !diagnosticMode.findings.isEmpty {
-                            FindingsCard()
-                        }
-
-                        // Accesos rápidos
-                        QuickDiagnosticsGrid(
-                            showDTCList: $showDTCList,
-                            showClearDTCAlert: $showClearDTCAlert,
-                            showO2Test: $showO2Test,
-                            showRealTimeMonitor: $showRealTimeMonitor,
-                            showVehicleInfo: $showVehicleInfo,
-                            showFreezeFrame: $showFreezeFrame,
-                            showProcedures: $showProcedures,
-                            showBlackBox: $showBlackBox
-                        )
-
-                        // Diagnósticos específicos RX-8
-                        RX8SpecificDiagnosticsCard()
-                    }
-                }
-                .padding()
-            }
-            .background(Color.black)
-            .navigationTitle("Diagnóstico")
-            .onAppear {
-                // Conectar DiagnosticMode con ConnectionManager
-                diagnosticMode.connectionManager = connectionManager
-            }
-            .sheet(isPresented: $showReport) {
-                if let report = lastReport {
-                    DiagnosticReportView(report: report)
-                }
-            }
-            .sheet(isPresented: $showDTCList) {
-                DTCListSheet()
-            }
-            .sheet(isPresented: $showO2Test) {
-                O2TestSheet()
-            }
-            .sheet(isPresented: $showRealTimeMonitor) {
-                RealTimeMonitorSheet()
-            }
-            .sheet(isPresented: $showVehicleInfo) {
-                VehicleInfoSheet()
-            }
-            .sheet(isPresented: $showFreezeFrame) {
-                FreezeFrameSheet()
-            }
-            .sheet(isPresented: $showProcedures) {
-                ProceduresView()
-            }
-            .sheet(isPresented: $showBlackBox) {
-                BlackBoxView()
-            }
-            .alert("Borrar DTCs", isPresented: $showClearDTCAlert) {
-                Button("Cancelar", role: .cancel) {}
-                Button("Borrar", role: .destructive) {
-                    clearDTCs()
-                }
-            } message: {
-                Text("¿Estás seguro de borrar todos los códigos de fallo? Esto también apagará la luz Check Engine.")
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK") {}
-            } message: {
-                Text(errorMessage ?? "Error desconocido")
-            }
-            .alert("Resultado", isPresented: $showClearResult) {
-                Button("OK") {}
-            } message: {
-                Text(clearResultMessage)
-            }
-        }
-    }
-
     @State private var showClearResult = false
     @State private var clearResultMessage = ""
+
+    var isLandscape: Bool {
+        verticalSizeClass == .compact
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            if isLandscape {
+                // MODO CARPLAY
+                CarPlayDiagnosticView(
+                    geometry: geometry,
+                    showDTCList: $showDTCList,
+                    showClearDTCAlert: $showClearDTCAlert,
+                    showBlackBox: $showBlackBox
+                )
+            } else {
+                // MODO MÓVIL
+                MobileDiagnosticView(
+                    showReport: $showReport,
+                    lastReport: $lastReport,
+                    showDTCList: $showDTCList,
+                    showClearDTCAlert: $showClearDTCAlert,
+                    showO2Test: $showO2Test,
+                    showRealTimeMonitor: $showRealTimeMonitor,
+                    showVehicleInfo: $showVehicleInfo,
+                    showFreezeFrame: $showFreezeFrame,
+                    showProcedures: $showProcedures,
+                    showBlackBox: $showBlackBox,
+                    clearDTCsAction: clearDTCs
+                )
+            }
+        }
+        .background(Color.black)
+        .onAppear {
+            diagnosticMode.connectionManager = connectionManager
+        }
+        .sheet(isPresented: $showReport) {
+            if let report = lastReport {
+                DiagnosticReportView(report: report)
+            }
+        }
+        .sheet(isPresented: $showDTCList) {
+            DTCListSheet()
+        }
+        .sheet(isPresented: $showO2Test) {
+            O2TestSheet()
+        }
+        .sheet(isPresented: $showRealTimeMonitor) {
+            RealTimeMonitorSheet()
+        }
+        .sheet(isPresented: $showVehicleInfo) {
+            VehicleInfoSheet()
+        }
+        .sheet(isPresented: $showFreezeFrame) {
+            FreezeFrameSheet()
+        }
+        .sheet(isPresented: $showProcedures) {
+            ProceduresView()
+        }
+        .sheet(isPresented: $showBlackBox) {
+            BlackBoxView()
+        }
+        .alert("Borrar DTCs", isPresented: $showClearDTCAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Borrar", role: .destructive) {
+                clearDTCs()
+            }
+        } message: {
+            Text("¿Borrar todos los códigos? Apagará Check Engine.")
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK") {}
+        } message: {
+            Text(errorMessage ?? "Error desconocido")
+        }
+        .alert("Resultado", isPresented: $showClearResult) {
+            Button("OK") {}
+        } message: {
+            Text(clearResultMessage)
+        }
+    }
 
     private func clearDTCs() {
         Task {
@@ -136,6 +127,232 @@ struct DiagnosticView: View {
                     showError = true
                 }
             }
+        }
+    }
+}
+
+// MARK: - Vista CarPlay Diagnóstico (Horizontal)
+
+struct CarPlayDiagnosticView: View {
+    @EnvironmentObject var diagnosticMode: DiagnosticMode
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    let geometry: GeometryProxy
+    @Binding var showDTCList: Bool
+    @Binding var showClearDTCAlert: Bool
+    @Binding var showBlackBox: Bool
+
+    var isConnected: Bool {
+        connectionManager.connectionState == .connectedToVehicle
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Columna izquierda: Score de salud
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 10)
+                        .frame(width: 100, height: 100)
+
+                    Circle()
+                        .trim(from: 0, to: Double(diagnosticMode.healthScore) / 100)
+                        .stroke(healthColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                        .frame(width: 100, height: 100)
+                        .rotationEffect(.degrees(-90))
+
+                    VStack(spacing: 0) {
+                        Text("\(diagnosticMode.healthScore)")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        Text("Salud")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                }
+
+                Text(healthStatus)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(healthColor)
+
+                // Hallazgos si hay
+                if !diagnosticMode.findings.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption2)
+                        Text("\(diagnosticMode.findings.count) hallazgos")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+            .frame(width: geometry.size.width * 0.25)
+
+            // Columna central: Acciones rápidas
+            VStack(spacing: 8) {
+                Text("DIAGNÓSTICOS")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+
+                HStack(spacing: 8) {
+                    CarPlayDiagButton(icon: "exclamationmark.triangle", label: "Leer DTCs", color: .red, enabled: isConnected) {
+                        showDTCList = true
+                    }
+
+                    CarPlayDiagButton(icon: "trash", label: "Borrar", color: .orange, enabled: isConnected) {
+                        showClearDTCAlert = true
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    CarPlayDiagButton(icon: "record.circle", label: "Caja Negra", color: .pink, enabled: isConnected) {
+                        showBlackBox = true
+                    }
+
+                    CarPlayDiagButton(icon: "stethoscope", label: "Diag Full", color: .blue, enabled: isConnected) {
+                        Task {
+                            _ = try? await diagnosticMode.startDiagnostic()
+                        }
+                    }
+                }
+            }
+            .frame(width: geometry.size.width * 0.4)
+
+            // Columna derecha: Estado
+            VStack(spacing: 8) {
+                if diagnosticMode.isRunning {
+                    VStack(spacing: 8) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .tint(.orange)
+
+                        Text(diagnosticMode.currentPhase.rawValue)
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        Text(String(format: "%.0f%%", diagnosticMode.progress * 100))
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                } else {
+                    VStack(spacing: 4) {
+                        Image(systemName: isConnected ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .font(.title)
+                            .foregroundColor(isConnected ? .green : .red)
+
+                        Text(isConnected ? "Listo" : "Sin conexión")
+                            .font(.caption)
+                            .foregroundColor(isConnected ? .green : .red)
+                    }
+
+                    if isConnected {
+                        Text("Toca para diagnosticar")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .frame(width: geometry.size.width * 0.25)
+        }
+        .padding(12)
+    }
+
+    var healthColor: Color {
+        if diagnosticMode.healthScore >= 90 { return .green }
+        if diagnosticMode.healthScore >= 70 { return .teal }
+        if diagnosticMode.healthScore >= 50 { return .yellow }
+        if diagnosticMode.healthScore >= 25 { return .orange }
+        return .red
+    }
+
+    var healthStatus: String {
+        if diagnosticMode.healthScore >= 90 { return "Excelente" }
+        if diagnosticMode.healthScore >= 70 { return "Bueno" }
+        if diagnosticMode.healthScore >= 50 { return "Regular" }
+        if diagnosticMode.healthScore >= 25 { return "Deficiente" }
+        return "Crítico"
+    }
+}
+
+struct CarPlayDiagButton: View {
+    let icon: String
+    let label: String
+    let color: Color
+    let enabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.title3)
+                Text(label)
+                    .font(.caption2)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(enabled ? color.opacity(0.3) : Color.gray.opacity(0.2))
+            .foregroundColor(enabled ? color : .gray)
+            .cornerRadius(10)
+        }
+        .disabled(!enabled)
+    }
+}
+
+// MARK: - Vista Móvil Diagnóstico (Vertical)
+
+struct MobileDiagnosticView: View {
+    @EnvironmentObject var diagnosticMode: DiagnosticMode
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Binding var showReport: Bool
+    @Binding var lastReport: DiagnosticReport?
+    @Binding var showDTCList: Bool
+    @Binding var showClearDTCAlert: Bool
+    @Binding var showO2Test: Bool
+    @Binding var showRealTimeMonitor: Bool
+    @Binding var showVehicleInfo: Bool
+    @Binding var showFreezeFrame: Bool
+    @Binding var showProcedures: Bool
+    @Binding var showBlackBox: Bool
+    let clearDTCsAction: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    DiagnosticHeaderCard()
+
+                    if diagnosticMode.isRunning {
+                        DiagnosticProgressCard()
+                    } else {
+                        StartDiagnosticButton()
+
+                        if !diagnosticMode.findings.isEmpty {
+                            FindingsCard()
+                        }
+
+                        QuickDiagnosticsGrid(
+                            showDTCList: $showDTCList,
+                            showClearDTCAlert: $showClearDTCAlert,
+                            showO2Test: $showO2Test,
+                            showRealTimeMonitor: $showRealTimeMonitor,
+                            showVehicleInfo: $showVehicleInfo,
+                            showFreezeFrame: $showFreezeFrame,
+                            showProcedures: $showProcedures,
+                            showBlackBox: $showBlackBox
+                        )
+
+                        RX8SpecificDiagnosticsCard()
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Diagnóstico")
         }
     }
 }

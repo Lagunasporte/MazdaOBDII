@@ -98,34 +98,265 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Dashboard Principal
+// MARK: - Dashboard Principal (Responsive: Vertical=Móvil, Horizontal=CarPlay)
 
 struct DashboardView: View {
     @EnvironmentObject var connectionManager: OBDConnectionManager
     @EnvironmentObject var engineMonitor: EngineMonitor
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     @State private var showConnectionSheet = false
+
+    var isLandscape: Bool {
+        verticalSizeClass == .compact
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            if isLandscape {
+                // MODO CARPLAY - Layout horizontal
+                CarPlayDashboardView(geometry: geometry, showConnectionSheet: $showConnectionSheet)
+            } else {
+                // MODO MÓVIL - Layout vertical con scroll
+                MobileDashboardView(showConnectionSheet: $showConnectionSheet)
+            }
+        }
+        .background(Color.black)
+        .sheet(isPresented: $showConnectionSheet) {
+            ConnectionSheet()
+        }
+    }
+}
+
+// MARK: - Dashboard CarPlay (Horizontal)
+
+struct CarPlayDashboardView: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    let geometry: GeometryProxy
+    @Binding var showConnectionSheet: Bool
+
+    var body: some View {
+        if connectionManager.connectionState == .connectedToVehicle {
+            HStack(spacing: 12) {
+                // Columna izquierda: RPM grande
+                VStack(spacing: 4) {
+                    Text("RPM")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.gray)
+
+                    Text("\(engineMonitor.currentState.rpm)")
+                        .font(.system(size: 56, weight: .bold, design: .rounded))
+                        .foregroundColor(rpmColor)
+                        .minimumScaleFactor(0.5)
+
+                    // Barra RPM
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(height: 8)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(rpmColor)
+                                .frame(width: geo.size.width * min(Double(engineMonitor.currentState.rpm) / 9000, 1.0), height: 8)
+                        }
+                    }
+                    .frame(height: 8)
+                    .padding(.horizontal, 8)
+                }
+                .frame(width: geometry.size.width * 0.25)
+
+                // Columna central: Velocidad y temperaturas
+                VStack(spacing: 8) {
+                    // Velocidad grande
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(String(format: "%.0f", engineMonitor.currentState.vehicleSpeed))
+                            .font(.system(size: 48, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        Text("km/h")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+
+                    Divider().background(Color.gray.opacity(0.5))
+
+                    // Temperaturas en fila
+                    HStack(spacing: 16) {
+                        CarPlayTempItem(icon: "thermometer.medium", label: "Refr", value: engineMonitor.currentState.coolantTemperature, color: coolantColor)
+                        CarPlayTempItem(icon: "drop.fill", label: "Aceite", value: engineMonitor.currentState.oilTemperature, color: oilColor, showDash: engineMonitor.currentState.oilTemperature < 50)
+                        CarPlayTempItem(icon: "wind", label: "Adm", value: engineMonitor.currentState.intakeAirTemperature, color: .cyan)
+                    }
+                }
+                .frame(width: geometry.size.width * 0.35)
+
+                // Columna derecha: Estado motor y alertas
+                VStack(spacing: 6) {
+                    // Voltaje y throttle
+                    HStack(spacing: 12) {
+                        CarPlayStatBox(label: "Voltaje", value: String(format: "%.1f", engineMonitor.currentState.batteryVoltage), unit: "V", color: engineMonitor.currentState.batteryVoltage > 13.5 ? .green : .orange)
+                        CarPlayStatBox(label: "Carga", value: String(format: "%.0f", engineMonitor.currentState.throttlePosition), unit: "%", color: .blue)
+                    }
+
+                    // Fuel trims
+                    HStack(spacing: 12) {
+                        CarPlayStatBox(label: "STFT", value: String(format: "%+.0f", engineMonitor.currentState.shortTermFuelTrim), unit: "%", color: fuelTrimColor(engineMonitor.currentState.shortTermFuelTrim))
+                        CarPlayStatBox(label: "LTFT", value: String(format: "%+.0f", engineMonitor.currentState.longTermFuelTrim), unit: "%", color: fuelTrimColor(engineMonitor.currentState.longTermFuelTrim))
+                    }
+
+                    // Alertas si hay
+                    if !engineMonitor.activeAlerts.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                            Text("\(engineMonitor.activeAlerts.count) alertas")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(Color.orange.opacity(0.2))
+                        .cornerRadius(8)
+                    }
+
+                    // Estado conexión
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                        Text("Conectado")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                }
+                .frame(width: geometry.size.width * 0.3)
+            }
+            .padding(12)
+        } else {
+            // No conectado - CarPlay
+            VStack(spacing: 16) {
+                Image(systemName: "car.side")
+                    .font(.system(size: 50))
+                    .foregroundColor(.gray)
+                Text("No conectado")
+                    .font(.title3)
+                    .foregroundColor(.white)
+                Button(action: { showConnectionSheet = true }) {
+                    HStack {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                        Text("Conectar")
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.orange)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+            }
+        }
+    }
+
+    var rpmColor: Color {
+        let rpm = engineMonitor.currentState.rpm
+        if rpm > 8500 { return .red }
+        if rpm > 7000 { return .orange }
+        return .green
+    }
+
+    var coolantColor: Color {
+        let temp = engineMonitor.currentState.coolantTemperature
+        if temp > 100 { return .red }
+        if temp > 95 { return .orange }
+        if temp < 75 { return .blue }
+        return .green
+    }
+
+    var oilColor: Color {
+        let temp = engineMonitor.currentState.oilTemperature
+        if temp < 50 { return .gray }
+        if temp > 120 { return .red }
+        if temp > 110 { return .orange }
+        if temp < 80 { return .blue }
+        return .green
+    }
+
+    func fuelTrimColor(_ value: Double) -> Color {
+        if abs(value) > 15 { return .red }
+        if abs(value) > 10 { return .orange }
+        return .green
+    }
+}
+
+struct CarPlayTempItem: View {
+    let icon: String
+    let label: String
+    let value: Double
+    let color: Color
+    var showDash: Bool = false
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(color)
+            Text(showDash ? "-" : String(format: "%.0f°", value))
+                .font(.system(.subheadline, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(showDash ? .gray : .white)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.gray)
+        }
+    }
+}
+
+struct CarPlayStatBox: View {
+    let label: String
+    let value: String
+    let unit: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.gray)
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(.subheadline, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(color)
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(Color(.systemGray6).opacity(0.3))
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - Dashboard Móvil (Vertical)
+
+struct MobileDashboardView: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    @Binding var showConnectionSheet: Bool
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    // Estado de conexión
                     ConnectionStatusCard(showSheet: $showConnectionSheet)
 
                     if connectionManager.connectionState == .connectedToVehicle {
-                        // Indicadores principales
                         MainGaugesView()
-
-                        // Temperaturas
                         TemperatureGridView()
-
-                        // Estado del motor
                         EngineStatusCard()
-
-                        // Alertas activas
                         ActiveAlertsCard()
                     } else {
-                        // Placeholder cuando no está conectado
                         NotConnectedView(showSheet: $showConnectionSheet)
                     }
                 }
@@ -141,9 +372,6 @@ struct DashboardView: View {
                             .foregroundColor(connectionManager.connectionState.isConnected ? .green : .gray)
                     }
                 }
-            }
-            .sheet(isPresented: $showConnectionSheet) {
-                ConnectionSheet()
             }
         }
     }

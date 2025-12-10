@@ -1,138 +1,54 @@
 import SwiftUI
 
-// MARK: - Vista de Códigos DTC
+// MARK: - Vista de Códigos DTC (Responsive: Vertical=Móvil, Horizontal=CarPlay)
 
 struct DTCView: View {
     @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     @State private var currentDTCs: [String] = []
     @State private var pendingDTCs: [String] = []
     @State private var isScanning = false
     @State private var showClearConfirmation = false
     @State private var lastScan: Date?
 
+    var isLandscape: Bool {
+        verticalSizeClass == .compact
+    }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Botones de acción
-                    ActionButtonsCard()
-
-                    // Estado actual
-                    if isScanning {
-                        ScanningCard()
-                    } else if currentDTCs.isEmpty && pendingDTCs.isEmpty {
-                        NoDTCsCard()
-                    } else {
-                        // DTCs actuales
-                        if !currentDTCs.isEmpty {
-                            DTCListCard(title: "Códigos Activos", codes: currentDTCs, isActive: true)
-                        }
-
-                        // DTCs pendientes
-                        if !pendingDTCs.isEmpty {
-                            DTCListCard(title: "Códigos Pendientes", codes: pendingDTCs, isActive: false)
-                        }
-                    }
-
-                    // Base de datos de códigos
-                    DTCDatabaseCard()
-                }
-                .padding()
-            }
-            .background(Color.black)
-            .navigationTitle("Códigos DTC")
-            .alert("Borrar Códigos", isPresented: $showClearConfirmation) {
-                Button("Cancelar", role: .cancel) {}
-                Button("Borrar", role: .destructive) {
-                    clearDTCs()
-                }
-            } message: {
-                Text("¿Estás seguro de que quieres borrar todos los códigos de error? Esto también apagará la luz de Check Engine.")
+        GeometryReader { geometry in
+            if isLandscape {
+                // MODO CARPLAY
+                CarPlayDTCView(
+                    geometry: geometry,
+                    currentDTCs: $currentDTCs,
+                    pendingDTCs: $pendingDTCs,
+                    isScanning: $isScanning,
+                    showClearConfirmation: $showClearConfirmation,
+                    scanAction: scanDTCs
+                )
+            } else {
+                // MODO MÓVIL
+                MobileDTCView(
+                    currentDTCs: $currentDTCs,
+                    pendingDTCs: $pendingDTCs,
+                    isScanning: $isScanning,
+                    showClearConfirmation: $showClearConfirmation,
+                    lastScan: lastScan,
+                    scanAction: scanDTCs,
+                    clearAction: clearDTCs
+                )
             }
         }
-    }
-
-    // MARK: - Botones de Acción
-
-    func ActionButtonsCard() -> some View {
-        HStack(spacing: 12) {
-            Button(action: scanDTCs) {
-                VStack {
-                    Image(systemName: "magnifyingglass")
-                        .font(.title2)
-                    Text("Escanear")
-                        .font(.caption)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.orange)
-                .foregroundColor(.white)
-                .cornerRadius(12)
+        .background(Color.black)
+        .alert("Borrar Códigos", isPresented: $showClearConfirmation) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Borrar", role: .destructive) {
+                clearDTCs()
             }
-            .disabled(connectionManager.connectionState != .connectedToVehicle || isScanning)
-
-            Button(action: { showClearConfirmation = true }) {
-                VStack {
-                    Image(systemName: "trash")
-                        .font(.title2)
-                    Text("Borrar")
-                        .font(.caption)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(currentDTCs.isEmpty ? Color.gray : Color.red)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-            }
-            .disabled(currentDTCs.isEmpty || connectionManager.connectionState != .connectedToVehicle)
+        } message: {
+            Text("¿Borrar todos los códigos? Esto apagará la luz Check Engine.")
         }
-    }
-
-    func ScanningCard() -> some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-                .tint(.orange)
-
-            Text("Escaneando códigos de error...")
-                .foregroundColor(.white)
-
-            Text("Leyendo PCM, ABS, Airbag...")
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .padding(40)
-        .frame(maxWidth: .infinity)
-        .background(Color(.systemGray6).opacity(0.3))
-        .cornerRadius(16)
-    }
-
-    func NoDTCsCard() -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 60))
-                .foregroundColor(.green)
-
-            Text("Sin códigos de error")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-
-            Text("No se encontraron códigos de error activos ni pendientes")
-                .font(.caption)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-
-            if let lastScan = lastScan {
-                Text("Último escaneo: \(lastScan.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding(40)
-        .frame(maxWidth: .infinity)
-        .background(Color(.systemGray6).opacity(0.3))
-        .cornerRadius(16)
     }
 
     // MARK: - Acciones
@@ -160,6 +76,310 @@ struct DTCView: View {
             } catch {
                 // Manejar error
             }
+        }
+    }
+}
+
+// MARK: - Vista CarPlay DTC (Horizontal)
+
+struct CarPlayDTCView: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    let geometry: GeometryProxy
+    @Binding var currentDTCs: [String]
+    @Binding var pendingDTCs: [String]
+    @Binding var isScanning: Bool
+    @Binding var showClearConfirmation: Bool
+    let scanAction: () -> Void
+
+    var totalCodes: Int { currentDTCs.count + pendingDTCs.count }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Columna izquierda: Estado y botones
+            VStack(spacing: 12) {
+                // Indicador principal
+                if isScanning {
+                    VStack(spacing: 8) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.orange)
+                        Text("Escaneando...")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                } else if totalCodes == 0 {
+                    VStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(.green)
+                        Text("Sin errores")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                } else {
+                    VStack(spacing: 4) {
+                        Text("\(totalCodes)")
+                            .font(.system(size: 56, weight: .bold, design: .rounded))
+                            .foregroundColor(.red)
+                        Text(totalCodes == 1 ? "código" : "códigos")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+
+                Spacer()
+
+                // Botones
+                HStack(spacing: 8) {
+                    Button(action: scanAction) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.title3)
+                            Text("Escanear")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    .disabled(connectionManager.connectionState != .connectedToVehicle || isScanning)
+
+                    Button(action: { showClearConfirmation = true }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "trash")
+                                .font(.title3)
+                            Text("Borrar")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(currentDTCs.isEmpty ? Color.gray.opacity(0.5) : Color.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    .disabled(currentDTCs.isEmpty)
+                }
+            }
+            .frame(width: geometry.size.width * 0.3)
+            .padding()
+
+            // Columna derecha: Lista de códigos
+            VStack(alignment: .leading, spacing: 8) {
+                if !currentDTCs.isEmpty {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                        Text("ACTIVOS")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(currentDTCs, id: \.self) { code in
+                                CarPlayDTCChip(code: code, isActive: true)
+                            }
+                        }
+                    }
+                }
+
+                if !pendingDTCs.isEmpty {
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.orange)
+                            .font(.caption)
+                        Text("PENDIENTES")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(pendingDTCs, id: \.self) { code in
+                                CarPlayDTCChip(code: code, isActive: false)
+                            }
+                        }
+                    }
+                }
+
+                if totalCodes == 0 && !isScanning {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.largeTitle)
+                                .foregroundColor(.green)
+                            Text("Motor OK")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        Spacer()
+                    }
+                    Spacer()
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+        }
+    }
+}
+
+struct CarPlayDTCChip: View {
+    let code: String
+    let isActive: Bool
+
+    var dtcInfo: DTCCode? {
+        RX8DTCDatabase.find(code: code)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Text(code)
+                    .font(.system(.subheadline, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+
+                if let info = dtcInfo {
+                    if info.rotarySpecific {
+                        Image(systemName: "r.circle.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption2)
+                    }
+                    if info.affectsApexSeals {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                            .font(.caption2)
+                    }
+                }
+            }
+
+            if let info = dtcInfo {
+                Text(info.name)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isActive ? Color.red.opacity(0.3) : Color.orange.opacity(0.3))
+        .cornerRadius(10)
+    }
+}
+
+// MARK: - Vista Móvil DTC (Vertical)
+
+struct MobileDTCView: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @Binding var currentDTCs: [String]
+    @Binding var pendingDTCs: [String]
+    @Binding var isScanning: Bool
+    @Binding var showClearConfirmation: Bool
+    let lastScan: Date?
+    let scanAction: () -> Void
+    let clearAction: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Botones de acción
+                    HStack(spacing: 12) {
+                        Button(action: scanAction) {
+                            VStack {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.title2)
+                                Text("Escanear")
+                                    .font(.caption)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.orange)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .disabled(connectionManager.connectionState != .connectedToVehicle || isScanning)
+
+                        Button(action: { showClearConfirmation = true }) {
+                            VStack {
+                                Image(systemName: "trash")
+                                    .font(.title2)
+                                Text("Borrar")
+                                    .font(.caption)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(currentDTCs.isEmpty ? Color.gray : Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .disabled(currentDTCs.isEmpty || connectionManager.connectionState != .connectedToVehicle)
+                    }
+
+                    // Estado
+                    if isScanning {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(.orange)
+                            Text("Escaneando códigos de error...")
+                                .foregroundColor(.white)
+                            Text("Leyendo PCM, ABS, Airbag...")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .padding(40)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.systemGray6).opacity(0.3))
+                        .cornerRadius(16)
+                    } else if currentDTCs.isEmpty && pendingDTCs.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.green)
+                            Text("Sin códigos de error")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                            Text("No se encontraron códigos de error activos ni pendientes")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                            if let lastScan = lastScan {
+                                Text("Último escaneo: \(lastScan.formatted(date: .abbreviated, time: .shortened))")
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding(40)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.systemGray6).opacity(0.3))
+                        .cornerRadius(16)
+                    } else {
+                        if !currentDTCs.isEmpty {
+                            DTCListCard(title: "Códigos Activos", codes: currentDTCs, isActive: true)
+                        }
+                        if !pendingDTCs.isEmpty {
+                            DTCListCard(title: "Códigos Pendientes", codes: pendingDTCs, isActive: false)
+                        }
+                    }
+
+                    // Base de datos
+                    DTCDatabaseCard()
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Códigos DTC")
         }
     }
 }
