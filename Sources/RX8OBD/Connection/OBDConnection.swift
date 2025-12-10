@@ -990,25 +990,30 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     }
 
     /// PIDs conocidos para temperatura de aceite Mazda RX-8
-    /// Fuente: VersaTuner, RX8Club, equinox311 GitHub, JSON proporcionado por usuario
-    /// El RX-8 NO tiene sensor físico de aceite - la ECU CALCULA el valor
+    /// Fuente: Mazda3Revolution forum, FORScan forum, Scangauge X-gauge codes
+    /// IMPORTANTE: El RX-8 NO tiene sensor físico de aceite - la ECU CALCULA el valor
+    /// basándose en: RPM, carga, posición solenoide OMP, temp coolant, velocidad
     private static let oilTempPIDs: [(pid: UInt16, formula: (Data) -> Double, name: String)] = [
-        // PID principal verificado: 22 1200 - Fórmula: (A*256+B)/10-40
-        // Header: 7E0 (ECU motor)
-        (0x1200, { data in
-            guard data.count >= 2 else { return -999 }
-            return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
-        }, "Mode22_1200"),
-        // PID alternativo Serie 2: 22 1310
+        // PID principal de Torque/Scangauge: 22 1310
+        // Fórmula CORRECTA: (((A*256)+B)/100)-40 °C (divisor 100, NO 10)
+        // Fuente: Mazda3Revolution forum, Scangauge TXD:07E0221310 MTH:00090005F060
         (0x1310, { data in
             guard data.count >= 2 else { return -999 }
-            return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
-        }, "Mode22_1310"),
-        // PID alternativo: algunos ECU usan este
-        (0x115C, { data in
+            let raw = Double(data[0]) * 256.0 + Double(data[1])
+            return (raw / 100.0) - 40.0
+        }, "Mode22_1310_div100"),
+        // PID alternativo: 22 1200 con divisor 100
+        (0x1200, { data in
             guard data.count >= 2 else { return -999 }
-            return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
-        }, "Mode22_115C"),
+            let raw = Double(data[0]) * 256.0 + Double(data[1])
+            return (raw / 100.0) - 40.0
+        }, "Mode22_1200_div100"),
+        // Alternativo: divisor 10 (algunas versiones de ECU)
+        (0x1310, { data in
+            guard data.count >= 2 else { return -999 }
+            let raw = Double(data[0]) * 256.0 + Double(data[1])
+            return (raw / 10.0) - 40.0
+        }, "Mode22_1310_div10"),
         // PID estándar OBD2: 01 5C (fallback)
         (0x005C, { data in
             guard data.count >= 1 else { return -999 }

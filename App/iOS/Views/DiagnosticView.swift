@@ -601,12 +601,17 @@ struct PIDTesterSheet: View {
         isRunning = true
         testResults = []
 
-        // Lista de PIDs a probar
+        // Lista de PIDs a probar - incluye ambas fórmulas para temp aceite
         let pidsToTest: [(name: String, command: String, formula: String)] = [
-            ("Temp Aceite (1200)", "221200", "(A×256+B)/10-40 °C"),
-            ("Temp Aceite (1310)", "221310", "(A×256+B)/10-40 °C"),
-            ("Temp Aceite (115C)", "22115C", "(A×256+B)/10-40 °C"),
+            // Temperatura aceite - fórmula /100 (Torque/Scangauge confirmado)
+            ("Temp Aceite 1310 (/100)", "221310", "(A×256+B)/100-40 °C"),
+            ("Temp Aceite 1200 (/100)", "221200", "(A×256+B)/100-40 °C"),
+            // Temperatura aceite - fórmula /10 (VersaTuner)
+            ("Temp Aceite 1310 (/10)", "221310", "(A×256+B)/10-40 °C"),
+            ("Temp Aceite 1200 (/10)", "221200", "(A×256+B)/10-40 °C"),
+            // Temperatura aceite OBD estándar
             ("Temp Aceite OBD (5C)", "015C", "A-40 °C"),
+            // Otros PIDs
             ("Presión Aceite (1201)", "221201", "A×10 kPa"),
             ("SSV Position (2000)", "222000", "A %"),
             ("OMP Duty (2100)", "222100", "A duty%"),
@@ -632,7 +637,7 @@ struct PIDTesterSheet: View {
                 // Parsear valor si es exitoso
                 var parsedValue: String? = nil
                 if success {
-                    parsedValue = parseResponse(response, command: command)
+                    parsedValue = parseResponse(response, command: command, pidName: name)
                 }
 
                 testResults.append(PIDTestResult(
@@ -661,21 +666,33 @@ struct PIDTesterSheet: View {
         isRunning = false
     }
 
-    private func parseResponse(_ response: String, command: String) -> String? {
+    private func parseResponse(_ response: String, command: String, pidName: String = "") -> String? {
         let bytes = connectionManager.parseHexResponse(response)
         guard !bytes.isEmpty else { return nil }
 
-        // Para temp aceite Mode 22 (2 bytes)
+        // Para temp aceite Mode 22 (2 bytes) - mostrar ambas fórmulas
+        if command.starts(with: "22") && (command.contains("1310") || command.contains("1200")) && bytes.count >= 2 {
+            let raw = Double(bytes[0]) * 256.0 + Double(bytes[1])
+            // Determinar qué fórmula usar basándose en el nombre del PID
+            if pidName.contains("/100") {
+                let temp = (raw / 100.0) - 40.0
+                return String(format: "%.1f°C (raw: %d, bytes: %02X %02X)", temp, Int(raw), bytes[0], bytes[1])
+            } else {
+                let temp = (raw / 10.0) - 40.0
+                return String(format: "%.1f°C (raw: %d, bytes: %02X %02X)", temp, Int(raw), bytes[0], bytes[1])
+            }
+        }
+
+        // Otros Mode 22 PIDs
         if command.starts(with: "22") && bytes.count >= 2 {
             let raw = Double(bytes[0]) * 256.0 + Double(bytes[1])
-            let temp = raw / 10.0 - 40.0
-            return String(format: "%.1f°C (raw: %d)", temp, Int(raw))
+            return String(format: "raw: %d (bytes: %02X %02X)", Int(raw), bytes[0], bytes[1])
         }
 
         // Para temp OBD Mode 01 (1 byte)
         if command == "015C" && bytes.count >= 1 {
             let temp = Int(bytes[0]) - 40
-            return "\(temp)°C"
+            return "\(temp)°C (byte: \(String(format: "%02X", bytes[0])))"
         }
 
         // Para coolant temp
