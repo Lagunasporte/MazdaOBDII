@@ -1,0 +1,281 @@
+/*
+  Localizable.strings (Japanese)
+  Renesis Monitor RX8
+
+  日本語ローカライズ
+*/
+
+// MARK: - Common
+"common.ok" = "OK";
+"common.cancel" = "キャンセル";
+"common.save" = "保存";
+"common.delete" = "削除";
+"common.close" = "閉じる";
+"common.done" = "完了";
+"common.error" = "エラー";
+"common.warning" = "警告";
+"common.success" = "成功";
+"common.loading" = "読み込み中...";
+"common.retry" = "再試行";
+"common.settings" = "設定";
+"common.back" = "戻る";
+"common.next" = "次へ";
+"common.yes" = "はい";
+"common.no" = "いいえ";
+
+// MARK: - Tabs
+"tabs.dashboard" = "ダッシュボード";
+"tabs.diagnostics" = "診断";
+"tabs.dtcs" = "故障コード";
+"tabs.consumption" = "燃費";
+"tabs.settings" = "設定";
+"tabs.radar" = "レーダー";
+"tabs.blackbox" = "ブラックボックス";
+
+// MARK: - Dashboard
+"dashboard.rpm" = "回転数";
+"dashboard.speed" = "速度";
+"dashboard.coolant_temp" = "水温";
+"dashboard.oil_temp" = "油温";
+"dashboard.oil_pressure" = "油圧";
+"dashboard.battery_voltage" = "バッテリー";
+"dashboard.intake_temp" = "吸気温";
+"dashboard.throttle" = "スロットル";
+"dashboard.load" = "負荷";
+"dashboard.maf" = "MAF";
+"dashboard.fuel_level" = "燃料";
+"dashboard.afr" = "空燃比";
+"dashboard.not_connected" = "未接続";
+"dashboard.connecting" = "接続中...";
+"dashboard.connected" = "接続済み";
+"dashboard.active_alerts" = "アクティブな警告";
+"dashboard.no_alerts" = "警告なし";
+"dashboard.connect_adapter" = "BluetoothでOBD2アダプターを接続してください";
+
+// MARK: - Connection
+"connection.scanning_adapters" = "アダプターを検索中...";
+"connection.connect_adapter" = "アダプターを接続";
+"connection.disconnect" = "切断";
+"connection.reconnect" = "再接続";
+"connection.adapter_found" = "アダプターが見つかりました";
+"connection.no_adapter_found" = "アダプターが見つかりません";
+"connection.failed" = "接続失敗";
+"connection.lost" = "接続が切断されました";
+"connection.auto_connecting" = "自動接続中...";
+"connection.bluetooth_required" = "Bluetoothが必要です";
+"connection.enable_bluetooth" = "設定でBluetoothを有効にしてください";
+
+// MARK: - Diagnostics
+"diagnostics.scan_dtcs" = "コードをスキャン";
+"diagnostics.clear_dtcs" = "コードを消去";
+"diagnostics.current_dtcs" = "現在のコード";
+"diagnostics.pending_dtcs" = "保留中のコード";
+"diagnostics.no_dtcs_found" = "故障コードはありません";
+"diagnostics.dtc_cleared" = "故障コードを消去しました";
+"diagnostics.freeze_frame" = "フリーズフレーム";
+"diagnostics.realtime_monitor" = "リアルタイムモニター";
+"diagnostics.o2_test" = "O2センサーテスト";
+"diagnostics.vehicle_info" = "車両情報";
+"diagnostics.rotary_diagnostics" = "ロータリーエンジン診断";
+"diagnostics.actuator_tools" = "アクチュエーターツール";
+"diagnostics.pid_tester" = "PIDテスター";
+"diagnostics.confirm_clear" = "すべての故障コードを消去しますか？";
+"diagnostics.clear_warning" = "エンジン警告灯が消灯します。すべての問題が解決されていることを確認してください。";
+
+// MARK: - Rotary Specific
+"rotary.coil_status" = "コイル状態";
+"rotary.fuel_trim_analysis" = "燃料補正分析";
+"rotary.catalyst_status" = "触媒状態";
+"rotary.omp_system" = "OMPシステム";
+"rotary.ssv_position" = "SSV位置";
+"rotary.apv_position" = "APV位置";
+"rotary.compression_info" = "レネシスエンジンは信頼性のために適切な圧縮が必要です";
+"rotary.coil_warning" = "トレーリングコイルは静かに故障し、触媒を損傷させます";
+"rotary.coil_advice" = "常に4つのコイルを同時に交換してください";
+
+// MARK: - Actuator Tools
+"actuator.title" = "アクチュエーターツール";
+"actuator.throttle_body" = "スロットルボディ";
+"actuator.ssv" = "SSV（セカンダリシャッター）";
+"actuator.cooling_fan" = "冷却ファン";
+"actuator.ac_fan" = "A/Cファン";
+"actuator.fuel_pump" = "燃料ポンプ";
+"actuator.purge_valve" = "EVAPパージバルブ";
+"actuator.engine_must_be_off" = "エンジンを停止してください";
+"actuator.battery_low" = "バッテリー残量不足";
+"actuator.confirm_test" = "%@テストを実行しますか？周囲が安全か確認してください。";
+"actuator.adapter_limitation" = "汎用ELM327アダプターはアクチュエーター制御に制限があります。完全な機能にはOEMツール（Mazda IDS）または高度なアダプター（OBDLink MX+）が必要です。";
+
+// MARK: - Alerts
+"alerts.coolant_high" = "冷却水温度が高い！";
+"alerts.coolant_critical" = "危険：冷却水のオーバーヒート！";
+"alerts.oil_temp_high" = "油温が高い！";
+"alerts.oil_temp_critical" = "危険：オイルのオーバーヒート！";
+"alerts.oil_pressure_low" = "油圧が低い！";
+"alerts.battery_low" = "バッテリー電圧低下";
+"alerts.rpm_high" = "高回転警告";
+"alerts.check_engine" = "エンジン警告灯点灯";
+"alerts.stop_engine" = "すぐにエンジンを停止してください！";
+"alerts.check_cooling" = "冷却システムを確認してください";
+
+// MARK: - Settings
+"settings.title" = "設定";
+"settings.language" = "言語";
+"settings.units" = "単位";
+"settings.unit_metric" = "メートル法（km/h、°C）";
+"settings.unit_imperial" = "ヤード・ポンド法（mph、°F）";
+"settings.temperature" = "温度";
+"settings.temp_celsius" = "摂氏（°C）";
+"settings.temp_fahrenheit" = "華氏（°F）";
+"settings.alert_settings" = "警告設定";
+"settings.polling_interval" = "読み取り間隔";
+"settings.polling_fast" = "高速（データ多、電池消費大）";
+"settings.polling_normal" = "標準";
+"settings.polling_slow" = "低速（データ少、電池節約）";
+"settings.data_mode" = "データモード";
+"settings.data_mode_essential" = "基本";
+"settings.data_mode_normal" = "標準";
+"settings.data_mode_full" = "フル";
+"settings.auto_connect" = "自動接続";
+"settings.keep_screen_on" = "画面を常にオン";
+"settings.haptic_feedback" = "触覚フィードバック";
+"settings.data_logging" = "データ記録";
+"settings.export_data" = "データをエクスポート";
+"settings.adapter_test" = "アダプター速度テスト";
+"settings.about" = "情報";
+"settings.thresholds" = "警告しきい値";
+"settings.coolant_warning" = "水温警告";
+"settings.coolant_critical" = "水温危険";
+"settings.oil_warning" = "油温警告";
+"settings.oil_critical" = "油温危険";
+"settings.battery_warning" = "バッテリー低下";
+"settings.rpm_warning" = "回転数警告";
+"settings.subscription" = "サブスクリプション";
+
+// MARK: - Vehicle Info
+"vehicle.title" = "車両";
+"vehicle.vin" = "車台番号";
+"vehicle.odometer" = "走行距離";
+"vehicle.ecu_info" = "ECU情報";
+"vehicle.calibration_id" = "キャリブレーションID";
+"vehicle.monitor_status" = "モニター状態";
+"vehicle.dtc_count" = "コード数";
+"vehicle.mil_status" = "MIL状態";
+"vehicle.distance_since_clear" = "消去後の走行距離";
+"vehicle.time_since_clear" = "消去後の経過時間";
+
+// MARK: - Fuel Consumption
+"consumption.title" = "燃料消費";
+"consumption.current" = "現在";
+"consumption.average" = "平均";
+"consumption.trip" = "トリップ";
+"consumption.total" = "合計";
+"consumption.reset_trip" = "トリップをリセット";
+"consumption.history" = "履歴";
+
+// MARK: - Black Box
+"blackbox.title" = "ブラックボックス";
+"blackbox.recording" = "記録中";
+"blackbox.start_recording" = "記録を開始";
+"blackbox.stop_recording" = "記録を停止";
+"blackbox.export" = "データをエクスポート";
+"blackbox.ai_analysis" = "AI分析";
+"blackbox.analyze_with_claude" = "Claude AIで分析";
+
+// MARK: - Radar
+"radar.title" = "速度取締機";
+"radar.alerts_enabled" = "警告を有効化";
+"radar.alert_distance" = "警告距離";
+"radar.sound" = "サウンド";
+"radar.vibration" = "バイブレーション";
+
+// MARK: - Subscription
+"subscription.premium" = "プレミアム";
+"subscription.trial_title" = "無料トライアル";
+"subscription.trial_days_remaining" = "残り%d日";
+"subscription.trial_expired" = "トライアル終了";
+"subscription.active" = "アクティブ";
+"subscription.active_until" = "%@まで有効";
+"subscription.lifetime_active" = "永久アクセス";
+"subscription.not_subscribed" = "未登録";
+"subscription.status.unknown" = "状態を確認中...";
+"subscription.per_month" = "/月";
+"subscription.per_year" = "/年";
+"subscription.per_week" = "/週";
+"subscription.per_day" = "/日";
+"subscription.months" = "ヶ月";
+"subscription.years" = "年";
+"subscription.upgrade" = "アップグレード";
+"subscription.lifetime" = "永久";
+
+// MARK: - Paywall
+"paywall.title" = "フルアクセスを解除";
+"paywall.subtitle" = "すべての機能を無制限で利用";
+"paywall.trial_remaining" = "無料トライアル残り%d日";
+"paywall.trial_expired_message" = "無料トライアルが終了しました。すべての機能を引き続き利用するには登録してください。";
+"paywall.features_title" = "プレミアム機能";
+"paywall.products_unavailable" = "製品が利用できません。後でもう一度お試しください。";
+"paywall.subscribe_button" = "登録する";
+"paywall.restore_purchases" = "購入を復元";
+"paywall.best_value" = "お得";
+"paywall.monthly_title" = "月額";
+"paywall.yearly_title" = "年額";
+"paywall.lifetime_title" = "永久";
+"paywall.billed_monthly" = "毎月請求";
+"paywall.billed_yearly" = "毎年請求";
+"paywall.one_time_purchase" = "一回限りの購入";
+"paywall.save_percent" = "50%お得";
+"paywall.legal_text" = "サブスクリプションは現在の期間終了の24時間前までにキャンセルしない限り自動更新されます。サブスクリプションはApp Storeのアカウント設定で管理できます。";
+"paywall.privacy_policy" = "プライバシーポリシー";
+"paywall.terms" = "利用規約";
+
+// MARK: - Premium Features
+"premium.feature.unlimited_diagnostics" = "無制限の診断";
+"premium.feature.ai_analysis" = "AI分析";
+"premium.feature.data_export" = "データエクスポート（CSV/JSON）";
+"premium.feature.blackbox" = "拡張ブラックボックス記録";
+"premium.feature.advanced_alerts" = "高度な警告システム";
+"premium.feature.no_ads" = "広告なし";
+"premium.feature.priority_support" = "優先サポート";
+
+// MARK: - Store Errors
+"store.error.verification_failed" = "購入の確認に失敗しました";
+"store.error.purchase_failed" = "購入に失敗しました";
+"store.error.product_not_found" = "製品が見つかりません";
+
+// MARK: - Units
+"units.kmh" = "km/h";
+"units.mph" = "mph";
+"units.celsius" = "°C";
+"units.fahrenheit" = "°F";
+"units.kpa" = "kPa";
+"units.psi" = "psi";
+"units.liters" = "L";
+"units.gallons" = "gal";
+"units.km" = "km";
+"units.miles" = "mi";
+"units.lper100km" = "L/100km";
+"units.mpg" = "mpg";
+
+// MARK: - About
+"about.title" = "情報";
+"about.version" = "バージョン";
+"about.developer" = "開発者";
+"about.support" = "サポート";
+"about.rate_app" = "アプリを評価";
+"about.share_app" = "アプリを共有";
+"about.acknowledgements" = "謝辞";
+"about.disclaimer" = "このアプリはマツダ株式会社とは関係ありません。自己責任でご使用ください。";
+
+// MARK: - Errors
+"error.connection_failed" = "アダプターへの接続に失敗しました";
+"error.no_data" = "データを受信できませんでした";
+"error.timeout" = "接続がタイムアウトしました";
+"error.bluetooth_off" = "Bluetoothがオフです";
+"error.adapter_not_supported" = "サポートされていないアダプターです";
+"error.vehicle_not_responding" = "車両が応答しません";
+
+// MARK: - Language
+"language.restart_title" = "再起動が必要です";
+"language.restart_message" = "言語の変更を適用するにはアプリを再起動してください。";
+"language.restart_note" = "一部の変更はアプリの再起動が必要です。";

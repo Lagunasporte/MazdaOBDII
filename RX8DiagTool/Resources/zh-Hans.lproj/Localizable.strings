@@ -1,0 +1,281 @@
+/*
+  Localizable.strings (Simplified Chinese)
+  Renesis Monitor RX8
+
+  简体中文本地化
+*/
+
+// MARK: - Common
+"common.ok" = "确定";
+"common.cancel" = "取消";
+"common.save" = "保存";
+"common.delete" = "删除";
+"common.close" = "关闭";
+"common.done" = "完成";
+"common.error" = "错误";
+"common.warning" = "警告";
+"common.success" = "成功";
+"common.loading" = "加载中...";
+"common.retry" = "重试";
+"common.settings" = "设置";
+"common.back" = "返回";
+"common.next" = "下一步";
+"common.yes" = "是";
+"common.no" = "否";
+
+// MARK: - Tabs
+"tabs.dashboard" = "仪表盘";
+"tabs.diagnostics" = "诊断";
+"tabs.dtcs" = "故障码";
+"tabs.consumption" = "油耗";
+"tabs.settings" = "设置";
+"tabs.radar" = "测速";
+"tabs.blackbox" = "黑匣子";
+
+// MARK: - Dashboard
+"dashboard.rpm" = "转速";
+"dashboard.speed" = "车速";
+"dashboard.coolant_temp" = "水温";
+"dashboard.oil_temp" = "油温";
+"dashboard.oil_pressure" = "油压";
+"dashboard.battery_voltage" = "电瓶";
+"dashboard.intake_temp" = "进气温度";
+"dashboard.throttle" = "节气门";
+"dashboard.load" = "负载";
+"dashboard.maf" = "空气流量";
+"dashboard.fuel_level" = "油量";
+"dashboard.afr" = "空燃比";
+"dashboard.not_connected" = "未连接";
+"dashboard.connecting" = "连接中...";
+"dashboard.connected" = "已连接";
+"dashboard.active_alerts" = "活动警报";
+"dashboard.no_alerts" = "无活动警报";
+"dashboard.connect_adapter" = "通过蓝牙连接OBD2适配器以开始";
+
+// MARK: - Connection
+"connection.scanning_adapters" = "搜索适配器中...";
+"connection.connect_adapter" = "连接适配器";
+"connection.disconnect" = "断开连接";
+"connection.reconnect" = "重新连接";
+"connection.adapter_found" = "发现适配器";
+"connection.no_adapter_found" = "未找到适配器";
+"connection.failed" = "连接失败";
+"connection.lost" = "连接丢失";
+"connection.auto_connecting" = "自动连接中...";
+"connection.bluetooth_required" = "需要蓝牙";
+"connection.enable_bluetooth" = "请在设置中启用蓝牙";
+
+// MARK: - Diagnostics
+"diagnostics.scan_dtcs" = "扫描故障码";
+"diagnostics.clear_dtcs" = "清除故障码";
+"diagnostics.current_dtcs" = "当前故障码";
+"diagnostics.pending_dtcs" = "待处理故障码";
+"diagnostics.no_dtcs_found" = "未发现故障码";
+"diagnostics.dtc_cleared" = "故障码已清除";
+"diagnostics.freeze_frame" = "冻结帧";
+"diagnostics.realtime_monitor" = "实时监控";
+"diagnostics.o2_test" = "氧传感器测试";
+"diagnostics.vehicle_info" = "车辆信息";
+"diagnostics.rotary_diagnostics" = "转子发动机诊断";
+"diagnostics.actuator_tools" = "执行器工具";
+"diagnostics.pid_tester" = "PID测试";
+"diagnostics.confirm_clear" = "确定要清除所有故障码吗？";
+"diagnostics.clear_warning" = "这将关闭发动机故障灯。请确保所有问题已解决。";
+
+// MARK: - Rotary Specific
+"rotary.coil_status" = "点火线圈状态";
+"rotary.fuel_trim_analysis" = "燃油修正分析";
+"rotary.catalyst_status" = "催化器状态";
+"rotary.omp_system" = "OMP系统";
+"rotary.ssv_position" = "SSV位置";
+"rotary.apv_position" = "APV位置";
+"rotary.compression_info" = "转子发动机需要适当的压缩以保持可靠性";
+"rotary.coil_warning" = "后点火线圈会无声故障并损坏催化器";
+"rotary.coil_advice" = "建议同时更换全部4个点火线圈";
+
+// MARK: - Actuator Tools
+"actuator.title" = "执行器工具";
+"actuator.throttle_body" = "节气门体";
+"actuator.ssv" = "SSV（副节气门）";
+"actuator.cooling_fan" = "冷却风扇";
+"actuator.ac_fan" = "空调风扇";
+"actuator.fuel_pump" = "燃油泵";
+"actuator.purge_valve" = "蒸发排放阀";
+"actuator.engine_must_be_off" = "发动机必须关闭";
+"actuator.battery_low" = "电瓶电量不足";
+"actuator.confirm_test" = "执行%@测试？请确保周围安全。";
+"actuator.adapter_limitation" = "通用ELM327适配器对执行器控制支持有限。完整功能需要OEM工具（Mazda IDS）或高级适配器（OBDLink MX+）。";
+
+// MARK: - Alerts
+"alerts.coolant_high" = "水温过高！";
+"alerts.coolant_critical" = "危险：冷却液过热！";
+"alerts.oil_temp_high" = "油温过高！";
+"alerts.oil_temp_critical" = "危险：机油过热！";
+"alerts.oil_pressure_low" = "油压过低！";
+"alerts.battery_low" = "电瓶电压低";
+"alerts.rpm_high" = "转速过高警告";
+"alerts.check_engine" = "发动机故障灯亮起";
+"alerts.stop_engine" = "请立即熄火！";
+"alerts.check_cooling" = "请检查冷却系统";
+
+// MARK: - Settings
+"settings.title" = "设置";
+"settings.language" = "语言";
+"settings.units" = "单位";
+"settings.unit_metric" = "公制（km/h、°C）";
+"settings.unit_imperial" = "英制（mph、°F）";
+"settings.temperature" = "温度";
+"settings.temp_celsius" = "摄氏（°C）";
+"settings.temp_fahrenheit" = "华氏（°F）";
+"settings.alert_settings" = "警报设置";
+"settings.polling_interval" = "读取间隔";
+"settings.polling_fast" = "快速（更多数据，更多电量）";
+"settings.polling_normal" = "正常";
+"settings.polling_slow" = "慢速（更少数据，省电）";
+"settings.data_mode" = "数据模式";
+"settings.data_mode_essential" = "基础";
+"settings.data_mode_normal" = "正常";
+"settings.data_mode_full" = "完整";
+"settings.auto_connect" = "自动连接";
+"settings.keep_screen_on" = "保持屏幕常亮";
+"settings.haptic_feedback" = "触觉反馈";
+"settings.data_logging" = "数据记录";
+"settings.export_data" = "导出数据";
+"settings.adapter_test" = "适配器速度测试";
+"settings.about" = "关于";
+"settings.thresholds" = "警报阈值";
+"settings.coolant_warning" = "水温警告";
+"settings.coolant_critical" = "水温危险";
+"settings.oil_warning" = "油温警告";
+"settings.oil_critical" = "油温危险";
+"settings.battery_warning" = "电瓶电量低";
+"settings.rpm_warning" = "转速警告";
+"settings.subscription" = "订阅";
+
+// MARK: - Vehicle Info
+"vehicle.title" = "车辆";
+"vehicle.vin" = "车架号";
+"vehicle.odometer" = "里程表";
+"vehicle.ecu_info" = "ECU信息";
+"vehicle.calibration_id" = "校准ID";
+"vehicle.monitor_status" = "监控状态";
+"vehicle.dtc_count" = "故障码数量";
+"vehicle.mil_status" = "MIL状态";
+"vehicle.distance_since_clear" = "清除后行驶距离";
+"vehicle.time_since_clear" = "清除后运行时间";
+
+// MARK: - Fuel Consumption
+"consumption.title" = "油耗";
+"consumption.current" = "当前";
+"consumption.average" = "平均";
+"consumption.trip" = "行程";
+"consumption.total" = "总计";
+"consumption.reset_trip" = "重置行程";
+"consumption.history" = "历史";
+
+// MARK: - Black Box
+"blackbox.title" = "黑匣子";
+"blackbox.recording" = "记录中";
+"blackbox.start_recording" = "开始记录";
+"blackbox.stop_recording" = "停止记录";
+"blackbox.export" = "导出数据";
+"blackbox.ai_analysis" = "AI分析";
+"blackbox.analyze_with_claude" = "使用Claude AI分析";
+
+// MARK: - Radar
+"radar.title" = "测速摄像头";
+"radar.alerts_enabled" = "启用警报";
+"radar.alert_distance" = "警报距离";
+"radar.sound" = "声音";
+"radar.vibration" = "振动";
+
+// MARK: - Subscription
+"subscription.premium" = "高级版";
+"subscription.trial_title" = "免费试用";
+"subscription.trial_days_remaining" = "剩余%d天";
+"subscription.trial_expired" = "试用已过期";
+"subscription.active" = "已激活";
+"subscription.active_until" = "有效期至%@";
+"subscription.lifetime_active" = "终身会员";
+"subscription.not_subscribed" = "未订阅";
+"subscription.status.unknown" = "检查状态中...";
+"subscription.per_month" = "/月";
+"subscription.per_year" = "/年";
+"subscription.per_week" = "/周";
+"subscription.per_day" = "/天";
+"subscription.months" = "个月";
+"subscription.years" = "年";
+"subscription.upgrade" = "升级";
+"subscription.lifetime" = "终身";
+
+// MARK: - Paywall
+"paywall.title" = "解锁完整功能";
+"paywall.subtitle" = "获取所有功能的无限访问权限";
+"paywall.trial_remaining" = "免费试用剩余%d天";
+"paywall.trial_expired_message" = "您的免费试用已结束。订阅以继续使用所有功能。";
+"paywall.features_title" = "高级功能";
+"paywall.products_unavailable" = "产品暂不可用，请稍后重试。";
+"paywall.subscribe_button" = "订阅";
+"paywall.restore_purchases" = "恢复购买";
+"paywall.best_value" = "超值";
+"paywall.monthly_title" = "月度";
+"paywall.yearly_title" = "年度";
+"paywall.lifetime_title" = "终身";
+"paywall.billed_monthly" = "按月计费";
+"paywall.billed_yearly" = "按年计费";
+"paywall.one_time_purchase" = "一次性购买";
+"paywall.save_percent" = "省50%";
+"paywall.legal_text" = "订阅将自动续订，除非在当前周期结束前至少24小时取消。您可以在App Store账户设置中管理订阅。";
+"paywall.privacy_policy" = "隐私政策";
+"paywall.terms" = "服务条款";
+
+// MARK: - Premium Features
+"premium.feature.unlimited_diagnostics" = "无限诊断";
+"premium.feature.ai_analysis" = "AI智能分析";
+"premium.feature.data_export" = "数据导出（CSV/JSON）";
+"premium.feature.blackbox" = "扩展黑匣子记录";
+"premium.feature.advanced_alerts" = "高级警报系统";
+"premium.feature.no_ads" = "无广告体验";
+"premium.feature.priority_support" = "优先客服支持";
+
+// MARK: - Store Errors
+"store.error.verification_failed" = "购买验证失败";
+"store.error.purchase_failed" = "购买失败";
+"store.error.product_not_found" = "未找到产品";
+
+// MARK: - Units
+"units.kmh" = "km/h";
+"units.mph" = "mph";
+"units.celsius" = "°C";
+"units.fahrenheit" = "°F";
+"units.kpa" = "kPa";
+"units.psi" = "psi";
+"units.liters" = "L";
+"units.gallons" = "gal";
+"units.km" = "km";
+"units.miles" = "mi";
+"units.lper100km" = "L/100km";
+"units.mpg" = "mpg";
+
+// MARK: - About
+"about.title" = "关于";
+"about.version" = "版本";
+"about.developer" = "开发者";
+"about.support" = "支持";
+"about.rate_app" = "给App评分";
+"about.share_app" = "分享App";
+"about.acknowledgements" = "致谢";
+"about.disclaimer" = "本应用与马自达汽车公司无关。使用风险自负。";
+
+// MARK: - Errors
+"error.connection_failed" = "连接适配器失败";
+"error.no_data" = "未收到数据";
+"error.timeout" = "连接超时";
+"error.bluetooth_off" = "蓝牙已关闭";
+"error.adapter_not_supported" = "不支持此适配器";
+"error.vehicle_not_responding" = "车辆无响应";
+
+// MARK: - Language
+"language.restart_title" = "需要重启";
+"language.restart_message" = "请重启应用以应用语言更改。";
+"language.restart_note" = "部分更改需要重启应用才能生效。";
