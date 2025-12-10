@@ -922,20 +922,37 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     /// El PID se envía como 22XXXX y la respuesta es 62XXXX + datos
     public func readEnhancedPID(_ pid: UInt16) async throws -> [UInt8] {
         // Configurar header para ECU del motor (7E0 para Mazda)
-        _ = try? await sendCommand("ATSH7E0", timeout: 2.0)
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Usar formato con espacios que es más compatible
+        _ = try? await sendCommand("AT SH 7E0", timeout: 2.0)
+        try? await Task.sleep(nanoseconds: 50_000_000)
 
-        // Enviar comando Mode 22
+        // Enviar comando Mode 22 con PID
         let command = String(format: "22%04X", pid)
         let response = try await sendCommand(command, timeout: 3.0)
 
-        if response.contains("NO DATA") || response.contains("ERROR") || response.contains("?") {
+        // Verificar errores comunes
+        let upperResponse = response.uppercased()
+        if upperResponse.contains("NO DATA") || upperResponse.contains("ERROR") ||
+           upperResponse.contains("?") || upperResponse.contains("UNABLE") {
             throw OBDError.noData
         }
 
         // Parsear respuesta - buscar 62 seguido del PID
-        let expectedPrefix = String(format: "62%04X", pid).uppercased()
-        let bytes = parseEnhancedResponse(response, expectedPrefix: expectedPrefix)
+        // El PID en la respuesta puede tener formato diferente
+        let pidHigh = String(format: "%02X", (pid >> 8) & 0xFF)
+        let pidLow = String(format: "%02X", pid & 0xFF)
+
+        // Intentar múltiples formatos de prefijo
+        let prefixes = [
+            "62\(pidHigh)\(pidLow)",           // Sin espacios: 621200
+            "62 \(pidHigh) \(pidLow)",         // Con espacios: 62 12 00
+        ]
+
+        var bytes: [UInt8] = []
+        for prefix in prefixes {
+            bytes = parseEnhancedResponse(response, expectedPrefix: prefix.replacingOccurrences(of: " ", with: ""))
+            if !bytes.isEmpty { break }
+        }
 
         if bytes.isEmpty {
             throw OBDError.invalidResponse
@@ -973,23 +990,30 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     }
 
     /// PIDs conocidos para temperatura de aceite Mazda RX-8
-    /// Fuente: VersaTuner, RX8Club, equinox311 GitHub
-    private static let oilTempPIDs: [(pid: UInt16, formula: (Data) -> Double)] = [
+    /// Fuente: VersaTuner, RX8Club, equinox311 GitHub, JSON proporcionado por usuario
+    /// El RX-8 NO tiene sensor físico de aceite - la ECU CALCULA el valor
+    private static let oilTempPIDs: [(pid: UInt16, formula: (Data) -> Double, name: String)] = [
         // PID principal verificado: 22 1200 - Fórmula: (A*256+B)/10-40
+        // Header: 7E0 (ECU motor)
         (0x1200, { data in
-            guard data.count >= 2 else { return -100 }
+            guard data.count >= 2 else { return -999 }
             return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
-        }),
-        // PID alternativo: 22 1310 (algunos modelos)
+        }, "Mode22_1200"),
+        // PID alternativo Serie 2: 22 1310
         (0x1310, { data in
-            guard data.count >= 2 else { return -100 }
+            guard data.count >= 2 else { return -999 }
             return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
-        }),
-        // PID estándar OBD2: 01 5C
+        }, "Mode22_1310"),
+        // PID alternativo: algunos ECU usan este
+        (0x115C, { data in
+            guard data.count >= 2 else { return -999 }
+            return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
+        }, "Mode22_115C"),
+        // PID estándar OBD2: 01 5C (fallback)
         (0x005C, { data in
-            guard data.count >= 1 else { return -100 }
+            guard data.count >= 1 else { return -999 }
             return Double(data[0]) - 40.0
-        })
+        }, "Mode01_5C")
     ]
 
     /// Lee temperatura del aceite vía Mode 22 (Mazda RX-8)
@@ -1000,14 +1024,17 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     /// Intenta múltiples PIDs conocidos para máxima compatibilidad.
     public func readOilTempMazda() async throws -> Double {
         var lastError: Error = OBDError.noData
-        var bestReading: Double? = nil
+
+        // Asegurar header correcto para ECU motor
+        _ = try? await sendCommand("AT SH 7E0", timeout: 1.0)
+        try? await Task.sleep(nanoseconds: 50_000_000)
 
         // Intentar cada PID conocido
-        for (pid, formula) in Self.oilTempPIDs {
+        for (pid, formula, name) in Self.oilTempPIDs {
             do {
                 let bytes: [UInt8]
                 if pid < 0x0100 {
-                    // PID estándar Mode 01
+                    // PID estándar Mode 01 (5C = oil temp)
                     bytes = try await readStandardPID(mode: 0x01, pid: UInt8(pid))
                 } else {
                     // PID extendido Mode 22
@@ -1018,33 +1045,58 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
                 let tempC = formula(Data(bytes))
 
-                // Rango válido ampliado: -10°C a 160°C
-                // -10°C: Motor en clima muy frío
-                // 160°C: Máximo absoluto antes de daño
-                // Valores fuera de este rango son datos corruptos
-                if tempC >= -10 && tempC <= 160 {
-                    // Si está en rango operativo normal (50-150°C), retornar inmediatamente
-                    if tempC >= 50 && tempC <= 150 {
-                        return tempC
-                    }
-                    // Si está en rango frío (-10 a 50°C), guardar como mejor lectura
-                    // pero seguir intentando otros PIDs por si hay mejor dato
-                    if bestReading == nil {
-                        bestReading = tempC
-                    }
+                // -999 indica error de parsing interno
+                guard tempC > -900 else { continue }
+
+                // Rango válido ampliado: -40°C a 180°C
+                // Aceptamos rango muy amplio porque el RX-8 calcula, no mide
+                // -40°C: Mínimo teórico del sensor
+                // 180°C: Máximo antes de daño catastrófico
+                if tempC >= -40 && tempC <= 180 {
+                    #if DEBUG
+                    print("OilTemp: \(name) returned \(tempC)°C from bytes: \(bytes.map { String(format: "%02X", $0) }.joined(separator: " "))")
+                    #endif
+                    return tempC
                 }
             } catch {
                 lastError = error
+                #if DEBUG
+                print("OilTemp: \(name) failed: \(error)")
+                #endif
                 // Continuar con el siguiente PID
             }
         }
 
-        // Retornar la mejor lectura encontrada, aunque esté en rango frío
-        if let reading = bestReading {
-            return reading
+        throw lastError
+    }
+
+    /// Lee temperatura del aceite con información de debug
+    /// Retorna tupla con (temperatura, pid_usado, raw_bytes)
+    public func readOilTempMazdaDebug() async throws -> (temp: Double, pid: String, rawBytes: [UInt8]) {
+        // Asegurar header correcto
+        _ = try? await sendCommand("AT SH 7E0", timeout: 1.0)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        for (pid, formula, name) in Self.oilTempPIDs {
+            do {
+                let bytes: [UInt8]
+                if pid < 0x0100 {
+                    bytes = try await readStandardPID(mode: 0x01, pid: UInt8(pid))
+                } else {
+                    bytes = try await readEnhancedPID(pid)
+                }
+
+                guard !bytes.isEmpty else { continue }
+                let tempC = formula(Data(bytes))
+                guard tempC > -900 && tempC >= -40 && tempC <= 180 else { continue }
+
+                return (tempC, name, bytes)
+            } catch {
+                continue
+            }
         }
 
-        throw lastError
+        throw OBDError.noData
     }
 
     /// Lee voltaje MAF vía Mode 22 PID 1177 (Mazda específico)
