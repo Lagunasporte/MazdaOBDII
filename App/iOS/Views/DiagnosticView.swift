@@ -706,26 +706,78 @@ struct ActuatorToolsSheet: View {
                     return
                 }
 
-                // Ejecutar comando de actuador
-                let response = try await connectionManager.sendCommand(test.command, timeout: 5.0)
-
                 await MainActor.run {
-                    if response.contains("OK") || !response.contains("ERROR") && !response.contains("NO DATA") {
-                        testResult = "Test \(test.title) ejecutado correctamente"
-                        testSuccess = true
-                    } else {
-                        testResult = "Test \(test.title) - Respuesta: \(response)"
-                        testSuccess = false
-                    }
-                    isRunningTest = false
+                    testResult = "Iniciando sesión de diagnóstico..."
                 }
 
-                // Esperar duración del test
-                try await Task.sleep(nanoseconds: UInt64(test.duration) * 1_000_000_000)
+                // 1. Intentar entrar en sesión de diagnóstico extendida
+                // UDS Mode 10 03 = Extended Diagnostic Session
+                _ = try? await connectionManager.sendCommand("1003", timeout: 2.0)
 
-                // Enviar comando de parada si es necesario
-                if let stopCmd = test.stopCommand {
-                    _ = try? await connectionManager.sendCommand(stopCmd, timeout: 2.0)
+                // 2. Enviar Tester Present para mantener sesión
+                _ = try? await connectionManager.sendCommand("3E00", timeout: 1.0)
+
+                await MainActor.run {
+                    testResult = "Ejecutando \(test.title)..."
+                }
+
+                // 3. Intentar múltiples métodos de control
+                var success = false
+                var lastResponse = ""
+
+                // Método 1: UDS IO Control By Identifier (Mode 2F)
+                if !success {
+                    let response = try await connectionManager.sendCommand(test.udsCommand, timeout: 5.0)
+                    lastResponse = response
+                    if isPositiveResponse(response) {
+                        success = true
+                    }
+                }
+
+                // Método 2: Mazda Mode 30 (Output Control)
+                if !success {
+                    let response = try await connectionManager.sendCommand(test.mode30Command, timeout: 5.0)
+                    lastResponse = response
+                    if isPositiveResponse(response) {
+                        success = true
+                    }
+                }
+
+                // Método 3: Mode 08 estándar (último recurso)
+                if !success {
+                    let response = try await connectionManager.sendCommand(test.command, timeout: 5.0)
+                    lastResponse = response
+                    if isPositiveResponse(response) {
+                        success = true
+                    }
+                }
+
+                await MainActor.run {
+                    if success {
+                        testResult = "✓ \(test.title) activado"
+                        testSuccess = true
+                    } else {
+                        // Analizar respuesta para dar mejor feedback
+                        let errorMsg = parseErrorResponse(lastResponse)
+                        testResult = "✗ \(test.title): \(errorMsg)"
+                        testSuccess = false
+                    }
+                }
+
+                // Esperar duración del test si fue exitoso
+                if success {
+                    try await Task.sleep(nanoseconds: UInt64(test.duration) * 1_000_000_000)
+
+                    // Enviar comando de parada
+                    if let stopCmd = test.stopCommand {
+                        _ = try? await connectionManager.sendCommand(stopCmd, timeout: 2.0)
+                    }
+                    // Parar control UDS
+                    _ = try? await connectionManager.sendCommand(test.udsStopCommand, timeout: 2.0)
+                }
+
+                await MainActor.run {
+                    isRunningTest = false
                 }
 
             } catch {
@@ -736,6 +788,58 @@ struct ActuatorToolsSheet: View {
                 }
             }
         }
+    }
+
+    private func isPositiveResponse(_ response: String) -> Bool {
+        // Respuestas positivas UDS
+        if response.contains("6F") || response.contains("70") || response.contains("50") {
+            return true
+        }
+        // Respuesta OK genérica
+        if response.contains("OK") {
+            return true
+        }
+        // No es error ni NO DATA
+        if !response.contains("ERROR") && !response.contains("NO DATA") &&
+           !response.contains("7F") && response.count > 2 {
+            return true
+        }
+        return false
+    }
+
+    private func parseErrorResponse(_ response: String) -> String {
+        if response.contains("NO DATA") {
+            return "ECU no responde - función no soportada"
+        }
+        if response.contains("7F") {
+            // Negative Response Code
+            if response.contains("12") {
+                return "Sub-función no soportada"
+            }
+            if response.contains("13") {
+                return "Longitud incorrecta"
+            }
+            if response.contains("22") {
+                return "Condiciones no correctas"
+            }
+            if response.contains("31") {
+                return "Fuera de rango"
+            }
+            if response.contains("33") {
+                return "Requiere acceso de seguridad"
+            }
+            if response.contains("35") {
+                return "Clave inválida"
+            }
+            if response.contains("72") {
+                return "Secuencia incorrecta"
+            }
+            return "ECU rechazó comando (NRC)"
+        }
+        if response.contains("ERROR") || response.contains("?") {
+            return "Comando no reconocido por adaptador"
+        }
+        return "Sin respuesta válida"
     }
 }
 
@@ -791,25 +895,66 @@ enum ActuatorTest: String, CaseIterable {
         }
     }
 
-    // Comandos Mazda Mode 08 / Mode 22 específicos
-    // Estos son comandos típicos - pueden variar según ECU
+    // UDS IO Control By Identifier (Mode 2F)
+    // Formato: 2F [DID High] [DID Low] [Control Option] [Control Parameter...]
+    // Control Options: 00=Return, 03=Short Term Adjustment
+    var udsCommand: String {
+        switch self {
+        // DIDs específicos de Mazda para control de actuadores
+        case .throttleBody: return "2F100103FF"  // DID 1001, Short Term, Full Open
+        case .ssv: return "2F100203FF"           // DID 1002, Short Term, Full Open
+        case .coolingFan: return "2F10030301"    // DID 1003, Short Term, ON
+        case .acFan: return "2F10040301"         // DID 1004, Short Term, ON
+        case .fuelPump: return "2F10050301"      // DID 1005, Short Term, ON
+        case .purgeValve: return "2F10060301"    // DID 1006, Short Term, ON
+        }
+    }
+
+    var udsStopCommand: String {
+        switch self {
+        // Return Control to ECU (Control Option 00)
+        case .throttleBody: return "2F100100"
+        case .ssv: return "2F100200"
+        case .coolingFan: return "2F100300"
+        case .acFan: return "2F100400"
+        case .fuelPump: return "2F100500"
+        case .purgeValve: return "2F100600"
+        }
+    }
+
+    // Mazda Output Control (Mode 30) - protocolo más antiguo
+    // Formato: 30 [Actuator ID] [Control State]
+    var mode30Command: String {
+        switch self {
+        case .throttleBody: return "300101"  // Actuator 01, ON
+        case .ssv: return "300201"           // Actuator 02, ON
+        case .coolingFan: return "300301"    // Actuator 03, ON
+        case .acFan: return "300401"         // Actuator 04, ON
+        case .fuelPump: return "300501"      // Actuator 05, ON
+        case .purgeValve: return "300601"    // Actuator 06, ON
+        }
+    }
+
+    // Mode 08 estándar OBD-II (fallback)
     var command: String {
         switch self {
-        case .throttleBody: return "0801" // Mode 08 TID 01
-        case .ssv: return "0802"          // Mode 08 TID 02
-        case .coolingFan: return "0803"   // Mode 08 TID 03
-        case .acFan: return "0804"        // Mode 08 TID 04
-        case .fuelPump: return "0805"     // Mode 08 TID 05
-        case .purgeValve: return "0806"   // Mode 08 TID 06
+        case .throttleBody: return "0801"
+        case .ssv: return "0802"
+        case .coolingFan: return "0803"
+        case .acFan: return "0804"
+        case .fuelPump: return "0805"
+        case .purgeValve: return "0806"
         }
     }
 
     var stopCommand: String? {
-        // Algunos tests necesitan comando de parada
         switch self {
-        case .throttleBody: return "0800"
-        case .ssv: return "0800"
-        default: return nil
+        case .throttleBody: return "300100"  // Actuator 01, OFF
+        case .ssv: return "300200"           // Actuator 02, OFF
+        case .coolingFan: return "300300"
+        case .acFan: return "300400"
+        case .fuelPump: return "300500"
+        case .purgeValve: return "300600"
         }
     }
 
@@ -1010,7 +1155,7 @@ struct RequirementsNotMetCard: View {
 
 struct ActuatorInfoCard: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "info.circle.fill")
                     .foregroundColor(.blue)
@@ -1028,6 +1173,24 @@ struct ActuatorInfoCard: View {
             }
             .font(.caption)
             .foregroundColor(.gray)
+
+            Divider().background(Color.gray.opacity(0.5))
+
+            // Advertencia sobre limitaciones del adaptador
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .font(.caption)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Limitaciones del adaptador")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.orange)
+                    Text("Los adaptadores ELM327 genéricos no soportan control completo de actuadores. Para funcionalidad completa se requiere herramienta OEM (Mazda IDS) o adaptadores avanzados (OBDLink MX+).")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+            }
         }
         .padding()
         .background(Color.blue.opacity(0.2))
