@@ -435,11 +435,132 @@ public enum RX8OBD2StandardPIDs {
 }
 
 // MARK: - PIDs Extendidos Mazda (Mode 22)
+// Fuente: VersaTuner, RX8Club, equinox311 GitHub, Mazda WDS
 
 public enum RX8ExtendedPIDs {
 
+    // MARK: - Motor Avanzado
+
+    /// Temperatura del aceite del motor
+    /// PID: 22 1200, Header: 7E0
+    /// CRÍTICO: mantener 80-95°C para longevidad. >110°C = peligro
+    public static let oilTemperature = ExtendedPID(
+        code: "221200",
+        header: "7E0",
+        name: "Temp. Aceite Motor",
+        shortName: "OIL_T",
+        unit: "°C",
+        formula: { data in (Double(data.uint16(at: 0)) / 10.0) - 40 },
+        minValue: -40,
+        maxValue: 250,
+        warningThreshold: 105,
+        dangerThreshold: 110,
+        isCritical: true
+    )
+
+    /// Presión de aceite del motor
+    /// PID: 22 1201, Header: 7E0
+    /// VITAL: mínimo 200kPa en ralentí caliente. Ref: 350kPa@3000rpm
+    public static let oilPressure = ExtendedPID(
+        code: "221201",
+        header: "7E0",
+        name: "Presión Aceite",
+        shortName: "OIL_P",
+        unit: "kPa",
+        formula: { data in Double(data[0]) * 10 },
+        minValue: 0,
+        maxValue: 1000,
+        warningThreshold: 250,
+        dangerThreshold: 200,
+        isCritical: true
+    )
+
+    /// Retardo de encendido por detonación (knock)
+    /// PID: 22 1746, Header: 7E0
+    /// Tuning: valores >2 grados indican detonación
+    public static let knockRetard = ExtendedPID(
+        code: "221746",
+        header: "7E0",
+        name: "Retardo Knock",
+        shortName: "KR",
+        unit: "°",
+        formula: { data in Double(data.int16(at: 0)) / 64.0 },
+        minValue: -32,
+        maxValue: 32,
+        warningThreshold: 2
+    )
+
+    /// Avance de encendido actual
+    /// PID: 22 1747, Header: 7E0
+    public static let ignitionTiming = ExtendedPID(
+        code: "221747",
+        header: "7E0",
+        name: "Avance Encendido",
+        shortName: "IGN_T",
+        unit: "°",
+        formula: { data in Double(data.int16(at: 0)) / 64.0 },
+        minValue: -64,
+        maxValue: 64
+    )
+
+    /// Relación aire-combustible objetivo
+    /// PID: 22 1300, Header: 7E0
+    /// Stock ~14.7 en cruise. WOT ~12.5-13.0 para rotary
+    public static let targetAFR = ExtendedPID(
+        code: "221300",
+        header: "7E0",
+        name: "AFR Objetivo",
+        shortName: "TGT_AFR",
+        unit: ":1",
+        formula: { data in Double(data.uint16(at: 0)) / 1000.0 },
+        minValue: 0,
+        maxValue: 25
+    )
+
+    /// Relación aire-combustible actual medida
+    /// PID: 22 1301, Header: 7E0
+    public static let actualAFR = ExtendedPID(
+        code: "221301",
+        header: "7E0",
+        name: "AFR Actual",
+        shortName: "ACT_AFR",
+        unit: ":1",
+        formula: { data in Double(data.uint16(at: 0)) / 1000.0 },
+        minValue: 0,
+        maxValue: 25
+    )
+
+    /// Ciclo de trabajo de inyectores
+    /// PID: 22 1400, Header: 7E0
+    /// Tuning: >85% indica necesidad de inyectores más grandes
+    public static let injectorDutyCycle = ExtendedPID(
+        code: "221400",
+        header: "7E0",
+        name: "Duty Inyector",
+        shortName: "IDC",
+        unit: "%",
+        formula: { data in Double(data[0]) },
+        minValue: 0,
+        maxValue: 100,
+        warningThreshold: 85
+    )
+
+    /// Tiempo de carga de bobinas de encendido
+    /// PID: 22 1500, Header: 7E0
+    /// Stock trailing: 3.5ms, leading: 2.8ms
+    public static let coilDwell = ExtendedPID(
+        code: "221500",
+        header: "7E0",
+        name: "Dwell Bobinas",
+        shortName: "DWELL",
+        unit: "ms",
+        formula: { data in Double(data[0]) * 0.1 },
+        minValue: 0,
+        maxValue: 25
+    )
+
     /// Voltaje del MAF
-    /// PID: 221177, Header: 7E0
+    /// PID: 22 1177, Header: 7E0
     public static let mafVoltage = ExtendedPID(
         code: "221177",
         header: "7E0",
@@ -451,137 +572,29 @@ public enum RX8ExtendedPIDs {
         maxValue: 5
     )
 
-    /// Temperatura del aceite del motor
-    /// PID: 221310, Header: 7E0
-    public static let oilTemperature = ExtendedPID(
-        code: "221310",
-        header: "7E0",
-        name: "Temp. Aceite Motor",
-        shortName: "EOT",
-        unit: "°C",
-        formula: { data in (Double(data.uint16(at: 0)) / 100.0) - 40 },
-        minValue: -40,
-        maxValue: 200
-    )
-
     /// Temperatura del combustible
-    /// PID: 220522, Header: 7E0
+    /// PID: 22 0522, Header: 7E0
     public static let fuelTemperature = ExtendedPID(
         code: "220522",
         header: "7E0",
         name: "Temp. Combustible",
-        shortName: "FT",
+        shortName: "FUEL_T",
         unit: "°C",
         formula: { data in Double(data[0]) - 40 },
         minValue: -40,
         maxValue: 215
     )
 
-    /// Presión de aceite (si disponible)
-    /// Nota: RX-8 solo tiene switch, no sensor de presión en modelos estándar
-    public static let oilPressureSwitch = ExtendedPID(
-        code: "221318",
+    /// Ancho de pulso inyector
+    public static let injectorPulseWidth = ExtendedPID(
+        code: "221240",
         header: "7E0",
-        name: "Switch Presión Aceite",
-        shortName: "OPS",
-        unit: "",
-        formula: { data in Double(data[0]) },
+        name: "Ancho Pulso Inyector",
+        shortName: "IPW",
+        unit: "ms",
+        formula: { data in Double(data.uint16(at: 0)) / 1000.0 },
         minValue: 0,
-        maxValue: 1
-    )
-
-    /// Posición del OMP (Oil Metering Pump)
-    public static let ompPosition = ExtendedPID(
-        code: "221350",
-        header: "7E0",
-        name: "Posición OMP",
-        shortName: "OMP",
-        unit: "%",
-        formula: { data in Double(data[0]) * 100.0 / 255.0 },
-        minValue: 0,
-        maxValue: 100
-    )
-
-    /// Inyección de aceite activa
-    public static let oilInjectionActive = ExtendedPID(
-        code: "221351",
-        header: "7E0",
-        name: "Inyección Aceite",
-        shortName: "OILA",
-        unit: "",
-        formula: { data in Double(data[0]) },
-        minValue: 0,
-        maxValue: 1
-    )
-
-    /// Presión neumático 1 (TPMS)
-    /// PID: 22C901, Header: 751
-    public static let tirePressure1 = ExtendedPID(
-        code: "22C901",
-        header: "751",
-        name: "Presión Neumático 1",
-        shortName: "TP1",
-        unit: "psi",
-        formula: { data in ((Double(data[0]) * 1373) / 1000) * 0.145037738 },
-        minValue: 0,
-        maxValue: 50
-    )
-
-    public static let tirePressure2 = ExtendedPID(
-        code: "22C902",
-        header: "751",
-        name: "Presión Neumático 2",
-        shortName: "TP2",
-        unit: "psi",
-        formula: { data in ((Double(data[0]) * 1373) / 1000) * 0.145037738 },
-        minValue: 0,
-        maxValue: 50
-    )
-
-    public static let tirePressure3 = ExtendedPID(
-        code: "22C903",
-        header: "751",
-        name: "Presión Neumático 3",
-        shortName: "TP3",
-        unit: "psi",
-        formula: { data in ((Double(data[0]) * 1373) / 1000) * 0.145037738 },
-        minValue: 0,
-        maxValue: 50
-    )
-
-    public static let tirePressure4 = ExtendedPID(
-        code: "22C904",
-        header: "751",
-        name: "Presión Neumático 4",
-        shortName: "TP4",
-        unit: "psi",
-        formula: { data in ((Double(data[0]) * 1373) / 1000) * 0.145037738 },
-        minValue: 0,
-        maxValue: 50
-    )
-
-    /// Temperatura aceite transmisión (automático)
-    public static let transmissionFluidTemp = ExtendedPID(
-        code: "221E1C",
-        header: "7E1",
-        name: "Temp. Aceite Transmisión",
-        shortName: "TFT",
-        unit: "°C",
-        formula: { data in Double(data.int16(at: 0)) / 16.0 },
-        minValue: -40,
-        maxValue: 200
-    )
-
-    /// Marcha actual (automático)
-    public static let currentGear = ExtendedPID(
-        code: "221E12",
-        header: "7E1",
-        name: "Marcha Actual",
-        shortName: "GEAR",
-        unit: "",
-        formula: { data in Double(data[0]) },
-        minValue: 0,
-        maxValue: 6
+        maxValue: 25
     )
 
     /// Ángulo de encendido Leading
@@ -608,7 +621,7 @@ public enum RX8ExtendedPIDs {
         maxValue: 60
     )
 
-    /// Knock sensor
+    /// Knock sensor voltage (legacy)
     public static let knockSensor = ExtendedPID(
         code: "221230",
         header: "7E0",
@@ -620,24 +633,291 @@ public enum RX8ExtendedPIDs {
         maxValue: 5
     )
 
-    /// Ancho de pulso inyector
-    public static let injectorPulseWidth = ExtendedPID(
-        code: "221240",
+    // MARK: - Sistemas Específicos del Rotary
+
+    /// Posición de la válvula SSV (Secondary Shutter Valve)
+    /// PID: 22 2000, Header: 7E0
+    /// Se abre ~5800 rpm. Diagnóstico de fallas de potencia en alto rpm
+    public static let ssvPosition = ExtendedPID(
+        code: "222000",
         header: "7E0",
-        name: "Ancho Pulso Inyector",
-        shortName: "IPW",
-        unit: "ms",
-        formula: { data in Double(data.uint16(at: 0)) / 1000.0 },
+        name: "Posición SSV",
+        shortName: "SSV",
+        unit: "%",
+        formula: { data in Double(data[0]) },
         minValue: 0,
-        maxValue: 25
+        maxValue: 100,
+        isRotarySpecific: true
     )
 
+    /// Posición de la válvula APV (Auxiliary Port Valve)
+    /// PID: 22 2001, Header: 7E0
+    /// Se abre ~6500 rpm. Aumenta potencia en alto rpm
+    public static let apvPosition = ExtendedPID(
+        code: "222001",
+        header: "7E0",
+        name: "Posición APV",
+        shortName: "APV",
+        unit: "%",
+        formula: { data in Double(data[0]) },
+        minValue: 0,
+        maxValue: 100,
+        isRotarySpecific: true
+    )
+
+    /// Posición del sistema VDI (Variable Dynamic Intake)
+    /// PID: 22 2002, Header: 7E0
+    /// Cambia geometría del intake según rpm
+    public static let vdiPosition = ExtendedPID(
+        code: "222002",
+        header: "7E0",
+        name: "Posición VDI",
+        shortName: "VDI",
+        unit: "%",
+        formula: { data in Double(data[0]) },
+        minValue: 0,
+        maxValue: 100,
+        isRotarySpecific: true
+    )
+
+    /// Duty cycle de bomba de aceite OMP (Oil Metering Pump)
+    /// PID: 22 2100, Header: 7E0
+    /// VITAL: inyecta aceite en cámaras. Fallas = motor muerto. NUNCA reducir
+    public static let ompDuty = ExtendedPID(
+        code: "222100",
+        header: "7E0",
+        name: "Duty OMP",
+        shortName: "OMP",
+        unit: "%",
+        formula: { data in Double(data[0]) * 100.0 / 255.0 },
+        minValue: 0,
+        maxValue: 100,
+        isCritical: true,
+        isRotarySpecific: true
+    )
+
+    /// Sistema de inyección de aire secundario
+    /// PID: 22 2200, Header: 7E0
+    /// Reduce emisiones en arranque frío. Fallas comunes >100k km
+    public static let airPumpDuty = ExtendedPID(
+        code: "222200",
+        header: "7E0",
+        name: "Duty Bomba Aire",
+        shortName: "AIR_P",
+        unit: "%",
+        formula: { data in Double(data[0]) },
+        minValue: 0,
+        maxValue: 100,
+        isRotarySpecific: true
+    )
+
+    // MARK: - Sistema de Refrigeración
+
+    /// Velocidad del ventilador primario del radiador
+    /// PID: 22 3000, Header: 7E0
+    /// Activación recomendada: 85°C
+    public static let fan1Speed = ExtendedPID(
+        code: "223000",
+        header: "7E0",
+        name: "Ventilador 1",
+        shortName: "FAN1",
+        unit: "%",
+        formula: { data in Double(data[0]) },
+        minValue: 0,
+        maxValue: 100
+    )
+
+    /// Velocidad del ventilador secundario
+    /// PID: 22 3001, Header: 7E0
+    /// Activación stock ~92°C
+    public static let fan2Speed = ExtendedPID(
+        code: "223001",
+        header: "7E0",
+        name: "Ventilador 2",
+        shortName: "FAN2",
+        unit: "%",
+        formula: { data in Double(data[0]) },
+        minValue: 0,
+        maxValue: 100
+    )
+
+    // MARK: - TPMS (Header: 751 - Módulo ABS)
+
+    /// Presión de todos los neumáticos (TPMS)
+    /// PID: 22 C901, Header: 751
+    /// Bytes A,B,C,D para cada neumático
+    /// Fórmula: byte * 0.199136814274 = psi
+    public static let tirePressure1 = ExtendedPID(
+        code: "22C901",
+        header: "751",
+        name: "Presión Neumático 1",
+        shortName: "TP1",
+        unit: "psi",
+        formula: { data in Double(data[0]) * 0.199136814274 },
+        minValue: 0,
+        maxValue: 50
+    )
+
+    public static let tirePressure2 = ExtendedPID(
+        code: "22C901",
+        header: "751",
+        name: "Presión Neumático 2",
+        shortName: "TP2",
+        unit: "psi",
+        formula: { data in data.count > 1 ? Double(data[1]) * 0.199136814274 : 0 },
+        minValue: 0,
+        maxValue: 50
+    )
+
+    public static let tirePressure3 = ExtendedPID(
+        code: "22C901",
+        header: "751",
+        name: "Presión Neumático 3",
+        shortName: "TP3",
+        unit: "psi",
+        formula: { data in data.count > 2 ? Double(data[2]) * 0.199136814274 : 0 },
+        minValue: 0,
+        maxValue: 50
+    )
+
+    public static let tirePressure4 = ExtendedPID(
+        code: "22C901",
+        header: "751",
+        name: "Presión Neumático 4",
+        shortName: "TP4",
+        unit: "psi",
+        formula: { data in data.count > 3 ? Double(data[3]) * 0.199136814274 : 0 },
+        minValue: 0,
+        maxValue: 50
+    )
+
+    /// Temperatura neumático 1
+    /// PID: 22 C902, Header: 751
+    public static let tireTemp1 = ExtendedPID(
+        code: "22C902",
+        header: "751",
+        name: "Temp. Neumático 1",
+        shortName: "TT1",
+        unit: "°C",
+        formula: { data in Double(data[0]) - 40 },
+        minValue: -40,
+        maxValue: 100
+    )
+
+    // MARK: - Transmisión (Header: 7E1)
+
+    /// Temperatura aceite transmisión (automático)
+    public static let transmissionFluidTemp = ExtendedPID(
+        code: "221E1C",
+        header: "7E1",
+        name: "Temp. Aceite Transmisión",
+        shortName: "TFT",
+        unit: "°C",
+        formula: { data in Double(data.int16(at: 0)) / 16.0 },
+        minValue: -40,
+        maxValue: 200
+    )
+
+    /// Marcha actual (automático)
+    public static let currentGear = ExtendedPID(
+        code: "221E12",
+        header: "7E1",
+        name: "Marcha Actual",
+        shortName: "GEAR",
+        unit: "",
+        formula: { data in Double(data[0]) },
+        minValue: 0,
+        maxValue: 6
+    )
+
+    // MARK: - DSC/Chassis (Header: módulo ABS)
+
+    /// Ángulo del volante
+    /// PID: 22 7000, Header: ABS
+    public static let steeringAngleDSC = ExtendedPID(
+        code: "227000",
+        header: "751",
+        name: "Ángulo Volante DSC",
+        shortName: "STEER",
+        unit: "°",
+        formula: { data in Double(data.int16(at: 0)) / 10.0 },
+        minValue: -720,
+        maxValue: 720
+    )
+
+    /// Velocidad de guiñada (yaw rate)
+    /// PID: 22 7001, Header: ABS
+    public static let yawRate = ExtendedPID(
+        code: "227001",
+        header: "751",
+        name: "Yaw Rate",
+        shortName: "YAW",
+        unit: "°/s",
+        formula: { data in Double(data.int16(at: 0)) / 100.0 },
+        minValue: -100,
+        maxValue: 100
+    )
+
+    /// Aceleración lateral
+    /// PID: 22 7002, Header: ABS
+    public static let lateralG = ExtendedPID(
+        code: "227002",
+        header: "751",
+        name: "G Lateral",
+        shortName: "LAT_G",
+        unit: "g",
+        formula: { data in Double(data.int16(at: 0)) / 1000.0 },
+        minValue: -2,
+        maxValue: 2
+    )
+
+    /// Aceleración longitudinal
+    /// PID: 22 7003, Header: ABS
+    public static let longitudinalG = ExtendedPID(
+        code: "227003",
+        header: "751",
+        name: "G Longitudinal",
+        shortName: "LONG_G",
+        unit: "g",
+        formula: { data in Double(data.int16(at: 0)) / 1000.0 },
+        minValue: -2,
+        maxValue: 2
+    )
+
+    // MARK: - Colecciones
+
     public static let all: [ExtendedPID] = [
-        mafVoltage, oilTemperature, fuelTemperature, oilPressureSwitch,
-        ompPosition, oilInjectionActive, tirePressure1, tirePressure2,
-        tirePressure3, tirePressure4, transmissionFluidTemp, currentGear,
+        // Motor avanzado
+        oilTemperature, oilPressure, knockRetard, ignitionTiming,
+        targetAFR, actualAFR, injectorDutyCycle, coilDwell,
+        mafVoltage, fuelTemperature, injectorPulseWidth,
         ignitionTimingLeading, ignitionTimingTrailing, knockSensor,
-        injectorPulseWidth
+        // Rotary específico
+        ssvPosition, apvPosition, vdiPosition, ompDuty, airPumpDuty,
+        // Refrigeración
+        fan1Speed, fan2Speed,
+        // TPMS
+        tirePressure1, tirePressure2, tirePressure3, tirePressure4, tireTemp1,
+        // Transmisión
+        transmissionFluidTemp, currentGear,
+        // DSC/Chassis
+        steeringAngleDSC, yawRate, lateralG, longitudinalG
+    ]
+
+    /// PIDs específicos del motor rotativo
+    public static let rotarySpecific: [ExtendedPID] = [
+        ssvPosition, apvPosition, vdiPosition, ompDuty, airPumpDuty
+    ]
+
+    /// PIDs críticos para la salud del motor
+    public static let critical: [ExtendedPID] = [
+        oilTemperature, oilPressure, ompDuty
+    ]
+
+    /// PIDs para tuning
+    public static let tuning: [ExtendedPID] = [
+        knockRetard, ignitionTiming, targetAFR, actualAFR,
+        injectorDutyCycle, coilDwell, ignitionTimingLeading, ignitionTimingTrailing
     ]
 }
 
@@ -684,6 +964,38 @@ public struct ExtendedPID: Sendable {
     public let formula: @Sendable (Data) -> Double
     public let minValue: Double
     public let maxValue: Double
+    public let warningThreshold: Double?
+    public let dangerThreshold: Double?
+    public let isCritical: Bool
+    public let isRotarySpecific: Bool
+
+    public init(
+        code: String,
+        header: String,
+        name: String,
+        shortName: String,
+        unit: String,
+        formula: @escaping @Sendable (Data) -> Double,
+        minValue: Double,
+        maxValue: Double,
+        warningThreshold: Double? = nil,
+        dangerThreshold: Double? = nil,
+        isCritical: Bool = false,
+        isRotarySpecific: Bool = false
+    ) {
+        self.code = code
+        self.header = header
+        self.name = name
+        self.shortName = shortName
+        self.unit = unit
+        self.formula = formula
+        self.minValue = minValue
+        self.maxValue = maxValue
+        self.warningThreshold = warningThreshold
+        self.dangerThreshold = dangerThreshold
+        self.isCritical = isCritical
+        self.isRotarySpecific = isRotarySpecific
+    }
 }
 
 // MARK: - Extensiones de Data para parsing
@@ -731,8 +1043,10 @@ public struct DiagnosticPIDGroup {
         ],
         extendedPIDs: [
             RX8ExtendedPIDs.oilTemperature,
-            RX8ExtendedPIDs.ompPosition,
+            RX8ExtendedPIDs.oilPressure,
+            RX8ExtendedPIDs.ompDuty,
             RX8ExtendedPIDs.knockSensor,
+            RX8ExtendedPIDs.knockRetard,
             RX8ExtendedPIDs.ignitionTimingLeading,
             RX8ExtendedPIDs.ignitionTimingTrailing
         ],
@@ -753,7 +1067,10 @@ public struct DiagnosticPIDGroup {
         ],
         extendedPIDs: [
             RX8ExtendedPIDs.fuelTemperature,
-            RX8ExtendedPIDs.injectorPulseWidth
+            RX8ExtendedPIDs.injectorPulseWidth,
+            RX8ExtendedPIDs.injectorDutyCycle,
+            RX8ExtendedPIDs.targetAFR,
+            RX8ExtendedPIDs.actualAFR
         ],
         canPIDs: []
     )
@@ -791,7 +1108,68 @@ public struct DiagnosticPIDGroup {
         ]
     )
 
+    public static let rotarySystem = DiagnosticPIDGroup(
+        name: "Sistema Rotativo",
+        description: "PIDs específicos del motor rotativo Renesis",
+        standardPIDs: [],
+        extendedPIDs: [
+            RX8ExtendedPIDs.ssvPosition,
+            RX8ExtendedPIDs.apvPosition,
+            RX8ExtendedPIDs.vdiPosition,
+            RX8ExtendedPIDs.ompDuty,
+            RX8ExtendedPIDs.airPumpDuty
+        ],
+        canPIDs: []
+    )
+
+    public static let cooling = DiagnosticPIDGroup(
+        name: "Refrigeración",
+        description: "Monitoreo del sistema de refrigeración",
+        standardPIDs: [
+            RX8OBD2StandardPIDs.coolantTemp
+        ],
+        extendedPIDs: [
+            RX8ExtendedPIDs.oilTemperature,
+            RX8ExtendedPIDs.fan1Speed,
+            RX8ExtendedPIDs.fan2Speed
+        ],
+        canPIDs: [
+            RX8CANPIDs.coolantTemp
+        ]
+    )
+
+    public static let tpms = DiagnosticPIDGroup(
+        name: "Presión Neumáticos",
+        description: "Sistema TPMS - presión y temperatura de neumáticos",
+        standardPIDs: [],
+        extendedPIDs: [
+            RX8ExtendedPIDs.tirePressure1,
+            RX8ExtendedPIDs.tirePressure2,
+            RX8ExtendedPIDs.tirePressure3,
+            RX8ExtendedPIDs.tirePressure4,
+            RX8ExtendedPIDs.tireTemp1
+        ],
+        canPIDs: []
+    )
+
+    public static let chassis = DiagnosticPIDGroup(
+        name: "Chasis/DSC",
+        description: "Datos de DSC, aceleración G y dinámica del vehículo",
+        standardPIDs: [],
+        extendedPIDs: [
+            RX8ExtendedPIDs.steeringAngleDSC,
+            RX8ExtendedPIDs.yawRate,
+            RX8ExtendedPIDs.lateralG,
+            RX8ExtendedPIDs.longitudinalG
+        ],
+        canPIDs: [
+            RX8CANPIDs.steeringAngle,
+            RX8CANPIDs.absDscWarning
+        ]
+    )
+
     public static let allGroups: [DiagnosticPIDGroup] = [
-        engineHealth, fuelSystem, emissions, driving
+        engineHealth, fuelSystem, emissions, driving,
+        rotarySystem, cooling, tpms, chassis
     ]
 }
