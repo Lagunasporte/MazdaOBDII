@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("hapticFeedback") private var hapticFeedback = true
     @AppStorage("keepScreenOn") private var keepScreenOn = false
     @AppStorage("pollingInterval") private var pollingInterval = 100 // ms
+    @AppStorage("dataMode") private var dataMode = DataMode.normal
     @State private var showVehicleInfo = false
     @State private var showAbout = false
     @State private var showAdapterTest = false
@@ -110,6 +111,29 @@ struct SettingsView: View {
 
                 // Rendimiento OBD
                 Section {
+                    // Modo de datos
+                    Picker("Volumen de datos", selection: $dataMode) {
+                        ForEach(DataMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+
+                    // Descripción del modo seleccionado
+                    HStack(spacing: 8) {
+                        Image(systemName: dataMode.icon)
+                            .foregroundColor(dataMode.color)
+                            .frame(width: 20)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(dataMode.description)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            Text("\(dataMode.pidsPerCycle) PIDs por ciclo")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                    .padding(.vertical, 4)
+
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Intervalo de lectura")
@@ -167,18 +191,38 @@ struct SettingsView: View {
                                 .font(.caption)
                                 .foregroundColor(results.errorCount > 0 ? .orange : .gray)
 
-                            Button("Aplicar recomendado") {
-                                pollingInterval = results.recommendedInterval
+                            // Sugerir modo según velocidad del adaptador
+                            if results.recommendedInterval > 150 {
+                                HStack {
+                                    Image(systemName: "lightbulb.fill")
+                                        .foregroundColor(.yellow)
+                                        .font(.caption)
+                                    Text("Adaptador lento - Modo Esencial recomendado")
+                                        .font(.caption)
+                                        .foregroundColor(.yellow)
+                                }
                             }
-                            .font(.caption)
-                            .foregroundColor(.blue)
+
+                            HStack {
+                                Button("Aplicar recomendado") {
+                                    pollingInterval = results.recommendedInterval
+                                    // Auto-ajustar modo de datos si el adaptador es lento
+                                    if results.recommendedInterval > 150 {
+                                        dataMode = .essential
+                                    } else if results.recommendedInterval <= 75 {
+                                        dataMode = .full
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            }
                         }
                         .padding(.vertical, 4)
                     }
                 } header: {
                     Text("Rendimiento OBD")
                 } footer: {
-                    Text("Adaptadores baratos pueden necesitar intervalos más largos (200-300ms). El Carista funciona bien a 50-100ms.")
+                    Text("Adaptadores baratos necesitan modo Esencial (5 PIDs). Carista/OBDLink pueden usar modo Completo (9+ PIDs).")
                 }
 
                 // Conexión
@@ -434,6 +478,54 @@ enum UnitSystem: String, CaseIterable {
 enum TemperatureUnit: String, CaseIterable {
     case celsius = "Celsius (°C)"
     case fahrenheit = "Fahrenheit (°F)"
+}
+
+// MARK: - Modo de Datos OBD
+
+enum DataMode: String, CaseIterable {
+    case essential = "essential"  // Solo PIDs críticos - adaptadores lentos
+    case normal = "normal"        // PIDs básicos con rotación reducida
+    case full = "full"            // Todos los PIDs con rotación completa
+
+    var displayName: String {
+        switch self {
+        case .essential: return "Esencial"
+        case .normal: return "Normal"
+        case .full: return "Completo"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .essential: return "Solo RPM, velocidad, temp y voltaje"
+        case .normal: return "Datos básicos + fuel trims"
+        case .full: return "Todos los sensores disponibles"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .essential: return "battery.50"
+        case .normal: return "gauge.medium"
+        case .full: return "chart.bar.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .essential: return .green
+        case .normal: return .blue
+        case .full: return .orange
+        }
+    }
+
+    var pidsPerCycle: String {
+        switch self {
+        case .essential: return "3-5"
+        case .normal: return "5-7"
+        case .full: return "7-10"
+        }
+    }
 }
 
 // MARK: - Vista de Información del Vehículo

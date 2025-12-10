@@ -1173,9 +1173,13 @@ public class EngineMonitor: ObservableObject {
 
         let startTime = Date()
 
+        // Obtener modo de datos configurado
+        let dataModeStr = UserDefaults.standard.string(forKey: "dataMode") ?? "normal"
+        let dataMode = dataModeStr // essential, normal, full
+
         // Leer PIDs en secuencia rápida (sin esperas innecesarias)
         do {
-            // PIDs críticos - siempre leer
+            // PIDs críticos - siempre leer (3 PIDs)
             async let rpmTask = cm.readRPM()
             async let speedTask = cm.readSpeed()
             async let coolantTask = cm.readCoolantTemp()
@@ -1198,134 +1202,222 @@ public class EngineMonitor: ObservableObject {
                 currentState.vehicleSpeed = Double(speed)
             }
 
-            // PIDs secundarios - leer en ciclos rotatorios para maximizar velocidad
-            // Expandido a 6 ciclos para incluir PIDs de diagnóstico forense
-            updateCount += 1
-            let cycle = updateCount % 6
+            // MODO ESENCIAL: Solo PIDs mínimos para adaptadores lentos
+            // Total: 3 críticos + 2 adicionales = 5 PIDs por ciclo máximo
+            if dataMode == "essential" {
+                updateCount += 1
+                let cycle = updateCount % 2
 
-            switch cycle {
-            case 0:
-                // Ciclo 0: throttle, MAF, carga del motor
-                if let throttle = try? await cm.readThrottlePosition() {
-                    currentState.throttlePosition = throttle
-                }
-                if let maf = try? await cm.readMAF() {
-                    currentState.mafAirFlow = maf
-                    // Actualizar consumo de combustible
-                    _ = fuelTracker?.calculateInstantConsumption(
-                        mafGramsPerSecond: maf,
-                        speedKmh: currentState.vehicleSpeed,
-                        rpm: rpm
-                    )
-                }
-                if let load = try? await cm.readEngineLoad() {
-                    currentState.engineLoad = load
-                }
-
-            case 1:
-                // Ciclo 1: fuel trims Bank 1
-                if let stft = try? await cm.readFuelTrimShort() {
-                    currentState.shortTermFuelTrim = stft
-                }
-                if let ltft = try? await cm.readFuelTrimLong() {
-                    currentState.longTermFuelTrim = ltft
-                }
-
-            case 2:
-                // Ciclo 2: fuel trims Bank 2 (rotor trasero) - crítico para diagnóstico
-                if let stftB2 = try? await cm.readFuelTrimShortB2() {
-                    currentState.shortTermFuelTrimB2 = stftB2
-                }
-                if let ltftB2 = try? await cm.readFuelTrimLongB2() {
-                    currentState.longTermFuelTrimB2 = ltftB2
-                }
-
-            case 3:
-                // Ciclo 3: timing, voltaje, MAP
-                if let timing = try? await cm.readTimingAdvance() {
-                    currentState.ignitionTiming = timing
-                }
-                if let voltage = try? await cm.readVoltage() {
-                    currentState.batteryVoltage = voltage
-                }
-                if let mapPressure = try? await cm.readMAP() {
-                    currentState.manifoldPressure = mapPressure
-                }
-
-            case 4:
-                // Ciclo 4: sensores O2 - importantes para diagnóstico de mezcla
-                if let o2s1 = try? await cm.readO2VoltageB1S1() {
-                    currentState.o2SensorBank1Sensor1 = o2s1
-                }
-                if let o2s2 = try? await cm.readO2VoltageB1S2() {
-                    currentState.o2SensorBank1Sensor2 = o2s2
-                }
-                if let accel = try? await cm.readAcceleratorPosition() {
-                    currentState.acceleratorPosition = accel
-                }
-
-            case 5:
-                // Ciclo 5: temperaturas adicionales (aceite, catalizador, IAT)
-                // Primero intentar Mode 22 (Mazda específico) para temp aceite
-                // Si falla, intentar PID estándar 0x5C
-                if let oilTemp = try? await cm.readOilTempMazda() {
-                    currentState.oilTemperature = oilTemp
-                } else if let oilTemp = try? await cm.readOilTemp() {
-                    currentState.oilTemperature = Double(oilTemp)
-                }
-
-                if let catTemp = try? await cm.readCatalystTemp() {
-                    currentState.catalystTemperature = catTemp
-                }
-                if let iat = try? await cm.readIntakeTemp() {
-                    currentState.intakeAirTemperature = Double(iat)
-                }
-
-                // Leer nivel de combustible con sistema dual de sondas
-                // El RX-8 tiene un saddle tank con dos sondas independientes
-                if let dualReading = try? await cm.readDualFuelLevel() {
-                    // Guardar lecturas individuales de cada sonda
-                    currentState.fuelLevelLeftSender = dualReading.leftSender
-                    currentState.fuelLevelRightSender = dualReading.rightSender
-
-                    // Usar nivel calculado (compensado si hay sonda defectuosa)
-                    currentState.fuelLevel = dualReading.calculatedLevel
-                    fuelTracker?.updateFuelLevel(dualReading.calculatedLevel)
-
-                    // Estado y advertencias de las sondas
-                    switch dualReading.senderStatus {
-                    case .normal:
-                        currentState.fuelSenderStatus = "normal"
-                        currentState.fuelSenderWarning = nil
-                    case .leftUnavailable, .rightUnavailable, .bothUnavailable:
-                        currentState.fuelSenderStatus = "unavailable"
-                        currentState.fuelSenderWarning = dualReading.warningMessage
-                    case .leftSuspect, .rightSuspect, .stuckLeft, .stuckRight:
-                        currentState.fuelSenderStatus = "suspect"
-                        currentState.fuelSenderWarning = dualReading.warningMessage
-                    case .mismatch:
-                        currentState.fuelSenderStatus = "mismatch"
-                        currentState.fuelSenderWarning = dualReading.warningMessage
+                switch cycle {
+                case 0:
+                    // Throttle y voltaje - esenciales para conducción
+                    if let throttle = try? await cm.readThrottlePosition() {
+                        currentState.throttlePosition = throttle
                     }
-                } else if let fuelLevel = try? await cm.readFuelLevel() {
-                    // Fallback a lectura estándar si dual no está disponible
-                    currentState.fuelLevel = fuelLevel
-                    fuelTracker?.updateFuelLevel(fuelLevel)
+                    if let voltage = try? await cm.readVoltage() {
+                        currentState.batteryVoltage = voltage
+                    }
+
+                case 1:
+                    // Temperatura de aceite (importante para rotativo)
+                    if let oilTemp = try? await cm.readOilTempMazda() {
+                        currentState.oilTemperature = oilTemp
+                    } else if let oilTemp = try? await cm.readOilTemp() {
+                        currentState.oilTemperature = Double(oilTemp)
+                    }
+
+                default:
+                    break
                 }
+            }
+            // MODO NORMAL: PIDs básicos con rotación reducida (4 ciclos)
+            // Total: 3 críticos + 2-4 adicionales = 5-7 PIDs por ciclo
+            else if dataMode == "normal" {
+                updateCount += 1
+                let cycle = updateCount % 4
 
-                // Leer runtime y odómetro
-                let runtime = try? await cm.readRuntimeSinceStart()
-                let odometer = try? await cm.readOdometer()
-                let distSinceClear = try? await cm.readDistanceSinceDTCClear()
+                switch cycle {
+                case 0:
+                    // Ciclo 0: throttle y voltaje
+                    if let throttle = try? await cm.readThrottlePosition() {
+                        currentState.throttlePosition = throttle
+                    }
+                    if let voltage = try? await cm.readVoltage() {
+                        currentState.batteryVoltage = voltage
+                    }
+                    if let maf = try? await cm.readMAF() {
+                        currentState.mafAirFlow = maf
+                        _ = fuelTracker?.calculateInstantConsumption(
+                            mafGramsPerSecond: maf,
+                            speedKmh: currentState.vehicleSpeed,
+                            rpm: rpm
+                        )
+                    }
 
-                fuelTracker?.updateOBDData(
-                    runtime: runtime ?? 0,
-                    distanceSinceClear: distSinceClear ?? 0,
-                    odometer: odometer
-                )
+                case 1:
+                    // Ciclo 1: fuel trims Bank 1 solamente
+                    if let stft = try? await cm.readFuelTrimShort() {
+                        currentState.shortTermFuelTrim = stft
+                    }
+                    if let ltft = try? await cm.readFuelTrimLong() {
+                        currentState.longTermFuelTrim = ltft
+                    }
 
-            default:
-                break
+                case 2:
+                    // Ciclo 2: temperaturas
+                    if let oilTemp = try? await cm.readOilTempMazda() {
+                        currentState.oilTemperature = oilTemp
+                    } else if let oilTemp = try? await cm.readOilTemp() {
+                        currentState.oilTemperature = Double(oilTemp)
+                    }
+                    if let iat = try? await cm.readIntakeTemp() {
+                        currentState.intakeAirTemperature = Double(iat)
+                    }
+
+                case 3:
+                    // Ciclo 3: fuel level y timing
+                    if let fuelLevel = try? await cm.readFuelLevel() {
+                        currentState.fuelLevel = fuelLevel
+                        fuelTracker?.updateFuelLevel(fuelLevel)
+                    }
+                    if let timing = try? await cm.readTimingAdvance() {
+                        currentState.ignitionTiming = timing
+                    }
+
+                default:
+                    break
+                }
+            }
+            // MODO COMPLETO: Todos los PIDs con rotación de 6 ciclos
+            // Total: 3 críticos + 3-6 adicionales = 6-9+ PIDs por ciclo
+            else {
+                updateCount += 1
+                let cycle = updateCount % 6
+
+                switch cycle {
+                case 0:
+                    // Ciclo 0: throttle, MAF, carga del motor
+                    if let throttle = try? await cm.readThrottlePosition() {
+                        currentState.throttlePosition = throttle
+                    }
+                    if let maf = try? await cm.readMAF() {
+                        currentState.mafAirFlow = maf
+                        // Actualizar consumo de combustible
+                        _ = fuelTracker?.calculateInstantConsumption(
+                            mafGramsPerSecond: maf,
+                            speedKmh: currentState.vehicleSpeed,
+                            rpm: rpm
+                        )
+                    }
+                    if let load = try? await cm.readEngineLoad() {
+                        currentState.engineLoad = load
+                    }
+
+                case 1:
+                    // Ciclo 1: fuel trims Bank 1
+                    if let stft = try? await cm.readFuelTrimShort() {
+                        currentState.shortTermFuelTrim = stft
+                    }
+                    if let ltft = try? await cm.readFuelTrimLong() {
+                        currentState.longTermFuelTrim = ltft
+                    }
+
+                case 2:
+                    // Ciclo 2: fuel trims Bank 2 (rotor trasero) - crítico para diagnóstico
+                    if let stftB2 = try? await cm.readFuelTrimShortB2() {
+                        currentState.shortTermFuelTrimB2 = stftB2
+                    }
+                    if let ltftB2 = try? await cm.readFuelTrimLongB2() {
+                        currentState.longTermFuelTrimB2 = ltftB2
+                    }
+
+                case 3:
+                    // Ciclo 3: timing, voltaje, MAP
+                    if let timing = try? await cm.readTimingAdvance() {
+                        currentState.ignitionTiming = timing
+                    }
+                    if let voltage = try? await cm.readVoltage() {
+                        currentState.batteryVoltage = voltage
+                    }
+                    if let mapPressure = try? await cm.readMAP() {
+                        currentState.manifoldPressure = mapPressure
+                    }
+
+                case 4:
+                    // Ciclo 4: sensores O2 - importantes para diagnóstico de mezcla
+                    if let o2s1 = try? await cm.readO2VoltageB1S1() {
+                        currentState.o2SensorBank1Sensor1 = o2s1
+                    }
+                    if let o2s2 = try? await cm.readO2VoltageB1S2() {
+                        currentState.o2SensorBank1Sensor2 = o2s2
+                    }
+                    if let accel = try? await cm.readAcceleratorPosition() {
+                        currentState.acceleratorPosition = accel
+                    }
+
+                case 5:
+                    // Ciclo 5: temperaturas adicionales (aceite, catalizador, IAT)
+                    // Primero intentar Mode 22 (Mazda específico) para temp aceite
+                    // Si falla, intentar PID estándar 0x5C
+                    if let oilTemp = try? await cm.readOilTempMazda() {
+                        currentState.oilTemperature = oilTemp
+                    } else if let oilTemp = try? await cm.readOilTemp() {
+                        currentState.oilTemperature = Double(oilTemp)
+                    }
+
+                    if let catTemp = try? await cm.readCatalystTemp() {
+                        currentState.catalystTemperature = catTemp
+                    }
+                    if let iat = try? await cm.readIntakeTemp() {
+                        currentState.intakeAirTemperature = Double(iat)
+                    }
+
+                    // Leer nivel de combustible con sistema dual de sondas
+                    // El RX-8 tiene un saddle tank con dos sondas independientes
+                    if let dualReading = try? await cm.readDualFuelLevel() {
+                        // Guardar lecturas individuales de cada sonda
+                        currentState.fuelLevelLeftSender = dualReading.leftSender
+                        currentState.fuelLevelRightSender = dualReading.rightSender
+
+                        // Usar nivel calculado (compensado si hay sonda defectuosa)
+                        currentState.fuelLevel = dualReading.calculatedLevel
+                        fuelTracker?.updateFuelLevel(dualReading.calculatedLevel)
+
+                        // Estado y advertencias de las sondas
+                        switch dualReading.senderStatus {
+                        case .normal:
+                            currentState.fuelSenderStatus = "normal"
+                            currentState.fuelSenderWarning = nil
+                        case .leftUnavailable, .rightUnavailable, .bothUnavailable:
+                            currentState.fuelSenderStatus = "unavailable"
+                            currentState.fuelSenderWarning = dualReading.warningMessage
+                        case .leftSuspect, .rightSuspect, .stuckLeft, .stuckRight:
+                            currentState.fuelSenderStatus = "suspect"
+                            currentState.fuelSenderWarning = dualReading.warningMessage
+                        case .mismatch:
+                            currentState.fuelSenderStatus = "mismatch"
+                            currentState.fuelSenderWarning = dualReading.warningMessage
+                        }
+                    } else if let fuelLevel = try? await cm.readFuelLevel() {
+                        // Fallback a lectura estándar si dual no está disponible
+                        currentState.fuelLevel = fuelLevel
+                        fuelTracker?.updateFuelLevel(fuelLevel)
+                    }
+
+                    // Leer runtime y odómetro
+                    let runtime = try? await cm.readRuntimeSinceStart()
+                    let odometer = try? await cm.readOdometer()
+                    let distSinceClear = try? await cm.readDistanceSinceDTCClear()
+
+                    fuelTracker?.updateOBDData(
+                        runtime: runtime ?? 0,
+                        distanceSinceClear: distSinceClear ?? 0,
+                        odometer: odometer
+                    )
+
+                default:
+                    break
+                }
             }
 
             // Calcular tasa de actualización
