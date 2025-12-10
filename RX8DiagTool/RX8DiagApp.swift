@@ -11,6 +11,7 @@ struct RX8DiagApp: App {
     @StateObject private var diagnosticMode = DiagnosticMode()
     @StateObject private var fuelTracker = FuelConsumptionTracker()
     @StateObject private var blackBoxRecorder = BlackBoxRecorder()
+    @StateObject private var radarManager = SpeedCameraManager()
 
     var body: some Scene {
         WindowGroup {
@@ -20,6 +21,7 @@ struct RX8DiagApp: App {
                 .environmentObject(diagnosticMode)
                 .environmentObject(fuelTracker)
                 .environmentObject(blackBoxRecorder)
+                .environmentObject(radarManager)
                 .preferredColorScheme(.dark)
                 .onAppear {
                     // Configurar el monitor con todas las dependencias
@@ -30,6 +32,9 @@ struct RX8DiagApp: App {
                     )
                     // Intervalo de 250ms (4 Hz)
                     engineMonitor.setUpdateInterval(milliseconds: 250)
+
+                    // Solicitar permisos de ubicación para radares
+                    radarManager.requestLocationPermission()
                 }
                 .onChange(of: connectionManager.connectionState) { oldState, newState in
                     // Auto-iniciar monitoreo al conectar al vehículo
@@ -50,6 +55,7 @@ struct RX8DiagApp: App {
 struct MainTabView: View {
     @EnvironmentObject var connectionManager: OBDConnectionManager
     @EnvironmentObject var engineMonitor: EngineMonitor
+    @EnvironmentObject var radarManager: SpeedCameraManager
     @State private var selectedTab = 0
 
     var body: some View {
@@ -83,19 +89,26 @@ struct MainTabView: View {
                 }
                 .tag(3)
 
-            // Tab 5: Caja Negra
+            // Tab 5: Avisador Radares
+            RadarView()
+                .tabItem {
+                    Label("Radares", systemImage: "antenna.radiowaves.left.and.right")
+                }
+                .tag(4)
+
+            // Tab 6: Caja Negra
             BlackBoxView()
                 .tabItem {
                     Label("Caja Negra", systemImage: "externaldrive.fill")
                 }
-                .tag(4)
+                .tag(5)
 
-            // Tab 6: Configuración
+            // Tab 7: Configuración
             SettingsView()
                 .tabItem {
                     Label("Ajustes", systemImage: "gearshape")
                 }
-                .tag(5)
+                .tag(6)
             }
             .tint(.orange) // Color RX-8
 
