@@ -12,19 +12,14 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var updateTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
-    // Shared engine monitor from main app
-    private var engineMonitor: EngineMonitor {
-        EngineMonitor.shared
-    }
-
     // MARK: - Scene Lifecycle
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didConnect interfaceController: CPInterfaceController) {
         self.interfaceController = interfaceController
 
-        // Subscribe to engine state updates
-        setupEngineMonitorSubscription()
+        // Subscribe to shared data provider updates
+        setupDataSubscription()
 
         // Create main template
         let rootTemplate = createDashboardTemplate()
@@ -41,14 +36,21 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         cancellables.removeAll()
     }
 
-    // MARK: - Engine Monitor Subscription
+    // MARK: - Data Subscription
 
-    private func setupEngineMonitorSubscription() {
-        // Subscribe to engine state changes from the shared EngineMonitor
-        engineMonitor.$engineState
+    private func setupDataSubscription() {
+        // Subscribe to shared CarPlay data provider
+        CarPlayDataProvider.shared.$engineState
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 self?.carPlayDashboard.update(from: state)
+            }
+            .store(in: &cancellables)
+
+        CarPlayDataProvider.shared.$fuelData
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] data in
+                self?.carPlayDashboard.updateFuel(from: data)
             }
             .store(in: &cancellables)
     }
@@ -57,7 +59,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     private func createDashboardTemplate() -> CPTemplate {
         let template = CPInformationTemplate(
-            title: "carplay.dashboard.title".localized,
+            title: NSLocalizedString("carplay.dashboard.title", comment: ""),
             layout: .twoColumn,
             items: createDashboardItems(),
             actions: createDashboardActions()
@@ -68,24 +70,24 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     private func createDashboardItems() -> [CPInformationItem] {
         return [
-            CPInformationItem(title: "carplay.rpm".localized, detail: "\(carPlayDashboard.rpm)"),
-            CPInformationItem(title: "carplay.speed".localized, detail: String(format: "%.0f km/h", carPlayDashboard.speed)),
-            CPInformationItem(title: "carplay.coolant".localized, detail: String(format: "%.0f °C", carPlayDashboard.coolantTemp)),
-            CPInformationItem(title: "carplay.oil_temp".localized, detail: String(format: "%.0f °C", carPlayDashboard.oilTemp)),
-            CPInformationItem(title: "carplay.consumption".localized, detail: String(format: "%.1f L/100", carPlayDashboard.consumption)),
-            CPInformationItem(title: "carplay.range".localized, detail: String(format: "%.0f km", carPlayDashboard.range))
+            CPInformationItem(title: NSLocalizedString("carplay.rpm", comment: ""), detail: "\(carPlayDashboard.rpm)"),
+            CPInformationItem(title: NSLocalizedString("carplay.speed", comment: ""), detail: String(format: "%.0f km/h", carPlayDashboard.speed)),
+            CPInformationItem(title: NSLocalizedString("carplay.coolant", comment: ""), detail: String(format: "%.0f °C", carPlayDashboard.coolantTemp)),
+            CPInformationItem(title: NSLocalizedString("carplay.oil_temp", comment: ""), detail: String(format: "%.0f °C", carPlayDashboard.oilTemp)),
+            CPInformationItem(title: NSLocalizedString("carplay.consumption", comment: ""), detail: String(format: "%.1f L/100", carPlayDashboard.consumption)),
+            CPInformationItem(title: NSLocalizedString("carplay.range", comment: ""), detail: String(format: "%.0f km", carPlayDashboard.range))
         ]
     }
 
     private func createDashboardActions() -> [CPTextButton] {
         return [
-            CPTextButton(title: "carplay.gauges".localized, textStyle: .normal) { [weak self] _ in
+            CPTextButton(title: NSLocalizedString("carplay.gauges", comment: ""), textStyle: .normal) { [weak self] _ in
                 self?.showGaugesTemplate()
             },
-            CPTextButton(title: "carplay.alerts".localized, textStyle: .normal) { [weak self] _ in
+            CPTextButton(title: NSLocalizedString("carplay.alerts", comment: ""), textStyle: .normal) { [weak self] _ in
                 self?.showAlertsTemplate()
             },
-            CPTextButton(title: "carplay.dtc".localized, textStyle: .normal) { [weak self] _ in
+            CPTextButton(title: NSLocalizedString("carplay.dtc", comment: ""), textStyle: .normal) { [weak self] _ in
                 self?.showDTCTemplate()
             }
         ]
@@ -96,38 +98,38 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private func showGaugesTemplate() {
         let gridButtons = [
             createGaugeButton(
-                title: "carplay.rpm".localized,
+                title: NSLocalizedString("carplay.rpm", comment: ""),
                 value: "\(carPlayDashboard.rpm)",
                 icon: "gauge.with.dots.needle.bottom.50percent"
             ),
             createGaugeButton(
-                title: "carplay.speed".localized,
+                title: NSLocalizedString("carplay.speed", comment: ""),
                 value: String(format: "%.0f", carPlayDashboard.speed),
                 icon: "speedometer"
             ),
             createGaugeButton(
-                title: "carplay.coolant".localized,
+                title: NSLocalizedString("carplay.coolant", comment: ""),
                 value: String(format: "%.0f°C", carPlayDashboard.coolantTemp),
                 icon: "thermometer"
             ),
             createGaugeButton(
-                title: "carplay.oil_temp".localized,
+                title: NSLocalizedString("carplay.oil_temp", comment: ""),
                 value: String(format: "%.0f°C", carPlayDashboard.oilTemp),
                 icon: "drop.fill"
             ),
             createGaugeButton(
-                title: "carplay.consumption".localized,
+                title: NSLocalizedString("carplay.consumption", comment: ""),
                 value: String(format: "%.1f", carPlayDashboard.consumption),
                 icon: "fuelpump"
             ),
             createGaugeButton(
-                title: "carplay.voltage".localized,
+                title: NSLocalizedString("carplay.voltage", comment: ""),
                 value: String(format: "%.1fV", carPlayDashboard.batteryVoltage),
                 icon: "bolt.fill"
             )
         ]
 
-        let gridTemplate = CPGridTemplate(title: "carplay.instruments".localized, gridButtons: gridButtons)
+        let gridTemplate = CPGridTemplate(title: NSLocalizedString("carplay.instruments", comment: ""), gridButtons: gridButtons)
         interfaceController?.pushTemplate(gridTemplate, animated: true, completion: nil)
     }
 
@@ -146,8 +148,8 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
         if carPlayDashboard.alerts.isEmpty {
             items.append(CPListItem(
-                text: "carplay.no_alerts".localized,
-                detailText: "carplay.all_systems_ok".localized
+                text: NSLocalizedString("carplay.no_alerts", comment: ""),
+                detailText: NSLocalizedString("carplay.all_systems_ok", comment: "")
             ))
         } else {
             for alert in carPlayDashboard.alerts {
@@ -161,7 +163,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         }
 
         let section = CPListSection(items: items)
-        let listTemplate = CPListTemplate(title: "carplay.alerts".localized, sections: [section])
+        let listTemplate = CPListTemplate(title: NSLocalizedString("carplay.alerts", comment: ""), sections: [section])
         interfaceController?.pushTemplate(listTemplate, animated: true, completion: nil)
     }
 
@@ -173,8 +175,8 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         let activeDTCs = carPlayDashboard.activeDTCs
         if activeDTCs.isEmpty {
             items.append(CPListItem(
-                text: "carplay.no_dtc".localized,
-                detailText: "carplay.engine_ok".localized
+                text: NSLocalizedString("carplay.no_dtc", comment: ""),
+                detailText: NSLocalizedString("carplay.engine_ok", comment: "")
             ))
         } else {
             for dtc in activeDTCs {
@@ -198,7 +200,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         }
 
         let section = CPListSection(items: items)
-        let listTemplate = CPListTemplate(title: "carplay.dtc".localized, sections: [section])
+        let listTemplate = CPListTemplate(title: NSLocalizedString("carplay.dtc", comment: ""), sections: [section])
         interfaceController?.pushTemplate(listTemplate, animated: true, completion: nil)
     }
 
@@ -221,7 +223,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
         // Create updated template
         let updatedTemplate = CPInformationTemplate(
-            title: "carplay.dashboard.title".localized,
+            title: NSLocalizedString("carplay.dashboard.title", comment: ""),
             layout: .twoColumn,
             items: createDashboardItems(),
             actions: createDashboardActions()
@@ -240,6 +242,55 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     }
 }
 
+// MARK: - CarPlay Data Provider (Singleton)
+// This class bridges the main app data to CarPlay
+
+public class CarPlayDataProvider: ObservableObject {
+    public static let shared = CarPlayDataProvider()
+
+    @Published public var engineState = RotaryEngineState()
+    @Published public var fuelData = CarPlayFuelData()
+    @Published public var activeDTCs: [DTCCode] = []
+
+    private init() {}
+
+    public func updateEngineState(_ state: RotaryEngineState) {
+        DispatchQueue.main.async {
+            self.engineState = state
+        }
+    }
+
+    public func updateFuelData(consumption: Double, range: Double, fuelLevel: Double) {
+        DispatchQueue.main.async {
+            self.fuelData = CarPlayFuelData(
+                instantConsumption: consumption,
+                estimatedRange: range,
+                fuelLevel: fuelLevel
+            )
+        }
+    }
+
+    public func updateDTCs(_ dtcs: [DTCCode]) {
+        DispatchQueue.main.async {
+            self.activeDTCs = dtcs
+        }
+    }
+}
+
+// MARK: - CarPlay Fuel Data
+
+public struct CarPlayFuelData {
+    public var instantConsumption: Double = 0
+    public var estimatedRange: Double = 0
+    public var fuelLevel: Double = 0
+
+    public init(instantConsumption: Double = 0, estimatedRange: Double = 0, fuelLevel: Double = 0) {
+        self.instantConsumption = instantConsumption
+        self.estimatedRange = estimatedRange
+        self.fuelLevel = fuelLevel
+    }
+}
+
 // MARK: - CarPlay Dashboard Provider
 
 class RX8CarPlayDashboard: ObservableObject {
@@ -251,7 +302,7 @@ class RX8CarPlayDashboard: ObservableObject {
     @Published var range: Double = 0
     @Published var batteryVoltage: Double = 0
     @Published var intakeTemp: Double = 0
-    @Published var boostPressure: Double = 0
+    @Published var fuelLevel: Double = 0
 
     @Published var alerts: [CarPlayAlert] = []
     @Published var activeDTCs: [DTCCode] = []
@@ -286,15 +337,18 @@ class RX8CarPlayDashboard: ObservableObject {
         oilTemp = engineState.oilTemperature
         batteryVoltage = engineState.batteryVoltage
         intakeTemp = engineState.intakeAirTemperature
-        consumption = engineState.instantConsumption
-        range = engineState.estimatedRange
 
         // Check alerts
         checkAlerts(engineState)
+
+        // Update active DTCs from provider
+        activeDTCs = CarPlayDataProvider.shared.activeDTCs
     }
 
-    func updateDTCs(_ dtcs: [DTCCode]) {
-        activeDTCs = dtcs
+    func updateFuel(from data: CarPlayFuelData) {
+        consumption = data.instantConsumption
+        range = data.estimatedRange
+        fuelLevel = data.fuelLevel
     }
 
     private func checkAlerts(_ state: RotaryEngineState) {
@@ -304,13 +358,13 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.coolantTemperature > 105 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: "carplay.alert.coolant_high".localized, Int(state.coolantTemperature)),
+                message: String(format: NSLocalizedString("carplay.alert.coolant_high", comment: ""), Int(state.coolantTemperature)),
                 timestamp: Date()
             ))
         } else if state.coolantTemperature > 100 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: "carplay.alert.coolant_warning".localized, Int(state.coolantTemperature)),
+                message: String(format: NSLocalizedString("carplay.alert.coolant_warning", comment: ""), Int(state.coolantTemperature)),
                 timestamp: Date()
             ))
         }
@@ -319,13 +373,13 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.oilTemperature > 130 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: "carplay.alert.oil_high".localized, Int(state.oilTemperature)),
+                message: String(format: NSLocalizedString("carplay.alert.oil_high", comment: ""), Int(state.oilTemperature)),
                 timestamp: Date()
             ))
         } else if state.oilTemperature > 120 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: "carplay.alert.oil_warning".localized, Int(state.oilTemperature)),
+                message: String(format: NSLocalizedString("carplay.alert.oil_warning", comment: ""), Int(state.oilTemperature)),
                 timestamp: Date()
             ))
         }
@@ -334,13 +388,13 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.batteryVoltage < 11.5 && state.batteryVoltage > 0 {
             newAlerts.append(CarPlayAlert(
                 type: .system,
-                message: String(format: "carplay.alert.battery_low".localized, state.batteryVoltage),
+                message: String(format: NSLocalizedString("carplay.alert.battery_low", comment: ""), state.batteryVoltage),
                 timestamp: Date()
             ))
         } else if state.batteryVoltage < 12.0 && state.batteryVoltage > 0 {
             newAlerts.append(CarPlayAlert(
                 type: .system,
-                message: String(format: "carplay.alert.battery_warning".localized, state.batteryVoltage),
+                message: String(format: NSLocalizedString("carplay.alert.battery_warning", comment: ""), state.batteryVoltage),
                 timestamp: Date()
             ))
         }
@@ -349,45 +403,11 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.rpm > 8500 {
             newAlerts.append(CarPlayAlert(
                 type: .system,
-                message: String(format: "carplay.alert.rpm_high".localized, state.rpm),
-                timestamp: Date()
-            ))
-        }
-
-        // Low oil pressure (if we have that data)
-        if state.oilPressure < 1.5 && state.rpm > 1000 {
-            newAlerts.append(CarPlayAlert(
-                type: .pressure,
-                message: String(format: "carplay.alert.oil_pressure_low".localized, state.oilPressure),
+                message: String(format: NSLocalizedString("carplay.alert.rpm_high", comment: ""), state.rpm),
                 timestamp: Date()
             ))
         }
 
         alerts = newAlerts
-    }
-}
-
-// MARK: - String Localization Extension for CarPlay
-
-extension String {
-    var localized: String {
-        let savedLanguage = UserDefaults.standard.string(forKey: "appLanguage") ?? "system"
-        let languageCode: String
-
-        if savedLanguage == "system" {
-            languageCode = Locale.current.language.languageCode?.identifier ?? "en"
-        } else {
-            languageCode = savedLanguage
-        }
-
-        if let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
-           let bundle = Bundle(path: path) {
-            return NSLocalizedString(self, bundle: bundle, comment: "")
-        } else if let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
-                  let bundle = Bundle(path: path) {
-            return NSLocalizedString(self, bundle: bundle, comment: "")
-        }
-
-        return NSLocalizedString(self, comment: "")
     }
 }

@@ -1443,6 +1443,9 @@ public class EngineMonitor: ObservableObject {
             // Enviar datos a la caja negra
             recordToBlackBox()
 
+            // Actualizar datos para CarPlay
+            updateCarPlayData()
+
             // Verificar alertas
             checkAlerts()
 
@@ -1459,6 +1462,22 @@ public class EngineMonitor: ObservableObject {
         // El recorder ahora detecta automáticamente si el motor está en marcha
         // y gestiona las sesiones. Solo necesitamos enviar el estado.
         recorder.recordSnapshot(state: currentState)
+    }
+
+    // MARK: - CarPlay Data Bridge
+
+    private func updateCarPlayData() {
+        // Update CarPlay data provider with current engine state
+        CarPlayDataProvider.shared.updateEngineState(currentState)
+
+        // Update fuel data if tracker is available
+        if let tracker = fuelTracker {
+            CarPlayDataProvider.shared.updateFuelData(
+                consumption: tracker.instantConsumption,
+                range: tracker.estimatedRange,
+                fuelLevel: tracker.fuelLevel
+            )
+        }
     }
 
     // MARK: - Sistema de Alertas
