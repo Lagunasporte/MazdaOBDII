@@ -39,14 +39,47 @@ public enum RadarAlertState: Equatable {
     case passed(camera: SpeedCamera)
 }
 
+// MARK: - Country Bounding Box
+
+private struct CountryBoundingBox {
+    let minLat: Double
+    let maxLat: Double
+    let minLon: Double
+    let maxLon: Double
+    let name: String
+
+    // Divide el bounding box en regiones más pequeñas para queries
+    func regions(maxSize: Double = 2.0) -> [(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)] {
+        var result: [(Double, Double, Double, Double)] = []
+
+        var lat = minLat
+        while lat < maxLat {
+            var lon = minLon
+            while lon < maxLon {
+                result.append((
+                    lat,
+                    min(lat + maxSize, maxLat),
+                    lon,
+                    min(lon + maxSize, maxLon)
+                ))
+                lon += maxSize
+            }
+            lat += maxSize
+        }
+
+        return result
+    }
+}
+
 // MARK: - Speed Camera Manager
 
 @MainActor
 public class SpeedCameraManager: NSObject, ObservableObject {
     // MARK: - Published Properties
 
-    @Published public var isEnabled: Bool = false {
+    @Published public var isEnabled: Bool = UserDefaults.standard.bool(forKey: "radarEnabled") {
         didSet {
+            UserDefaults.standard.set(isEnabled, forKey: "radarEnabled")
             if isEnabled {
                 startMonitoring()
             } else {
@@ -63,6 +96,10 @@ public class SpeedCameraManager: NSObject, ObservableObject {
     @Published public var lastUpdate: Date?
     @Published public var totalCamerasLoaded: Int = 0
     @Published public var locationPermissionStatus: CLAuthorizationStatus = .notDetermined
+    @Published public var currentCountry: String = ""
+    @Published public var currentCountryCode: String = ""
+    @Published public var downloadProgress: String = ""
+    @Published public var downloadedCountry: String = ""
 
     // MARK: - Configuration
 
@@ -73,6 +110,7 @@ public class SpeedCameraManager: NSObject, ObservableObject {
     // MARK: - Private Properties
 
     private let locationManager = CLLocationManager()
+    private let geocoder = CLGeocoder()
     private var cameras: [SpeedCamera] = []
     private var lastAlertedCameraId: String?
     private var lastAlertTime: Date?
@@ -80,10 +118,36 @@ public class SpeedCameraManager: NSObject, ObservableObject {
 
     // Cache
     private let cacheFileName = "speed_cameras_cache.json"
+    private let cacheMetaFileName = "speed_cameras_meta.json"
+
     private var cacheURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(cacheFileName)
     }
+
+    private var cacheMetaURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(cacheMetaFileName)
+    }
+
+    // Bounding boxes de países europeos
+    private let countryBoundingBoxes: [String: CountryBoundingBox] = [
+        "ES": CountryBoundingBox(minLat: 35.9, maxLat: 43.8, minLon: -9.3, maxLon: 4.4, name: "España"),
+        "FR": CountryBoundingBox(minLat: 41.3, maxLat: 51.1, minLon: -5.1, maxLon: 9.6, name: "Francia"),
+        "PT": CountryBoundingBox(minLat: 36.9, maxLat: 42.2, minLon: -9.5, maxLon: -6.2, name: "Portugal"),
+        "IT": CountryBoundingBox(minLat: 35.5, maxLat: 47.1, minLon: 6.6, maxLon: 18.5, name: "Italia"),
+        "DE": CountryBoundingBox(minLat: 47.3, maxLat: 55.1, minLon: 5.9, maxLon: 15.0, name: "Alemania"),
+        "GB": CountryBoundingBox(minLat: 49.9, maxLat: 60.9, minLon: -8.6, maxLon: 1.8, name: "Reino Unido"),
+        "BE": CountryBoundingBox(minLat: 49.5, maxLat: 51.5, minLon: 2.5, maxLon: 6.4, name: "Bélgica"),
+        "NL": CountryBoundingBox(minLat: 50.8, maxLat: 53.5, minLon: 3.4, maxLon: 7.2, name: "Países Bajos"),
+        "CH": CountryBoundingBox(minLat: 45.8, maxLat: 47.8, minLon: 6.0, maxLon: 10.5, name: "Suiza"),
+        "AT": CountryBoundingBox(minLat: 46.4, maxLat: 49.0, minLon: 9.5, maxLon: 17.2, name: "Austria"),
+        "PL": CountryBoundingBox(minLat: 49.0, maxLat: 54.8, minLon: 14.1, maxLon: 24.2, name: "Polonia"),
+        "CZ": CountryBoundingBox(minLat: 48.5, maxLat: 51.1, minLon: 12.1, maxLon: 18.9, name: "Chequia"),
+        "AD": CountryBoundingBox(minLat: 42.4, maxLat: 42.7, minLon: 1.4, maxLon: 1.8, name: "Andorra"),
+        "MC": CountryBoundingBox(minLat: 43.7, maxLat: 43.8, minLon: 7.4, maxLon: 7.5, name: "Mónaco"),
+        "LU": CountryBoundingBox(minLat: 49.4, maxLat: 50.2, minLon: 5.7, maxLon: 6.5, name: "Luxemburgo"),
+    ]
 
     // MARK: - Initialization
 
@@ -96,6 +160,12 @@ public class SpeedCameraManager: NSObject, ObservableObject {
         locationManager.pausesLocationUpdatesAutomatically = false
 
         loadCachedCameras()
+        loadCacheMeta()
+
+        // Auto-iniciar si estaba activado
+        if isEnabled {
+            startMonitoring()
+        }
     }
 
     // MARK: - Public Methods
@@ -131,6 +201,117 @@ public class SpeedCameraManager: NSObject, ObservableObject {
         passedCameras.removeAll()
     }
 
+    /// Detecta el país actual basándose en la ubicación GPS
+    public func detectCurrentCountry() async {
+        guard let location = currentLocation else {
+            print("No current location available")
+            return
+        }
+
+        do {
+            let placemarks = try await geocoder.reverseGeocodeLocation(location)
+            if let placemark = placemarks.first {
+                currentCountry = placemark.country ?? "Desconocido"
+                currentCountryCode = placemark.isoCountryCode ?? ""
+                print("País detectado: \(currentCountry) (\(currentCountryCode))")
+            }
+        } catch {
+            print("Error detectando país: \(error)")
+        }
+    }
+
+    /// Descarga todos los radares del país donde se encuentra el usuario
+    public func downloadCamerasForCurrentCountry() async {
+        guard let location = currentLocation else {
+            print("No current location available")
+            return
+        }
+
+        // Primero detectar el país
+        await detectCurrentCountry()
+
+        guard !currentCountryCode.isEmpty else {
+            print("No se pudo detectar el país")
+            downloadProgress = "Error: No se pudo detectar el país"
+            return
+        }
+
+        await downloadCamerasForCountry(countryCode: currentCountryCode)
+    }
+
+    /// Descarga todos los radares de un país específico
+    public func downloadCamerasForCountry(countryCode: String) async {
+        guard let boundingBox = countryBoundingBoxes[countryCode] else {
+            print("País no soportado: \(countryCode)")
+            downloadProgress = "País no soportado"
+            return
+        }
+
+        isLoading = true
+        downloadProgress = "Preparando descarga de \(boundingBox.name)..."
+
+        // Dividir el país en regiones para no sobrecargar la API
+        let regions = boundingBox.regions(maxSize: 2.0)
+        var allCameras: [SpeedCamera] = []
+        var downloadedRegions = 0
+
+        for region in regions {
+            downloadedRegions += 1
+            downloadProgress = "Descargando región \(downloadedRegions)/\(regions.count)..."
+
+            do {
+                let camerasInRegion = try await fetchCamerasFromOSMRegion(
+                    minLat: region.0,
+                    maxLat: region.1,
+                    minLon: region.2,
+                    maxLon: region.3
+                )
+                allCameras.append(contentsOf: camerasInRegion)
+
+                // Pequeña pausa para no sobrecargar la API
+                try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 segundos
+
+            } catch {
+                print("Error descargando región \(downloadedRegions): \(error)")
+                // Continuar con la siguiente región
+            }
+        }
+
+        // Eliminar duplicados
+        var cameraDict = Dictionary(uniqueKeysWithValues: allCameras.map { ($0.id, $0) })
+
+        // Añadir cámaras existentes de otros países
+        for camera in cameras {
+            if !camera.id.hasPrefix("osm_") || cameraDict[camera.id] == nil {
+                // Mantener cámaras que no son de OSM o que no están en la nueva descarga
+                // Para cámaras OSM, verificar si están en el nuevo país
+                let cameraLocation = CLLocation(latitude: camera.latitude, longitude: camera.longitude)
+                let inNewCountry = camera.latitude >= boundingBox.minLat &&
+                                   camera.latitude <= boundingBox.maxLat &&
+                                   camera.longitude >= boundingBox.minLon &&
+                                   camera.longitude <= boundingBox.maxLon
+
+                if !inNewCountry {
+                    cameraDict[camera.id] = camera
+                }
+            }
+        }
+
+        cameras = Array(cameraDict.values)
+        totalCamerasLoaded = cameras.count
+        lastUpdate = Date()
+        downloadedCountry = boundingBox.name
+
+        // Guardar en caché
+        saveCamerasToCache()
+        saveCacheMeta(country: boundingBox.name, countryCode: countryCode)
+
+        downloadProgress = "Completado: \(allCameras.count) radares en \(boundingBox.name)"
+        print("Descargados \(allCameras.count) radares de \(boundingBox.name), total: \(cameras.count)")
+
+        isLoading = false
+    }
+
     /// Descarga radares de OpenStreetMap para el área actual
     public func downloadCamerasForCurrentArea(radiusKm: Double = 50) async {
         guard let location = currentLocation else {
@@ -139,6 +320,7 @@ public class SpeedCameraManager: NSObject, ObservableObject {
         }
 
         isLoading = true
+        downloadProgress = "Descargando área cercana..."
 
         do {
             let newCameras = try await fetchCamerasFromOSM(
@@ -158,9 +340,11 @@ public class SpeedCameraManager: NSObject, ObservableObject {
             // Guardar en caché
             saveCamerasToCache()
 
+            downloadProgress = "Completado: \(newCameras.count) radares cercanos"
             print("Loaded \(newCameras.count) new cameras, total: \(cameras.count)")
         } catch {
             print("Error downloading cameras: \(error)")
+            downloadProgress = "Error: \(error.localizedDescription)"
         }
 
         isLoading = false
@@ -339,23 +523,15 @@ public class SpeedCameraManager: NSObject, ObservableObject {
 
     // MARK: - OpenStreetMap API
 
-    private func fetchCamerasFromOSM(center: CLLocationCoordinate2D, radiusKm: Double) async throws -> [SpeedCamera] {
-        // Calcular bounding box
-        let latDelta = radiusKm / 111.0  // ~111km por grado de latitud
-        let lonDelta = radiusKm / (111.0 * cos(center.latitude * .pi / 180))
-
-        let minLat = center.latitude - latDelta
-        let maxLat = center.latitude + latDelta
-        let minLon = center.longitude - lonDelta
-        let maxLon = center.longitude + lonDelta
-
-        // Query Overpass API para cámaras de velocidad
+    private func fetchCamerasFromOSMRegion(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) async throws -> [SpeedCamera] {
+        // Query Overpass API para cámaras de velocidad en la región
         let query = """
-        [out:json][timeout:25];
+        [out:json][timeout:60];
         (
           node["highway"="speed_camera"](\(minLat),\(minLon),\(maxLat),\(maxLon));
           node["enforcement"="maxspeed"](\(minLat),\(minLon),\(maxLat),\(maxLon));
           node["enforcement"="speed_camera"](\(minLat),\(minLon),\(maxLat),\(maxLon));
+          node["traffic_calming"="bump"](\(minLat),\(minLon),\(maxLat),\(maxLon));
         );
         out body;
         """
@@ -367,7 +543,10 @@ public class SpeedCameraManager: NSObject, ObservableObject {
             throw URLError(.badURL)
         }
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 60
+
+        let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
@@ -404,6 +583,19 @@ public class SpeedCameraManager: NSObject, ObservableObject {
         }
     }
 
+    private func fetchCamerasFromOSM(center: CLLocationCoordinate2D, radiusKm: Double) async throws -> [SpeedCamera] {
+        // Calcular bounding box
+        let latDelta = radiusKm / 111.0  // ~111km por grado de latitud
+        let lonDelta = radiusKm / (111.0 * cos(center.latitude * .pi / 180))
+
+        let minLat = center.latitude - latDelta
+        let maxLat = center.latitude + latDelta
+        let minLon = center.longitude - lonDelta
+        let maxLon = center.longitude + lonDelta
+
+        return try await fetchCamerasFromOSMRegion(minLat: minLat, maxLat: maxLat, minLon: minLon, maxLon: maxLon)
+    }
+
     // MARK: - Cache Management
 
     private func loadCachedCameras() {
@@ -429,10 +621,45 @@ public class SpeedCameraManager: NSObject, ObservableObject {
         }
     }
 
+    private func loadCacheMeta() {
+        guard FileManager.default.fileExists(atPath: cacheMetaURL.path) else { return }
+
+        do {
+            let data = try Data(contentsOf: cacheMetaURL)
+            if let meta = try JSONSerialization.jsonObject(with: data) as? [String: String] {
+                downloadedCountry = meta["country"] ?? ""
+                if let dateString = meta["date"] {
+                    let formatter = ISO8601DateFormatter()
+                    lastUpdate = formatter.date(from: dateString)
+                }
+            }
+        } catch {
+            print("Error loading cache meta: \(error)")
+        }
+    }
+
+    private func saveCacheMeta(country: String, countryCode: String) {
+        let formatter = ISO8601DateFormatter()
+        let meta: [String: String] = [
+            "country": country,
+            "countryCode": countryCode,
+            "date": formatter.string(from: Date())
+        ]
+
+        do {
+            let data = try JSONSerialization.data(withJSONObject: meta)
+            try data.write(to: cacheMetaURL)
+        } catch {
+            print("Error saving cache meta: \(error)")
+        }
+    }
+
     public func clearCache() {
         cameras.removeAll()
         totalCamerasLoaded = 0
+        downloadedCountry = ""
         try? FileManager.default.removeItem(at: cacheURL)
+        try? FileManager.default.removeItem(at: cacheMetaURL)
     }
 }
 

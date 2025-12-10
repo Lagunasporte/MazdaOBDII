@@ -580,10 +580,38 @@ struct RadarControlsCard: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            // Botón descargar radares
+            // País detectado
+            if !radarManager.currentCountry.isEmpty {
+                HStack {
+                    Image(systemName: "location.fill")
+                        .foregroundColor(.green)
+                    Text("País: \(radarManager.currentCountry)")
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.horizontal)
+            }
+
+            // Progreso de descarga
+            if !radarManager.downloadProgress.isEmpty {
+                HStack {
+                    if radarManager.isLoading {
+                        ProgressView()
+                            .tint(.orange)
+                            .scaleEffect(0.8)
+                    }
+                    Text(radarManager.downloadProgress)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Spacer()
+                }
+                .padding(.horizontal)
+            }
+
+            // Botón descargar TODO el país
             Button(action: {
                 Task {
-                    await radarManager.downloadCamerasForCurrentArea(radiusKm: 50)
+                    await radarManager.downloadCamerasForCurrentCountry()
                 }
             }) {
                 HStack {
@@ -591,9 +619,9 @@ struct RadarControlsCard: View {
                         ProgressView()
                             .tint(.white)
                     } else {
-                        Image(systemName: "arrow.down.circle")
+                        Image(systemName: "flag.fill")
                     }
-                    Text(radarManager.isLoading ? "Descargando..." : "Descargar radares zona")
+                    Text(radarManager.isLoading ? "Descargando..." : "Descargar radares del país")
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -603,13 +631,15 @@ struct RadarControlsCard: View {
             }
             .disabled(radarManager.isLoading || radarManager.currentLocation == nil)
 
-            // Botón cargar radares España por defecto
+            // Botón descargar solo zona cercana
             Button(action: {
-                radarManager.loadDefaultSpainCameras()
+                Task {
+                    await radarManager.downloadCamerasForCurrentArea(radiusKm: 50)
+                }
             }) {
                 HStack {
-                    Image(systemName: "flag")
-                    Text("Cargar radares España (demo)")
+                    Image(systemName: "location.circle")
+                    Text("Solo zona cercana (50km)")
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -617,6 +647,7 @@ struct RadarControlsCard: View {
                 .foregroundColor(.white)
                 .cornerRadius(12)
             }
+            .disabled(radarManager.isLoading || radarManager.currentLocation == nil)
         }
         .padding()
         .background(Color(.systemGray6).opacity(0.3))
@@ -628,25 +659,39 @@ struct RadarStatsCard: View {
     @EnvironmentObject var radarManager: SpeedCameraManager
 
     var body: some View {
-        HStack(spacing: 20) {
-            StatItemRadar(
-                icon: "camera.fill",
-                value: "\(radarManager.totalCamerasLoaded)",
-                label: "Cargados"
-            )
+        VStack(spacing: 12) {
+            // País descargado
+            if !radarManager.downloadedCountry.isEmpty {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Datos de: \(radarManager.downloadedCountry)")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+            }
 
-            StatItemRadar(
-                icon: "ruler",
-                value: "\(Int(radarManager.alertDistance))m",
-                label: "Distancia alerta"
-            )
-
-            if let lastUpdate = radarManager.lastUpdate {
+            HStack(spacing: 20) {
                 StatItemRadar(
-                    icon: "clock",
-                    value: lastUpdate.formatted(date: .omitted, time: .shortened),
-                    label: "Actualizado"
+                    icon: "camera.fill",
+                    value: "\(radarManager.totalCamerasLoaded)",
+                    label: "Cargados"
                 )
+
+                StatItemRadar(
+                    icon: "ruler",
+                    value: "\(Int(radarManager.alertDistance))m",
+                    label: "Distancia alerta"
+                )
+
+                if let lastUpdate = radarManager.lastUpdate {
+                    StatItemRadar(
+                        icon: "clock",
+                        value: lastUpdate.formatted(date: .abbreviated, time: .shortened),
+                        label: "Actualizado"
+                    )
+                }
             }
         }
         .padding()
