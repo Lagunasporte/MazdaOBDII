@@ -236,14 +236,19 @@ struct MainGaugesView: View {
                 progress: engineMonitor.currentState.coolantTemperature / 120
             )
 
-            // Temp Aceite
+            // Temp Aceite (RX-8 no tiene sensor físico - es calculado por ECU)
+            // Mostrar "-" si está por debajo de 50°C (valor no fiable)
             GaugeCard(
                 title: "Aceite",
-                value: String(format: "%.0f", engineMonitor.currentState.oilTemperature),
+                value: engineMonitor.currentState.oilTemperature >= 50
+                    ? String(format: "%.0f", engineMonitor.currentState.oilTemperature)
+                    : "-",
                 unit: "°C",
                 icon: "drop.fill",
                 color: oilColor,
-                progress: engineMonitor.currentState.oilTemperature / 150
+                progress: engineMonitor.currentState.oilTemperature >= 50
+                    ? engineMonitor.currentState.oilTemperature / 150
+                    : 0
             )
         }
     }
@@ -265,6 +270,8 @@ struct MainGaugesView: View {
 
     var oilColor: Color {
         let temp = engineMonitor.currentState.oilTemperature
+        // Si está por debajo de 50°C, el valor no es fiable (mostrar gris)
+        if temp < 50 { return .gray }
         if temp > 120 { return .red }
         if temp > 110 { return .orange }
         if temp < 80 { return .blue }

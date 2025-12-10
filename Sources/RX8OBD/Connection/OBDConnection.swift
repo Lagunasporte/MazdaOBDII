@@ -887,22 +887,50 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     }
 
     /// Lee temperatura del aceite vía Mode 22 PID 1310 (Mazda RX-8)
-    /// Nota: En RX-8 es un valor CALCULADO por la ECU basado en RPM, carga,
-    /// posición solenoide bomba aceite, temp refrigerante y velocidad.
-    /// NO es un sensor físico real.
-    /// Fórmula corregida: (((A*256)+B)/10) - 40 = °C
+    /// IMPORTANTE: El RX-8 NO tiene sensor físico de temperatura de aceite.
+    /// La ECU CALCULA este valor basándose en: RPM, carga del motor,
+    /// posición del solenoide de la bomba de aceite, temp refrigerante y velocidad.
+    /// Cuando el motor está frío o la ECU no ha convergido, el valor es basura.
     public func readOilTempMazda() async throws -> Double {
         let bytes = try await readEnhancedPID(0x1310)
-        guard bytes.count >= 2 else { throw OBDError.invalidResponse }
+        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
 
-        let rawValue = Double(bytes[0]) * 256.0 + Double(bytes[1])
-        // Fórmula: dividir por 10 (no 100), restar 40
-        let tempC = (rawValue / 10.0) - 40.0
+        var tempC: Double
 
-        // Validar rango razonable (-40°C a 200°C)
-        // Si está fuera de rango, el PID probablemente no es correcto para esta ECU
-        guard tempC >= -40 && tempC <= 200 else {
-            throw OBDError.invalidResponse
+        // Probar diferentes fórmulas según el número de bytes recibidos
+        if bytes.count >= 2 {
+            let rawValue = Double(bytes[0]) * 256.0 + Double(bytes[1])
+
+            // Intentar varias fórmulas comunes de Mazda
+            // Fórmula 1: (rawValue / 10) - 40 (común en Mazda)
+            let temp1 = (rawValue / 10.0) - 40.0
+
+            // Fórmula 2: (rawValue / 100) - 40
+            let temp2 = (rawValue / 100.0) - 40.0
+
+            // Fórmula 3: rawValue - 40 (si rawValue es pequeño)
+            let temp3 = rawValue - 40.0
+
+            // Usar la que dé un valor más razonable (80-130°C para motor caliente)
+            if temp1 >= 50 && temp1 <= 150 {
+                tempC = temp1
+            } else if temp2 >= 50 && temp2 <= 150 {
+                tempC = temp2
+            } else if temp3 >= 50 && temp3 <= 150 {
+                tempC = temp3
+            } else {
+                // Ninguna fórmula da valor razonable - usar fórmula estándar
+                tempC = temp1
+            }
+        } else {
+            // Un solo byte - fórmula estándar OBD: A - 40
+            tempC = Double(bytes[0]) - 40.0
+        }
+
+        // Si el valor es menor a 50°C, considerarlo no válido
+        // (el motor no ha calentado o la ECU no ha calculado bien)
+        guard tempC >= 50 else {
+            throw OBDError.noData
         }
 
         return tempC
