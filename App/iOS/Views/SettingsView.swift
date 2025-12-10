@@ -1037,7 +1037,7 @@ struct VehicleInfoView: View {
                     // Los primeros bytes pueden ser contadores, buscar ASCII
                     let asciiBytes = bytes.filter { $0 >= 0x20 && $0 <= 0x7E }
                     if let calId = String(bytes: asciiBytes.prefix(16), encoding: .ascii) {
-                        let cleaned = calId.trimmingCharacters(in: .whitespaces)
+                        let cleaned = calId.trimmingCharacters(in: CharacterSet.whitespaces)
                         if !cleaned.isEmpty {
                             extendedInfo.calibrationId = cleaned
                         }

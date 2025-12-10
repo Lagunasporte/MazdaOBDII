@@ -646,7 +646,7 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return parseHexResponse(response)
     }
 
-    private func parseHexResponse(_ response: String) -> [UInt8] {
+    public func parseHexResponse(_ response: String) -> [UInt8] {
         let hexOnly = response.components(separatedBy: .whitespaces).joined()
         var bytes: [UInt8] = []
         var index = hexOnly.startIndex
