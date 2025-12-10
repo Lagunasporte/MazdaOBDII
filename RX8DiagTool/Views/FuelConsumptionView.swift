@@ -1,35 +1,276 @@
 import SwiftUI
 
 // MARK: - Vista de Consumo de Combustible
-// El RX-8 no tiene ordenador de abordo - esta funcionalidad es muy valiosa
+// Responsive: Vertical = Móvil, Horizontal = CarPlay
 
 struct FuelConsumptionView: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
     @EnvironmentObject var connectionManager: OBDConnectionManager
-    @State private var showTripHistory = false
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     @State private var showSettings = false
+
+    // Detectar si estamos en modo landscape (CarPlay)
+    var isLandscape: Bool {
+        verticalSizeClass == .compact
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            if isLandscape {
+                // MODO CARPLAY - Layout horizontal optimizado
+                CarPlayFuelView(geometry: geometry)
+            } else {
+                // MODO MÓVIL - Layout vertical con scroll
+                MobileFuelView(showSettings: $showSettings)
+            }
+        }
+        .background(Color.black)
+        .sheet(isPresented: $showSettings) {
+            FuelSettingsView()
+        }
+    }
+}
+
+// MARK: - Vista CarPlay (Horizontal)
+
+struct CarPlayFuelView: View {
+    @EnvironmentObject var fuelTracker: FuelConsumptionTracker
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    let geometry: GeometryProxy
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Columna izquierda: Consumo instantáneo grande
+            VStack(spacing: 8) {
+                Text("CONSUMO")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+
+                Text(consumptionText)
+                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                    .foregroundColor(consumptionColor)
+                    .minimumScaleFactor(0.5)
+
+                Text(consumptionUnit)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+
+                // Barra de eficiencia compacta
+                HStack(spacing: 4) {
+                    ForEach(0..<5) { i in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(barColor(index: i))
+                            .frame(height: 8)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            .frame(width: geometry.size.width * 0.3)
+
+            // Columna central: Stats del viaje
+            VStack(spacing: 6) {
+                Text("VIAJE ACTUAL")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+
+                CarPlayStatRow(icon: "road.lanes", label: "Dist", value: formatDistance(fuelTracker.distanceTrip), unit: "km")
+                CarPlayStatRow(icon: "fuelpump", label: "Usado", value: formatFuel(fuelTracker.fuelUsedTrip), unit: "L")
+                CarPlayStatRow(icon: "gauge", label: "Media", value: formatConsumption(fuelTracker.tripConsumption), unit: "L/100")
+
+                Divider().background(Color.gray.opacity(0.5))
+
+                Text("PARCIAL")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.purple)
+
+                CarPlayStatRow(icon: "sum", label: "Dist", value: formatDistance(fuelTracker.partial2.distance), unit: "km")
+                CarPlayStatRow(icon: "drop", label: "Usado", value: formatFuel(fuelTracker.partial2.fuelUsed), unit: "L")
+            }
+            .frame(width: geometry.size.width * 0.35)
+            .padding(.vertical, 8)
+
+            // Columna derecha: Autonomía y nivel
+            VStack(spacing: 8) {
+                Text("AUTONOMÍA")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+
+                Text(rangeText)
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundColor(fuelTracker.fuelLevelAvailable ? .white : .gray)
+                    .minimumScaleFactor(0.5)
+
+                Text("km")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+
+                Spacer()
+
+                // Indicador de nivel compacto
+                HStack(spacing: 4) {
+                    Image(systemName: "fuelpump.fill")
+                        .foregroundColor(fuelLevelColor)
+                        .font(.caption)
+
+                    Text(fuelLevelText)
+                        .font(.system(.title3, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(fuelTracker.fuelLevelAvailable ? .white : .gray)
+
+                    if fuelTracker.fuelLevelAvailable {
+                        Text("% (\(formatLiters(fuelTracker.fuelLevelLiters))L)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+
+                // Warning si hay
+                if let warning = engineMonitor.currentState.fuelSenderWarning {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                        Text(warning)
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
+                    .foregroundColor(.orange)
+                }
+            }
+            .frame(width: geometry.size.width * 0.3)
+        }
+        .padding(12)
+    }
+
+    var consumptionText: String {
+        fuelTracker.instantConsumption > 0 ? String(format: "%.1f", fuelTracker.instantConsumption) : "-"
+    }
+
+    var consumptionUnit: String {
+        engineMonitor.currentState.vehicleSpeed < 3 ? "L/h" : "L/100km"
+    }
+
+    var consumptionColor: Color {
+        let value = fuelTracker.instantConsumption
+        if value <= 0 { return .gray }
+        if value < 10 { return .green }
+        if value < 13 { return .teal }
+        if value < 16 { return .yellow }
+        if value < 20 { return .orange }
+        return .red
+    }
+
+    func barColor(index: Int) -> Color {
+        let value = fuelTracker.instantConsumption
+        let threshold = Double(index + 1) * 5 // 5, 10, 15, 20, 25
+        if value <= 0 { return Color.gray.opacity(0.3) }
+        if value >= threshold { return consumptionColor }
+        return Color.gray.opacity(0.3)
+    }
+
+    var rangeText: String {
+        guard fuelTracker.fuelLevelAvailable, fuelTracker.estimatedRange > 0 else { return "-" }
+        return String(format: "%.0f", fuelTracker.estimatedRange)
+    }
+
+    var fuelLevelText: String {
+        guard fuelTracker.fuelLevelAvailable else { return "-" }
+        return String(format: "%.0f", fuelTracker.fuelLevel)
+    }
+
+    var fuelLevelColor: Color {
+        guard fuelTracker.fuelLevelAvailable else { return .gray }
+        let level = fuelTracker.fuelLevel
+        if level > 50 { return .green }
+        if level > 25 { return .yellow }
+        if level > 10 { return .orange }
+        return .red
+    }
+
+    func formatDistance(_ value: Double) -> String {
+        value > 0 ? String(format: "%.1f", value) : "-"
+    }
+
+    func formatFuel(_ value: Double) -> String {
+        value > 0 ? String(format: "%.2f", value) : "-"
+    }
+
+    func formatConsumption(_ value: Double) -> String {
+        value > 0 ? String(format: "%.1f", value) : "-"
+    }
+
+    func formatLiters(_ value: Double) -> String {
+        value > 0 ? String(format: "%.1f", value) : "-"
+    }
+}
+
+struct CarPlayStatRow: View {
+    let icon: String
+    let label: String
+    let value: String
+    let unit: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundColor(.blue)
+                .frame(width: 16)
+
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .frame(width: 40, alignment: .leading)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(.subheadline, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(value == "-" ? .gray : .white)
+                .frame(width: 50, alignment: .trailing)
+
+            Text(unit)
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .frame(width: 35, alignment: .leading)
+        }
+    }
+}
+
+// MARK: - Vista Móvil (Vertical)
+
+struct MobileFuelView: View {
+    @EnvironmentObject var fuelTracker: FuelConsumptionTracker
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    @Binding var showSettings: Bool
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    // Consumo instantáneo - Grande y destacado
-                    InstantConsumptionCard()
+                    // Consumo instantáneo
+                    InstantConsumptionCardV2()
 
-                    // Estadísticas del viaje actual
-                    CurrentTripCard()
+                    // Viaje actual
+                    CurrentTripCardV2()
 
                     // Autonomía
-                    RangeCard()
+                    RangeCardV2()
 
-                    // Parciales de consumo
-                    PartialsSection()
+                    // Parciales - Nuevo diseño
+                    PartialsSectionV2()
 
                     // Promedios
-                    AveragesCard()
+                    AveragesCardV2()
 
-                    // Coste del combustible
-                    FuelCostCard()
+                    // Coste
+                    FuelCostCardV2()
                 }
                 .padding()
             }
@@ -42,21 +283,19 @@ struct FuelConsumptionView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showTripHistory) {
-                TripHistoryView()
-            }
-            .sheet(isPresented: $showSettings) {
-                FuelSettingsView()
-            }
         }
     }
 }
 
-// MARK: - Consumo Instantáneo
+// MARK: - Componentes V2 (Rediseñados)
 
-struct InstantConsumptionCard: View {
+struct InstantConsumptionCardV2: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
     @EnvironmentObject var engineMonitor: EngineMonitor
+
+    var hasData: Bool {
+        fuelTracker.instantConsumption > 0
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -65,9 +304,9 @@ struct InstantConsumptionCard: View {
                 .foregroundColor(.gray)
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(String(format: "%.1f", fuelTracker.instantConsumption))
+                Text(hasData ? String(format: "%.1f", fuelTracker.instantConsumption) : "-")
                     .font(.system(size: 72, weight: .bold, design: .rounded))
-                    .foregroundColor(consumptionColor)
+                    .foregroundColor(hasData ? consumptionColor : .gray)
 
                 VStack(alignment: .leading) {
                     Text(consumptionUnit)
@@ -77,22 +316,23 @@ struct InstantConsumptionCard: View {
             }
 
             // Barra de eficiencia
-            ConsumptionIndicatorBar(value: fuelTracker.instantConsumption)
+            if hasData {
+                ConsumptionBarV2(value: fuelTracker.instantConsumption)
 
-            // Indicador de eficiencia
-            HStack {
-                Image(systemName: efficiencyIcon)
-                    .foregroundColor(consumptionColor)
-                Text(efficiencyText)
-                    .font(.caption)
-                    .foregroundColor(consumptionColor)
+                HStack {
+                    Image(systemName: efficiencyIcon)
+                        .foregroundColor(consumptionColor)
+                    Text(efficiencyText)
+                        .font(.caption)
+                        .foregroundColor(consumptionColor)
+                }
             }
         }
         .padding(24)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
-                colors: [consumptionColor.opacity(0.3), Color.clear],
+                colors: [consumptionColor.opacity(hasData ? 0.3 : 0.1), Color.clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -102,11 +342,7 @@ struct InstantConsumptionCard: View {
     }
 
     var consumptionUnit: String {
-        // En ralentí mostrar L/h
-        if engineMonitor.currentState.vehicleSpeed < 3 {
-            return "L/h"
-        }
-        return "L/100km"
+        engineMonitor.currentState.vehicleSpeed < 3 ? "L/h" : "L/100km"
     }
 
     var consumptionColor: Color {
@@ -135,13 +371,12 @@ struct InstantConsumptionCard: View {
     }
 }
 
-struct ConsumptionIndicatorBar: View {
+struct ConsumptionBarV2: View {
     let value: Double
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                // Fondo con gradiente
                 RoundedRectangle(cornerRadius: 6)
                     .fill(
                         LinearGradient(
@@ -153,7 +388,6 @@ struct ConsumptionIndicatorBar: View {
                     .opacity(0.3)
                     .frame(height: 12)
 
-                // Indicador
                 let position = min(value / 25, 1.0) * geo.size.width
                 Circle()
                     .fill(Color.white)
@@ -167,9 +401,7 @@ struct ConsumptionIndicatorBar: View {
     }
 }
 
-// MARK: - Viaje Actual
-
-struct CurrentTripCard: View {
+struct CurrentTripCardV2: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
 
     var body: some View {
@@ -182,24 +414,25 @@ struct CurrentTripCard: View {
                     .foregroundColor(.white)
             }
 
-            HStack(spacing: 24) {
-                TripStatItem(
+            // Grid de 3 columnas con anchos fijos
+            HStack(spacing: 0) {
+                StatColumnV2(
                     icon: "road.lanes",
-                    value: String(format: "%.1f", fuelTracker.distanceTrip),
+                    value: fuelTracker.distanceTrip > 0 ? String(format: "%.1f", fuelTracker.distanceTrip) : "-",
                     unit: "km",
                     label: "Distancia"
                 )
 
-                TripStatItem(
+                StatColumnV2(
                     icon: "fuelpump",
-                    value: String(format: "%.2f", fuelTracker.fuelUsedTrip),
+                    value: fuelTracker.fuelUsedTrip > 0 ? String(format: "%.2f", fuelTracker.fuelUsedTrip) : "-",
                     unit: "L",
                     label: "Consumido"
                 )
 
-                TripStatItem(
+                StatColumnV2(
                     icon: "gauge",
-                    value: String(format: "%.1f", fuelTracker.tripConsumption),
+                    value: fuelTracker.tripConsumption > 0 ? String(format: "%.1f", fuelTracker.tripConsumption) : "-",
                     unit: "L/100",
                     label: "Media"
                 )
@@ -211,7 +444,9 @@ struct CurrentTripCard: View {
     }
 }
 
-struct TripStatItem: View {
+// MARK: - Columna de Stat V2 (Nunca se descuadra)
+
+struct StatColumnV2: View {
     let icon: String
     let value: String
     let unit: String
@@ -223,19 +458,19 @@ struct TripStatItem: View {
                 .foregroundColor(.blue)
                 .font(.caption)
 
-            // Usar fuente monoespaciada y anchos fijos para evitar desalineación
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(value)
-                    .font(.system(.title3, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .frame(minWidth: 45, alignment: .trailing)
-                Text(unit)
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .frame(width: 35, alignment: .leading)
-            }
+            // Valor con fuente monoespaciada en contenedor fijo
+            Text(value)
+                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                .foregroundColor(value == "-" ? .gray : .white)
+                .frame(height: 24)
 
+            // Unidad
+            Text(unit)
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .frame(height: 14)
+
+            // Label
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.gray)
@@ -244,38 +479,36 @@ struct TripStatItem: View {
     }
 }
 
-// MARK: - Autonomía
+// MARK: - Autonomía V2
 
-struct RangeCard: View {
+struct RangeCardV2: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
     @EnvironmentObject var engineMonitor: EngineMonitor
     @State private var showFuelSenderConfig = false
 
+    var hasData: Bool {
+        fuelTracker.fuelLevelAvailable
+    }
+
     var body: some View {
         VStack(spacing: 12) {
-            // Título y autonomía
+            // Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Image(systemName: "fuelpump.fill")
-                            .foregroundColor(.green)
+                            .foregroundColor(hasData ? .green : .gray)
                         Text("Autonomía Estimada")
                             .font(.subheadline)
                             .foregroundColor(.gray)
                     }
 
-                    if fuelTracker.estimatedRange > 0 {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(String(format: "%.0f", fuelTracker.estimatedRange))
-                                .font(.system(size: 36, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                            Text("km")
-                                .font(.body)
-                                .foregroundColor(.gray)
-                        }
-                    } else {
-                        Text("-- km")
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(hasData && fuelTracker.estimatedRange > 0 ? String(format: "%.0f", fuelTracker.estimatedRange) : "-")
                             .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundColor(hasData ? .white : .gray)
+                        Text("km")
+                            .font(.body)
                             .foregroundColor(.gray)
                     }
                 }
@@ -283,15 +516,15 @@ struct RangeCard: View {
                 Spacer()
 
                 // Indicador de nivel
-                FuelLevelIndicator(
+                FuelLevelIndicatorV2(
                     level: fuelTracker.fuelLevel,
-                    available: fuelTracker.fuelLevelAvailable
+                    available: hasData
                 )
             }
 
-            // Información del combustible
+            // Info combustible
             HStack(spacing: 16) {
-                if fuelTracker.fuelLevelAvailable {
+                if hasData {
                     VStack(alignment: .leading) {
                         Text("Nivel")
                             .font(.caption2)
@@ -321,7 +554,7 @@ struct RangeCard: View {
                     }
                 } else {
                     VStack(alignment: .leading) {
-                        Text("Sin sensor de nivel")
+                        Text("Sin datos de nivel")
                             .font(.caption)
                             .foregroundColor(.orange)
                         Text("Configura las sondas")
@@ -332,7 +565,6 @@ struct RangeCard: View {
 
                 Spacer()
 
-                // Botón para configurar sondas de combustible
                 Button(action: { showFuelSenderConfig = true }) {
                     HStack {
                         Image(systemName: "gauge.with.dots.needle.bottom.50percent")
@@ -346,7 +578,7 @@ struct RangeCard: View {
                 }
             }
 
-            // Advertencia de sonda si hay problema
+            // Warning
             if let warning = engineMonitor.currentState.fuelSenderWarning {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -359,24 +591,25 @@ struct RangeCard: View {
                 }
             }
 
-            // Consumo usado para el cálculo
-            HStack {
-                Image(systemName: "gauge.medium")
-                    .foregroundColor(.gray)
-                    .font(.caption)
-                Text("Consumo usado: \(String(format: "%.1f", effectiveConsumption)) L/100km")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                Spacer()
+            // Info adicional
+            if hasData {
+                HStack {
+                    Image(systemName: "gauge.medium")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                    Text("Consumo: \(String(format: "%.1f", effectiveConsumption)) L/100km")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Spacer()
+                }
             }
 
-            // Tiempo de motor encendido
             if fuelTracker.runtimeSeconds > 0 {
                 HStack {
                     Image(systemName: "clock")
                         .foregroundColor(.gray)
                         .font(.caption)
-                    Text("Motor encendido: \(fuelTracker.runtimeFormatted)")
+                    Text("Motor: \(fuelTracker.runtimeFormatted)")
                         .font(.caption)
                         .foregroundColor(.gray)
                     Spacer()
@@ -401,186 +634,17 @@ struct RangeCard: View {
     }
 }
 
-// MARK: - Configuración de Sondas de Combustible
-
-struct FuelSenderConfigView: View {
-    @EnvironmentObject var fuelTracker: FuelConsumptionTracker
-    @EnvironmentObject var engineMonitor: EngineMonitor
-    @Environment(\.dismiss) var dismiss
-    @AppStorage("fuelSenderMode") private var senderMode: String = "both"
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text("El RX-8 tiene un depósito 'saddle tank' dividido en dos secciones con sondas independientes. Si una falla, puedes usar solo la otra.")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-
-                Section("Lecturas Actuales") {
-                    // Sonda Izquierda
-                    HStack {
-                        Image(systemName: "l.circle.fill")
-                            .foregroundColor(.blue)
-                        Text("Sonda Izquierda")
-                        Spacer()
-                        if let left = engineMonitor.currentState.fuelLevelLeftSender {
-                            Text(String(format: "%.0f%%", left))
-                                .foregroundColor(.white)
-                                .fontWeight(.semibold)
-                        } else {
-                            Text("No disponible")
-                                .foregroundColor(.orange)
-                        }
-                    }
-
-                    // Sonda Derecha
-                    HStack {
-                        Image(systemName: "r.circle.fill")
-                            .foregroundColor(.purple)
-                        Text("Sonda Derecha")
-                        Spacer()
-                        if let right = engineMonitor.currentState.fuelLevelRightSender {
-                            Text(String(format: "%.0f%%", right))
-                                .foregroundColor(.white)
-                                .fontWeight(.semibold)
-                        } else {
-                            Text("No disponible")
-                                .foregroundColor(.orange)
-                        }
-                    }
-
-                    // Lectura OBD Estándar
-                    HStack {
-                        Image(systemName: "car.fill")
-                            .foregroundColor(.green)
-                        Text("OBD Estándar")
-                        Spacer()
-                        Text(String(format: "%.0f%%", fuelTracker.fuelLevel))
-                            .foregroundColor(.white)
-                            .fontWeight(.semibold)
-                    }
-                }
-
-                Section("Sonda a Utilizar") {
-                    Picker("Modo", selection: $senderMode) {
-                        HStack {
-                            Image(systemName: "l.circle.fill")
-                            Text("Solo Izquierda")
-                        }.tag("left")
-
-                        HStack {
-                            Image(systemName: "r.circle.fill")
-                            Text("Solo Derecha")
-                        }.tag("right")
-
-                        HStack {
-                            Image(systemName: "circle.lefthalf.filled")
-                            Text("Ambas (Promedio)")
-                        }.tag("both")
-
-                        HStack {
-                            Image(systemName: "car.fill")
-                            Text("OBD Estándar")
-                        }.tag("standard")
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                }
-
-                Section {
-                    // Nivel resultante
-                    HStack {
-                        Text("Nivel Calculado")
-                            .fontWeight(.semibold)
-                        Spacer()
-                        Text(String(format: "%.0f%%", calculatedLevel))
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.green)
-                    }
-
-                    HStack {
-                        Text("Litros Restantes")
-                        Spacer()
-                        Text(String(format: "%.1f L", calculatedLevel * 0.6))
-                            .foregroundColor(.white)
-                    }
-
-                    HStack {
-                        Text("Autonomía Estimada")
-                        Spacer()
-                        let range = (calculatedLevel * 0.6 / 13.0) * 100
-                        Text(String(format: "%.0f km", range))
-                            .foregroundColor(.white)
-                    }
-                }
-
-                Section {
-                    Text("Si tu indicador de combustible está atascado, probablemente una de las sondas esté defectuosa. Selecciona solo la sonda que funcione correctamente.")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-            }
-            .navigationTitle("Sondas de Combustible")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cerrar") {
-                        // Aplicar configuración antes de cerrar
-                        applyConfiguration()
-                        dismiss()
-                    }
-                }
-            }
-            .onChange(of: senderMode) { _, _ in
-                applyConfiguration()
-            }
-        }
-    }
-
-    var calculatedLevel: Double {
-        let left = engineMonitor.currentState.fuelLevelLeftSender
-        let right = engineMonitor.currentState.fuelLevelRightSender
-        let standard = fuelTracker.fuelLevel
-
-        switch senderMode {
-        case "left":
-            return left ?? standard
-        case "right":
-            return right ?? standard
-        case "both":
-            if let l = left, let r = right {
-                return (l + r) / 2
-            }
-            return left ?? right ?? standard
-        case "standard":
-            return standard
-        default:
-            return standard
-        }
-    }
-
-    func applyConfiguration() {
-        // Actualizar el nivel de combustible según la configuración
-        fuelTracker.updateFuelLevel(calculatedLevel)
-    }
-}
-
-struct FuelLevelIndicator: View {
-    let level: Double // 0-100 (porcentaje de combustible restante)
-    var available: Bool = true // Si el nivel está disponible
+struct FuelLevelIndicatorV2: View {
+    let level: Double
+    var available: Bool = true
 
     var body: some View {
         ZStack {
-            // Tanque vacío
             RoundedRectangle(cornerRadius: 8)
                 .stroke(available ? Color.gray.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 2)
                 .frame(width: 50, height: 80)
 
             if available {
-                // Nivel de combustible (llena desde abajo)
                 VStack {
                     Spacer()
                     RoundedRectangle(cornerRadius: 6)
@@ -596,7 +660,6 @@ struct FuelLevelIndicator: View {
                 .frame(width: 50, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                // Icono y porcentaje
                 VStack(spacing: 2) {
                     Image(systemName: "fuelpump")
                         .foregroundColor(.white)
@@ -606,12 +669,11 @@ struct FuelLevelIndicator: View {
                         .foregroundColor(.white)
                 }
             } else {
-                // Sin datos - mostrar interrogación
                 VStack(spacing: 2) {
                     Image(systemName: "fuelpump")
                         .foregroundColor(.gray)
                         .font(.caption)
-                    Text("?")
+                    Text("-")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.gray)
                 }
@@ -627,9 +689,9 @@ struct FuelLevelIndicator: View {
     }
 }
 
-// MARK: - Parciales de Consumo
+// MARK: - Parciales V2 (Nuevo diseño que nunca se descuadra)
 
-struct PartialsSection: View {
+struct PartialsSectionV2: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
     @State private var showingResetConfirmation = false
     @State private var partialToReset: Int = 0
@@ -644,25 +706,26 @@ struct PartialsSection: View {
                     .foregroundColor(.white)
             }
 
-            // Parcial 1 - Viaje actual
-            PartialCard(
+            // Parcial 1
+            PartialCardV2(
                 partial: fuelTracker.partial1,
+                color: .blue,
                 onReset: {
                     partialToReset = 1
                     showingResetConfirmation = true
                 }
             )
 
-            // Parcial 2 - Acumulado
-            PartialCard(
+            // Parcial 2
+            PartialCardV2(
                 partial: fuelTracker.partial2,
+                color: .purple,
                 onReset: {
                     partialToReset = 2
                     showingResetConfirmation = true
                 }
             )
 
-            // Nota explicativa
             Text("El viaje se considera el mismo si el motor para menos de 2 horas")
                 .font(.caption2)
                 .foregroundColor(.gray)
@@ -682,20 +745,21 @@ struct PartialsSection: View {
     }
 }
 
-struct PartialCard: View {
+struct PartialCardV2: View {
     let partial: TripPartial
+    let color: Color
     let onReset: () -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Header con nombre y reset
+        VStack(spacing: 10) {
+            // Header
             HStack {
                 Text(partial.name)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(partial.id == 1 ? .blue : .purple)
+                    .foregroundColor(color)
 
-                if let start = partial.startTime {
+                if partial.startTime != nil {
                     Text(partial.dateRangeFormatted)
                         .font(.caption2)
                         .foregroundColor(.gray)
@@ -710,41 +774,25 @@ struct PartialCard: View {
                 }
             }
 
-            // Stats principales
-            HStack(spacing: 16) {
-                PartialStatItem(
-                    value: String(format: "%.1f", partial.distance),
-                    unit: "km",
-                    label: "Distancia"
-                )
-
-                PartialStatItem(
-                    value: String(format: "%.2f", partial.fuelUsed),
-                    unit: "L",
-                    label: "Consumido"
-                )
-
-                PartialStatItem(
-                    value: partial.avgConsumption > 0 ? String(format: "%.1f", partial.avgConsumption) : "--",
-                    unit: "L/100",
-                    label: "Media"
-                )
-
-                PartialStatItem(
-                    value: String(format: "%.2f", partial.fuelCost),
-                    unit: "€",
-                    label: "Coste"
-                )
+            // Stats en grid de 2x2 - NUNCA se descuadra
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8)
+            ], spacing: 8) {
+                PartialStatBoxV2(label: "Distancia", value: formatValue(partial.distance, decimals: 1), unit: "km")
+                PartialStatBoxV2(label: "Consumido", value: formatValue(partial.fuelUsed, decimals: 2), unit: "L")
+                PartialStatBoxV2(label: "Media", value: formatValue(partial.avgConsumption, decimals: 1), unit: "L/100")
+                PartialStatBoxV2(label: "Coste", value: formatValue(partial.fuelCost, decimals: 2), unit: "€")
             }
 
             // Stats secundarios
             if partial.distance > 0 {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     HStack(spacing: 4) {
                         Image(systemName: "speedometer")
                             .font(.caption2)
                             .foregroundColor(.gray)
-                        Text("Media: \(String(format: "%.0f", partial.avgSpeed)) km/h")
+                        Text("\(Int(partial.avgSpeed)) km/h")
                             .font(.caption2)
                             .foregroundColor(.gray)
                     }
@@ -753,7 +801,7 @@ struct PartialCard: View {
                         Image(systemName: "gauge.high")
                             .font(.caption2)
                             .foregroundColor(.gray)
-                        Text("Máx: \(String(format: "%.0f", partial.maxSpeed)) km/h")
+                        Text("Máx \(Int(partial.maxSpeed))")
                             .font(.caption2)
                             .foregroundColor(.gray)
                     }
@@ -772,41 +820,49 @@ struct PartialCard: View {
             }
         }
         .padding(12)
-        .background(partial.id == 1 ? Color.blue.opacity(0.1) : Color.purple.opacity(0.1))
+        .background(color.opacity(0.1))
         .cornerRadius(12)
+    }
+
+    func formatValue(_ value: Double, decimals: Int) -> String {
+        guard value > 0 else { return "-" }
+        return String(format: "%.\(decimals)f", value)
     }
 }
 
-struct PartialStatItem: View {
+struct PartialStatBoxV2: View {
+    let label: String
     let value: String
     let unit: String
-    let label: String
 
     var body: some View {
-        VStack(spacing: 2) {
-            // Usar ancho fijo para que los números no desalineen la UI
-            HStack(alignment: .firstTextBaseline, spacing: 1) {
-                Text(value)
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .frame(minWidth: 40, alignment: .trailing)
-                Text(unit)
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .frame(width: 30, alignment: .leading)
-            }
+        VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.gray)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                    .foregroundColor(value == "-" ? .gray : .white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(8)
     }
 }
 
-// MARK: - Promedios
+// MARK: - Promedios V2
 
-struct AveragesCard: View {
+struct AveragesCardV2: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
 
     var body: some View {
@@ -816,45 +872,32 @@ struct AveragesCard: View {
                 .foregroundColor(.white)
 
             HStack(spacing: 12) {
-                ReferenceConsumptionItem(
-                    label: "Ciudad",
-                    value: 15.0,
-                    icon: "building.2"
-                )
-
-                ReferenceConsumptionItem(
-                    label: "Mixto",
-                    value: 13.0,
-                    icon: "road.lanes"
-                )
-
-                ReferenceConsumptionItem(
-                    label: "Autopista",
-                    value: 10.0,
-                    icon: "car.side"
-                )
+                ReferenceItemV2(label: "Ciudad", value: 15.0, icon: "building.2")
+                ReferenceItemV2(label: "Mixto", value: 13.0, icon: "road.lanes")
+                ReferenceItemV2(label: "Autopista", value: 10.0, icon: "car.side")
             }
 
-            Divider()
-                .background(Color.gray)
+            Divider().background(Color.gray)
 
             HStack {
                 VStack(alignment: .leading) {
                     Text("Tu Media")
                         .font(.caption)
                         .foregroundColor(.gray)
-                    Text(String(format: "%.1f L/100km", fuelTracker.averageConsumption))
+                    Text(fuelTracker.averageConsumption > 0 ? String(format: "%.1f L/100km", fuelTracker.averageConsumption) : "- L/100km")
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(fuelTracker.averageConsumption > 0 ? .white : .gray)
                 }
 
                 Spacer()
 
-                ComparisonBadge(
-                    userValue: fuelTracker.averageConsumption,
-                    referenceValue: 13.0
-                )
+                if fuelTracker.averageConsumption > 0 {
+                    ComparisonBadgeV2(
+                        userValue: fuelTracker.averageConsumption,
+                        referenceValue: 13.0
+                    )
+                }
             }
         }
         .padding()
@@ -863,7 +906,7 @@ struct AveragesCard: View {
     }
 }
 
-struct ReferenceConsumptionItem: View {
+struct ReferenceItemV2: View {
     let label: String
     let value: Double
     let icon: String
@@ -890,7 +933,7 @@ struct ReferenceConsumptionItem: View {
     }
 }
 
-struct ComparisonBadge: View {
+struct ComparisonBadgeV2: View {
     let userValue: Double
     let referenceValue: Double
 
@@ -913,10 +956,14 @@ struct ComparisonBadge: View {
     }
 }
 
-// MARK: - Coste del Combustible
+// MARK: - Coste V2
 
-struct FuelCostCard: View {
+struct FuelCostCardV2: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
+
+    var hasData: Bool {
+        fuelTracker.fuelCost > 0
+    }
 
     var body: some View {
         HStack {
@@ -930,9 +977,9 @@ struct FuelCostCard: View {
                 }
 
                 HStack(alignment: .firstTextBaseline) {
-                    Text(String(format: "%.2f", fuelTracker.fuelCost))
+                    Text(hasData ? String(format: "%.2f", fuelTracker.fuelCost) : "-")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(hasData ? .white : .gray)
                     Text("€")
                         .font(.title3)
                         .foregroundColor(.gray)
@@ -947,10 +994,11 @@ struct FuelCostCard: View {
                     .foregroundColor(.gray)
 
                 HStack(alignment: .firstTextBaseline) {
-                    Text(String(format: "%.0f", fuelTracker.co2Emissions * fuelTracker.distanceTrip / 1000))
+                    let co2 = fuelTracker.co2Emissions * fuelTracker.distanceTrip / 1000
+                    Text(co2 > 0 ? String(format: "%.0f", co2) : "-")
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(co2 > 0 ? .white : .gray)
                     Text("kg")
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -963,29 +1011,161 @@ struct FuelCostCard: View {
     }
 }
 
+// MARK: - Configuración de Sondas
 
-// MARK: - Historial de Viajes
-
-struct TripHistoryView: View {
+struct FuelSenderConfigView: View {
+    @EnvironmentObject var fuelTracker: FuelConsumptionTracker
+    @EnvironmentObject var engineMonitor: EngineMonitor
     @Environment(\.dismiss) var dismiss
+    @AppStorage("fuelSenderMode") private var senderMode: String = "both"
 
     var body: some View {
         NavigationStack {
             List {
-                // TODO: Implementar historial
-                Text("Historial de viajes")
+                Section {
+                    Text("El RX-8 tiene un depósito 'saddle tank' dividido en dos secciones con sondas independientes. Si una falla, puedes usar solo la otra.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+
+                Section("Lecturas Actuales") {
+                    SenderRowV2(
+                        icon: "l.circle.fill",
+                        color: .blue,
+                        name: "Sonda Izquierda",
+                        value: engineMonitor.currentState.fuelLevelLeftSender
+                    )
+
+                    SenderRowV2(
+                        icon: "r.circle.fill",
+                        color: .purple,
+                        name: "Sonda Derecha",
+                        value: engineMonitor.currentState.fuelLevelRightSender
+                    )
+
+                    SenderRowV2(
+                        icon: "car.fill",
+                        color: .green,
+                        name: "OBD Estándar",
+                        value: fuelTracker.fuelLevel > 0 ? fuelTracker.fuelLevel : nil
+                    )
+                }
+
+                Section("Sonda a Utilizar") {
+                    Picker("Modo", selection: $senderMode) {
+                        Label("Solo Izquierda", systemImage: "l.circle.fill").tag("left")
+                        Label("Solo Derecha", systemImage: "r.circle.fill").tag("right")
+                        Label("Ambas (Promedio)", systemImage: "circle.lefthalf.filled").tag("both")
+                        Label("OBD Estándar", systemImage: "car.fill").tag("standard")
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+
+                Section {
+                    HStack {
+                        Text("Nivel Calculado")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text(calculatedLevel > 0 ? String(format: "%.0f%%", calculatedLevel) : "-")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(calculatedLevel > 0 ? .green : .gray)
+                    }
+
+                    HStack {
+                        Text("Litros Restantes")
+                        Spacer()
+                        Text(calculatedLevel > 0 ? String(format: "%.1f L", calculatedLevel * 0.6) : "-")
+                            .foregroundColor(calculatedLevel > 0 ? .white : .gray)
+                    }
+
+                    HStack {
+                        Text("Autonomía Estimada")
+                        Spacer()
+                        let range = calculatedLevel > 0 ? (calculatedLevel * 0.6 / 13.0) * 100 : 0
+                        Text(range > 0 ? String(format: "%.0f km", range) : "-")
+                            .foregroundColor(range > 0 ? .white : .gray)
+                    }
+                }
+
+                Section {
+                    Text("Si tu indicador de combustible está atascado, probablemente una de las sondas esté defectuosa. Selecciona solo la sonda que funcione correctamente.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
             }
-            .navigationTitle("Historial")
+            .navigationTitle("Sondas de Combustible")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cerrar") { dismiss() }
+                    Button("Cerrar") {
+                        applyConfiguration()
+                        dismiss()
+                    }
                 }
+            }
+            .onChange(of: senderMode) { _, _ in
+                applyConfiguration()
+            }
+        }
+    }
+
+    var calculatedLevel: Double {
+        let left = engineMonitor.currentState.fuelLevelLeftSender
+        let right = engineMonitor.currentState.fuelLevelRightSender
+        let standard = fuelTracker.fuelLevel
+
+        switch senderMode {
+        case "left":
+            return left ?? 0
+        case "right":
+            return right ?? 0
+        case "both":
+            if let l = left, let r = right {
+                return (l + r) / 2
+            }
+            return left ?? right ?? 0
+        case "standard":
+            return standard > 0 ? standard : 0
+        default:
+            return standard > 0 ? standard : 0
+        }
+    }
+
+    func applyConfiguration() {
+        if calculatedLevel > 0 {
+            fuelTracker.updateFuelLevel(calculatedLevel)
+        }
+    }
+}
+
+struct SenderRowV2: View {
+    let icon: String
+    let color: Color
+    let name: String
+    let value: Double?
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(color)
+            Text(name)
+            Spacer()
+            if let v = value {
+                Text(String(format: "%.0f%%", v))
+                    .foregroundColor(.white)
+                    .fontWeight(.semibold)
+            } else {
+                Text("-")
+                    .foregroundColor(.gray)
+                    .fontWeight(.semibold)
             }
         }
     }
 }
 
-// MARK: - Configuración de Combustible
+// MARK: - Settings
 
 struct FuelSettingsView: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
