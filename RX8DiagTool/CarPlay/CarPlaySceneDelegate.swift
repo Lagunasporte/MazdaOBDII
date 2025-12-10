@@ -3,29 +3,22 @@ import SwiftUI
 import Combine
 
 // MARK: - CarPlay Scene Delegate
-// Interfaz profesional y limpia para monitorización del motor rotativo RX-8
+// Dashboard premium para Mazda RX-8 - Máximo aprovechamiento visual de CarPlay
 
 class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     var interfaceController: CPInterfaceController?
-    private var carPlayDashboard = RX8CarPlayDashboard()
+    private var dashboard = RX8CarPlayDashboard()
     private var updateTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
-    // MARK: - Scene Lifecycle
+    // MARK: - Lifecycle
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didConnect interfaceController: CPInterfaceController) {
-        print("CarPlay: Connected")
         self.interfaceController = interfaceController
         setupDataSubscription()
-
-        let rootTemplate = createRootTemplate()
-        interfaceController.setRootTemplate(rootTemplate, animated: true) { success, error in
-            if let error = error {
-                print("CarPlay: Error - \(error)")
-            }
-        }
+        interfaceController.setRootTemplate(createRootTemplate(), animated: true, completion: nil)
         startUpdates()
     }
 
@@ -39,302 +32,405 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private func setupDataSubscription() {
         CarPlayDataProvider.shared.$engineState
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                self?.carPlayDashboard.update(from: state)
-            }
+            .sink { [weak self] in self?.dashboard.update(from: $0) }
             .store(in: &cancellables)
 
         CarPlayDataProvider.shared.$fuelData
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] data in
-                self?.carPlayDashboard.updateFuel(from: data)
-            }
+            .sink { [weak self] in self?.dashboard.updateFuel(from: $0) }
             .store(in: &cancellables)
     }
 
     // MARK: - Root Template
 
     private func createRootTemplate() -> CPTemplate {
-        let tabBar = CPTabBarTemplate(templates: [
-            createDashboardTab(),
-            createEngineTab(),
-            createFuelTab(),
-            createAlertsTab()
+        CPTabBarTemplate(templates: [
+            createMainDashboard(),
+            createEngineDashboard(),
+            createFuelDashboard(),
+            createStatusDashboard()
         ])
-        return tabBar
     }
 
-    // MARK: - Tab 1: Dashboard (Grid de instrumentos)
+    // MARK: - Tab 1: DASHBOARD PRINCIPAL
+    // Los 6 datos más importantes para el RX-8
 
-    private func createDashboardTab() -> CPGridTemplate {
-        let gridButtons = [
-            createInstrument(
-                icon: "gauge.with.needle",
-                value: "\(carPlayDashboard.rpm)",
+    private func createMainDashboard() -> CPGridTemplate {
+        let template = CPGridTemplate(title: "RX-8 MONITOR", gridButtons: [
+            // Fila 1: Motor
+            gauge(
+                icon: "gauge.with.needle.fill",
+                value: dashboard.rpm,
                 unit: "RPM",
-                color: rpmColor
+                color: rpmColor,
+                size: .large
             ),
-            createInstrument(
+            gauge(
                 icon: "speedometer",
-                value: String(format: "%.0f", carPlayDashboard.speed),
+                value: Int(dashboard.speed),
                 unit: "km/h",
-                color: .systemBlue
+                color: .systemBlue,
+                size: .large
             ),
-            createInstrument(
-                icon: "thermometer.medium",
-                value: String(format: "%.0f°", carPlayDashboard.coolantTemp),
-                unit: "Refrig",
-                color: coolantColor
+            gauge(
+                icon: "thermometer.sun.fill",
+                value: Int(dashboard.coolantTemp),
+                unit: "°C",
+                subtitle: "REFRIG",
+                color: coolantColor,
+                size: .large
             ),
-            createInstrument(
+            // Fila 2: Críticos
+            gauge(
                 icon: "drop.fill",
-                value: carPlayDashboard.oilTemp > 50 ? String(format: "%.0f°", carPlayDashboard.oilTemp) : "—",
-                unit: "Aceite",
-                color: oilColor
+                value: dashboard.oilTemp > 50 ? Int(dashboard.oilTemp) : nil,
+                unit: "°C",
+                subtitle: "ACEITE",
+                color: oilColor,
+                size: .large
             ),
-            createInstrument(
-                icon: "bolt.fill",
-                value: String(format: "%.1f", carPlayDashboard.batteryVoltage),
+            gauge(
+                icon: "bolt.batteryblock.fill",
+                value: dashboard.batteryVoltage,
+                decimals: 1,
                 unit: "V",
-                color: voltageColor
+                color: voltageColor,
+                size: .large
             ),
-            createInstrument(
-                icon: "fuelpump.fill",
-                value: String(format: "%.0f", carPlayDashboard.fuelLevel),
+            gauge(
+                icon: "fuelpump.circle.fill",
+                value: Int(dashboard.fuelLevel),
                 unit: "%",
-                color: fuelColor
+                subtitle: "FUEL",
+                color: fuelColor,
+                size: .large
             )
-        ]
+        ])
 
-        let template = CPGridTemplate(title: "Renesis Monitor", gridButtons: gridButtons)
         template.tabTitle = "Dashboard"
-        template.tabImage = UIImage(systemName: "gauge.with.dots.needle.bottom.50percent")
+        template.tabImage = UIImage(systemName: "gauge.with.dots.needle.bottom.50percent.badge.plus")
         return template
     }
 
-    private func createInstrument(icon: String, value: String, unit: String, color: UIColor) -> CPGridButton {
-        let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .medium)
-        var image = UIImage(systemName: icon, withConfiguration: config) ?? UIImage(systemName: "circle")!
-        image = image.withTintColor(color, renderingMode: .alwaysOriginal)
+    // MARK: - Tab 2: MOTOR DETALLADO
+    // Datos específicos del motor rotativo
 
-        return CPGridButton(titleVariants: ["\(value) \(unit)", value], image: image) { _ in }
-    }
-
-    // MARK: - Tab 2: Motor
-
-    private func createEngineTab() -> CPListTemplate {
-        let tempItems = [
-            createDataItem(icon: "thermometer.high", title: "Refrigerante",
-                          value: String(format: "%.1f °C", carPlayDashboard.coolantTemp),
-                          color: coolantColor),
-            createDataItem(icon: "drop.fill", title: "Aceite",
-                          value: carPlayDashboard.oilTemp > 50 ? String(format: "%.1f °C", carPlayDashboard.oilTemp) : "— °C",
-                          color: oilColor),
-            createDataItem(icon: "wind", title: "Admisión",
-                          value: String(format: "%.1f °C", carPlayDashboard.intakeTemp),
-                          color: .systemCyan)
-        ]
-
-        let perfItems = [
-            createDataItem(icon: "gauge.with.needle", title: "RPM",
-                          value: "\(carPlayDashboard.rpm)",
-                          color: rpmColor),
-            createDataItem(icon: "pedal.accelerator", title: "Acelerador",
-                          value: String(format: "%.0f %%", carPlayDashboard.throttle),
-                          color: .systemBlue),
-            createDataItem(icon: "engine.combustion", title: "Carga",
-                          value: String(format: "%.0f %%", carPlayDashboard.engineLoad),
-                          color: .systemPurple)
-        ]
-
-        let fuelTrimItems = [
-            createDataItem(icon: "arrow.up.arrow.down", title: "STFT",
-                          value: String(format: "%+.1f %%", carPlayDashboard.stft),
-                          color: fuelTrimColor(carPlayDashboard.stft)),
-            createDataItem(icon: "chart.line.flattrend.xyaxis", title: "LTFT",
-                          value: String(format: "%+.1f %%", carPlayDashboard.ltft),
-                          color: fuelTrimColor(carPlayDashboard.ltft))
-        ]
-
-        let template = CPListTemplate(title: "Motor", sections: [
-            CPListSection(items: tempItems, header: "Temperaturas", sectionIndexTitle: nil),
-            CPListSection(items: perfItems, header: "Rendimiento", sectionIndexTitle: nil),
-            CPListSection(items: fuelTrimItems, header: "Fuel Trim", sectionIndexTitle: nil)
+    private func createEngineDashboard() -> CPGridTemplate {
+        let template = CPGridTemplate(title: "MOTOR ROTATIVO", gridButtons: [
+            // Fila 1: Temperaturas
+            gauge(
+                icon: "thermometer.high",
+                value: Int(dashboard.coolantTemp),
+                unit: "°C",
+                subtitle: "COOLANT",
+                color: coolantColor,
+                size: .large
+            ),
+            gauge(
+                icon: "drop.triangle.fill",
+                value: dashboard.oilTemp > 50 ? Int(dashboard.oilTemp) : nil,
+                unit: "°C",
+                subtitle: "OIL",
+                color: oilColor,
+                size: .large
+            ),
+            gauge(
+                icon: "wind",
+                value: Int(dashboard.intakeTemp),
+                unit: "°C",
+                subtitle: "INTAKE",
+                color: .systemCyan,
+                size: .large
+            ),
+            // Fila 2: Fuel Trims (crítico para rotativo)
+            gauge(
+                icon: "arrow.up.arrow.down.circle.fill",
+                value: dashboard.stft,
+                decimals: 1,
+                unit: "%",
+                subtitle: "STFT",
+                color: fuelTrimColor(dashboard.stft),
+                showSign: true,
+                size: .large
+            ),
+            gauge(
+                icon: "chart.line.uptrend.xyaxis.circle.fill",
+                value: dashboard.ltft,
+                decimals: 1,
+                unit: "%",
+                subtitle: "LTFT",
+                color: fuelTrimColor(dashboard.ltft),
+                showSign: true,
+                size: .large
+            ),
+            gauge(
+                icon: "engine.combustion.fill",
+                value: Int(dashboard.engineLoad),
+                unit: "%",
+                subtitle: "CARGA",
+                color: loadColor,
+                size: .large
+            )
         ])
+
         template.tabTitle = "Motor"
-        template.tabImage = UIImage(systemName: "engine.combustion")
+        template.tabImage = UIImage(systemName: "engine.combustion.fill")
         return template
     }
 
-    // MARK: - Tab 3: Consumo
+    // MARK: - Tab 3: CONSUMO
+    // Todo sobre combustible y autonomía
 
-    private func createFuelTab() -> CPListTemplate {
-        let consumptionValue = carPlayDashboard.speed > 5
-            ? String(format: "%.1f L/100km", carPlayDashboard.consumption)
-            : String(format: "%.1f L/h", carPlayDashboard.consumptionPerHour)
-
-        let tripItems = [
-            createDataItem(icon: "fuelpump", title: "Consumo",
-                          value: consumptionValue,
-                          color: consumptionColor),
-            createDataItem(icon: "chart.xyaxis.line", title: "Media",
-                          value: String(format: "%.1f L/100km", carPlayDashboard.avgConsumption),
-                          color: .systemBlue),
-            createDataItem(icon: "road.lanes", title: "Autonomía",
-                          value: String(format: "%.0f km", carPlayDashboard.range),
-                          color: rangeColor)
-        ]
-
-        let tankItems = [
-            createDataItem(icon: "fuelpump.fill", title: "Nivel",
-                          value: String(format: "%.0f %%", carPlayDashboard.fuelLevel),
-                          color: fuelColor),
-            createDataItem(icon: "drop.halffull", title: "Restante",
-                          value: String(format: "%.1f L", carPlayDashboard.fuelLiters),
-                          color: .systemTeal)
-        ]
-
-        let electricItems = [
-            createDataItem(icon: "bolt.fill", title: "Batería",
-                          value: String(format: "%.2f V", carPlayDashboard.batteryVoltage),
-                          color: voltageColor)
-        ]
-
-        let template = CPListTemplate(title: "Consumo", sections: [
-            CPListSection(items: tripItems, header: "Viaje", sectionIndexTitle: nil),
-            CPListSection(items: tankItems, header: "Depósito", sectionIndexTitle: nil),
-            CPListSection(items: electricItems, header: "Eléctrico", sectionIndexTitle: nil)
-        ])
-        template.tabTitle = "Consumo"
-        template.tabImage = UIImage(systemName: "fuelpump")
-        return template
-    }
-
-    // MARK: - Tab 4: Estado
-
-    private func createAlertsTab() -> CPListTemplate {
-        var sections: [CPListSection] = []
-
-        // Alertas activas (si las hay)
-        if !carPlayDashboard.alerts.isEmpty {
-            let alertItems = carPlayDashboard.alerts.map { alert -> CPListItem in
-                let item = CPListItem(text: alert.message, detailText: formatTime(alert.timestamp))
-                item.setImage(alertImage(alert.severity))
-                return item
-            }
-            sections.append(CPListSection(items: alertItems, header: "Alertas Activas", sectionIndexTitle: nil))
+    private func createFuelDashboard() -> CPGridTemplate {
+        let consumptionDisplay: String
+        let consumptionUnit: String
+        if dashboard.speed > 5 {
+            consumptionDisplay = String(format: "%.1f", dashboard.consumption)
+            consumptionUnit = "L/100"
+        } else {
+            consumptionDisplay = String(format: "%.1f", dashboard.consumptionPerHour)
+            consumptionUnit = "L/h"
         }
 
-        // Estado de sistemas
-        let statusItems = [
-            createStatusItem(title: "Motor", ok: carPlayDashboard.coolantTemp < 100 && carPlayDashboard.oilTemp < 120),
-            createStatusItem(title: "Eléctrico", ok: carPlayDashboard.batteryVoltage >= 12.0 || carPlayDashboard.batteryVoltage == 0),
-            createStatusItem(title: "Combustible", ok: abs(carPlayDashboard.stft) < 15 && abs(carPlayDashboard.ltft) < 10),
-            createStatusItem(title: "Depósito", ok: carPlayDashboard.fuelLevel > 15)
-        ]
-        sections.append(CPListSection(items: statusItems, header: "Estado del Sistema", sectionIndexTitle: nil))
+        let template = CPGridTemplate(title: "CONSUMO", gridButtons: [
+            // Fila 1: Consumo actual
+            CPGridButton(
+                titleVariants: ["\(consumptionDisplay)\n\(consumptionUnit)"],
+                image: coloredIcon("fuelpump.fill", color: consumptionColor, size: 44)
+            ) { _ in },
 
-        let hasAlerts = !carPlayDashboard.alerts.isEmpty
-        let template = CPListTemplate(title: hasAlerts ? "Alertas" : "Sistema OK", sections: sections)
-        template.tabTitle = hasAlerts ? "!" : "OK"
+            gauge(
+                icon: "chart.xyaxis.line",
+                value: dashboard.avgConsumption,
+                decimals: 1,
+                unit: "L/100",
+                subtitle: "MEDIA",
+                color: .systemBlue,
+                size: .large
+            ),
+            gauge(
+                icon: "road.lanes.curved.right",
+                value: Int(dashboard.range),
+                unit: "km",
+                subtitle: "AUTONOMÍA",
+                color: rangeColor,
+                size: .large
+            ),
+            // Fila 2: Depósito
+            gauge(
+                icon: "fuelpump.circle.fill",
+                value: Int(dashboard.fuelLevel),
+                unit: "%",
+                subtitle: "NIVEL",
+                color: fuelColor,
+                size: .large
+            ),
+            gauge(
+                icon: "drop.halffull",
+                value: dashboard.fuelLiters,
+                decimals: 1,
+                unit: "L",
+                subtitle: "QUEDAN",
+                color: .systemTeal,
+                size: .large
+            ),
+            gauge(
+                icon: "bolt.fill",
+                value: dashboard.batteryVoltage,
+                decimals: 2,
+                unit: "V",
+                subtitle: "BATERÍA",
+                color: voltageColor,
+                size: .large
+            )
+        ])
+
+        template.tabTitle = "Consumo"
+        template.tabImage = UIImage(systemName: "fuelpump.fill")
+        return template
+    }
+
+    // MARK: - Tab 4: ESTADO DEL SISTEMA
+    // Resumen de salud del vehículo
+
+    private func createStatusDashboard() -> CPGridTemplate {
+        let hasAlerts = !dashboard.alerts.isEmpty
+
+        let template = CPGridTemplate(title: hasAlerts ? "⚠ ALERTAS" : "✓ SISTEMA OK", gridButtons: [
+            // Estado de cada sistema
+            statusGauge(
+                title: "MOTOR",
+                icon: "engine.combustion.fill",
+                ok: dashboard.coolantTemp < 100 && dashboard.oilTemp < 120
+            ),
+            statusGauge(
+                title: "ELÉCTRICO",
+                icon: "bolt.batteryblock.fill",
+                ok: dashboard.batteryVoltage >= 12.0 || dashboard.batteryVoltage == 0
+            ),
+            statusGauge(
+                title: "FUEL SYS",
+                icon: "fuelpump.arrowtriangle.right.fill",
+                ok: abs(dashboard.stft) < 15 && abs(dashboard.ltft) < 10
+            ),
+            statusGauge(
+                title: "DEPÓSITO",
+                icon: "fuelpump.circle.fill",
+                ok: dashboard.fuelLevel > 15
+            ),
+            statusGauge(
+                title: "RPM",
+                icon: "gauge.with.needle.fill",
+                ok: dashboard.rpm < 8000
+            ),
+            // Resumen general
+            CPGridButton(
+                titleVariants: [hasAlerts ? "\(dashboard.alerts.count) ALERTA\(dashboard.alerts.count > 1 ? "S" : "")" : "TODO OK"],
+                image: coloredIcon(
+                    hasAlerts ? "exclamationmark.shield.fill" : "checkmark.shield.fill",
+                    color: hasAlerts ? .systemOrange : .systemGreen,
+                    size: 48
+                )
+            ) { _ in }
+        ])
+
+        template.tabTitle = hasAlerts ? "⚠ \(dashboard.alerts.count)" : "✓"
         template.tabImage = UIImage(systemName: hasAlerts ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
         return template
     }
 
-    // MARK: - Item Builders
+    // MARK: - Gauge Builders
 
-    private func createDataItem(icon: String, title: String, value: String, color: UIColor) -> CPListItem {
-        let item = CPListItem(text: title, detailText: value)
-        var image = UIImage(systemName: icon) ?? UIImage(systemName: "circle")!
-        image = image.withTintColor(color, renderingMode: .alwaysOriginal)
-        item.setImage(image)
-        return item
-    }
-
-    private func createStatusItem(title: String, ok: Bool) -> CPListItem {
-        let item = CPListItem(text: title, detailText: ok ? "OK" : "Revisar")
-        let icon = ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-        let color = ok ? UIColor.systemGreen : UIColor.systemOrange
-        var image = UIImage(systemName: icon)!
-        image = image.withTintColor(color, renderingMode: .alwaysOriginal)
-        item.setImage(image)
-        return item
-    }
-
-    private func alertImage(_ severity: RX8CarPlayDashboard.AlertSeverity) -> UIImage {
-        let icon: String
-        let color: UIColor
-        switch severity {
-        case .critical:
-            icon = "exclamationmark.octagon.fill"
-            color = .systemRed
-        case .warning:
-            icon = "exclamationmark.triangle.fill"
-            color = .systemOrange
-        case .info:
-            icon = "info.circle.fill"
-            color = .systemBlue
+    private func gauge(icon: String, value: Int?, unit: String, subtitle: String? = nil, color: UIColor, size: GridSize = .large) -> CPGridButton {
+        let displayValue = value != nil ? "\(value!)" : "—"
+        var title = "\(displayValue) \(unit)"
+        if let sub = subtitle {
+            title = "\(displayValue)\(unit)\n\(sub)"
         }
-        return UIImage(systemName: icon)!.withTintColor(color, renderingMode: .alwaysOriginal)
+
+        return CPGridButton(titleVariants: [title, displayValue], image: coloredIcon(icon, color: color, size: size == .large ? 40 : 32)) { _ in }
     }
 
-    // MARK: - Colors
+    private func gauge(icon: String, value: Double, decimals: Int, unit: String, subtitle: String? = nil, color: UIColor, showSign: Bool = false, size: GridSize = .large) -> CPGridButton {
+        let format = showSign ? "%+.\(decimals)f" : "%.\(decimals)f"
+        let displayValue = String(format: format, value)
+        var title = "\(displayValue)\(unit)"
+        if let sub = subtitle {
+            title = "\(displayValue)\(unit)\n\(sub)"
+        }
+
+        return CPGridButton(titleVariants: [title, displayValue], image: coloredIcon(icon, color: color, size: size == .large ? 40 : 32)) { _ in }
+    }
+
+    private func statusGauge(title: String, icon: String, ok: Bool) -> CPGridButton {
+        let status = ok ? "OK" : "CHECK"
+        let color = ok ? UIColor.systemGreen : UIColor.systemOrange
+        let displayIcon = ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+
+        return CPGridButton(titleVariants: ["\(status)\n\(title)", status], image: coloredIcon(displayIcon, color: color, size: 40)) { _ in }
+    }
+
+    private enum GridSize { case large, small }
+
+    private func coloredIcon(_ name: String, color: UIColor, size: CGFloat) -> UIImage {
+        let config = UIImage.SymbolConfiguration(pointSize: size, weight: .semibold)
+        let image = UIImage(systemName: name, withConfiguration: config) ?? UIImage(systemName: "circle.fill", withConfiguration: config)!
+        return image.withTintColor(color, renderingMode: .alwaysOriginal)
+    }
+
+    // MARK: - Color Logic (RX-8 specific thresholds)
 
     private var rpmColor: UIColor {
-        if carPlayDashboard.rpm > 8000 { return .systemRed }
-        if carPlayDashboard.rpm > 7000 { return .systemOrange }
-        return .systemGreen
+        switch dashboard.rpm {
+        case 8500...: return .systemRed
+        case 7500..<8500: return .systemOrange
+        case 6000..<7500: return .systemYellow
+        default: return .systemGreen
+        }
     }
 
     private var coolantColor: UIColor {
-        if carPlayDashboard.coolantTemp > 105 { return .systemRed }
-        if carPlayDashboard.coolantTemp > 98 { return .systemOrange }
-        if carPlayDashboard.coolantTemp < 70 { return .systemBlue }
-        return .systemGreen
+        switch dashboard.coolantTemp {
+        case 105...: return .systemRed
+        case 98..<105: return .systemOrange
+        case 85..<98: return .systemGreen
+        case 70..<85: return .systemTeal
+        default: return .systemBlue
+        }
     }
 
     private var oilColor: UIColor {
-        if carPlayDashboard.oilTemp > 130 { return .systemRed }
-        if carPlayDashboard.oilTemp > 120 { return .systemOrange }
-        if carPlayDashboard.oilTemp < 80 && carPlayDashboard.oilTemp > 50 { return .systemBlue }
-        if carPlayDashboard.oilTemp <= 50 { return .systemGray }
-        return .systemGreen
+        guard dashboard.oilTemp > 50 else { return .systemGray }
+        switch dashboard.oilTemp {
+        case 130...: return .systemRed
+        case 115..<130: return .systemOrange
+        case 90..<115: return .systemGreen
+        case 70..<90: return .systemTeal
+        default: return .systemBlue
+        }
     }
 
     private var voltageColor: UIColor {
-        if carPlayDashboard.batteryVoltage < 11.5 && carPlayDashboard.batteryVoltage > 0 { return .systemRed }
-        if carPlayDashboard.batteryVoltage < 12.5 && carPlayDashboard.batteryVoltage > 0 { return .systemOrange }
-        return .systemGreen
+        guard dashboard.batteryVoltage > 0 else { return .systemGray }
+        switch dashboard.batteryVoltage {
+        case ..<11.5: return .systemRed
+        case 11.5..<12.2: return .systemOrange
+        case 12.2..<14.8: return .systemGreen
+        default: return .systemYellow
+        }
     }
 
     private var fuelColor: UIColor {
-        if carPlayDashboard.fuelLevel < 10 { return .systemRed }
-        if carPlayDashboard.fuelLevel < 20 { return .systemOrange }
-        return .systemGreen
+        switch dashboard.fuelLevel {
+        case ..<10: return .systemRed
+        case 10..<20: return .systemOrange
+        case 20..<30: return .systemYellow
+        default: return .systemGreen
+        }
     }
 
     private var rangeColor: UIColor {
-        if carPlayDashboard.range < 30 { return .systemRed }
-        if carPlayDashboard.range < 50 { return .systemOrange }
-        return .systemGreen
+        switch dashboard.range {
+        case ..<30: return .systemRed
+        case 30..<50: return .systemOrange
+        case 50..<80: return .systemYellow
+        default: return .systemGreen
+        }
     }
 
     private var consumptionColor: UIColor {
-        if carPlayDashboard.consumption > 20 { return .systemOrange }
-        return .systemGreen
+        switch dashboard.consumption {
+        case 20...: return .systemRed
+        case 15..<20: return .systemOrange
+        case 12..<15: return .systemYellow
+        default: return .systemGreen
+        }
+    }
+
+    private var loadColor: UIColor {
+        switch dashboard.engineLoad {
+        case 90...: return .systemRed
+        case 75..<90: return .systemOrange
+        case 50..<75: return .systemYellow
+        default: return .systemGreen
+        }
     }
 
     private func fuelTrimColor(_ value: Double) -> UIColor {
-        if abs(value) > 20 { return .systemRed }
-        if abs(value) > 15 { return .systemOrange }
-        return .systemGreen
+        let abs = abs(value)
+        switch abs {
+        case 20...: return .systemRed
+        case 15..<20: return .systemOrange
+        case 10..<15: return .systemYellow
+        default: return .systemGreen
+        }
     }
 
     // MARK: - Updates
 
     private func startUpdates() {
         updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.refreshAllTabs()
+            self?.refreshDashboard()
         }
     }
 
@@ -343,22 +439,16 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         updateTimer = nil
     }
 
-    private func refreshAllTabs() {
-        guard let interfaceController = interfaceController,
-              let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate else { return }
+    private func refreshDashboard() {
+        guard let controller = interfaceController,
+              let tabBar = controller.rootTemplate as? CPTabBarTemplate else { return }
 
         tabBar.updateTemplates([
-            createDashboardTab(),
-            createEngineTab(),
-            createFuelTab(),
-            createAlertsTab()
+            createMainDashboard(),
+            createEngineDashboard(),
+            createFuelDashboard(),
+            createStatusDashboard()
         ])
-    }
-
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 
@@ -388,8 +478,6 @@ public class CarPlayDataProvider: ObservableObject {
     }
 }
 
-// MARK: - Fuel Data
-
 public struct CarPlayFuelData {
     public var instantConsumption: Double = 0
     public var estimatedRange: Double = 0
@@ -408,33 +496,30 @@ public struct CarPlayFuelData {
 
 // MARK: - Dashboard Model
 
-class RX8CarPlayDashboard: ObservableObject {
-    @Published var rpm: Int = 0
-    @Published var speed: Double = 0
-    @Published var coolantTemp: Double = 0
-    @Published var oilTemp: Double = 0
-    @Published var batteryVoltage: Double = 0
-    @Published var intakeTemp: Double = 0
-    @Published var fuelLevel: Double = 0
-    @Published var fuelLiters: Double = 0
-    @Published var consumption: Double = 0
-    @Published var consumptionPerHour: Double = 0
-    @Published var avgConsumption: Double = 0
-    @Published var range: Double = 0
-    @Published var throttle: Double = 0
-    @Published var engineLoad: Double = 0
-    @Published var stft: Double = 0
-    @Published var ltft: Double = 0
-    @Published var alerts: [CarPlayAlert] = []
+class RX8CarPlayDashboard {
+    var rpm: Int = 0
+    var speed: Double = 0
+    var coolantTemp: Double = 0
+    var oilTemp: Double = 0
+    var batteryVoltage: Double = 0
+    var intakeTemp: Double = 0
+    var fuelLevel: Double = 0
+    var fuelLiters: Double = 0
+    var consumption: Double = 0
+    var consumptionPerHour: Double = 0
+    var avgConsumption: Double = 0
+    var range: Double = 0
+    var throttle: Double = 0
+    var engineLoad: Double = 0
+    var stft: Double = 0
+    var ltft: Double = 0
+    var alerts: [Alert] = []
 
-    struct CarPlayAlert: Identifiable {
-        let id = UUID()
-        let severity: AlertSeverity
+    struct Alert {
+        let severity: Severity
         let message: String
-        let timestamp: Date
+        enum Severity { case info, warning, critical }
     }
-
-    enum AlertSeverity { case info, warning, critical }
 
     func update(from state: RotaryEngineState) {
         rpm = state.rpm
@@ -460,38 +545,38 @@ class RX8CarPlayDashboard: ObservableObject {
     }
 
     private func checkAlerts(_ state: RotaryEngineState) {
-        var newAlerts: [CarPlayAlert] = []
+        var newAlerts: [Alert] = []
 
         if state.coolantTemperature > 108 {
-            newAlerts.append(CarPlayAlert(severity: .critical, message: "Refrigerante: \(Int(state.coolantTemperature))°C", timestamp: Date()))
+            newAlerts.append(Alert(severity: .critical, message: "Refrigerante crítico"))
         } else if state.coolantTemperature > 100 {
-            newAlerts.append(CarPlayAlert(severity: .warning, message: "Refrigerante alto: \(Int(state.coolantTemperature))°C", timestamp: Date()))
+            newAlerts.append(Alert(severity: .warning, message: "Refrigerante alto"))
         }
 
         if state.oilTemperature > 135 {
-            newAlerts.append(CarPlayAlert(severity: .critical, message: "Aceite: \(Int(state.oilTemperature))°C", timestamp: Date()))
+            newAlerts.append(Alert(severity: .critical, message: "Aceite crítico"))
         } else if state.oilTemperature > 120 {
-            newAlerts.append(CarPlayAlert(severity: .warning, message: "Aceite caliente: \(Int(state.oilTemperature))°C", timestamp: Date()))
+            newAlerts.append(Alert(severity: .warning, message: "Aceite caliente"))
         }
 
         if state.batteryVoltage > 0 && state.batteryVoltage < 11.5 {
-            newAlerts.append(CarPlayAlert(severity: .critical, message: "Batería: \(String(format: "%.1f", state.batteryVoltage))V", timestamp: Date()))
+            newAlerts.append(Alert(severity: .critical, message: "Batería crítica"))
         }
 
         if state.rpm > 8500 {
-            newAlerts.append(CarPlayAlert(severity: .warning, message: "RPM: \(state.rpm)", timestamp: Date()))
+            newAlerts.append(Alert(severity: .warning, message: "RPM alto"))
         }
 
         if state.rpm > 800 && abs(state.shortTermFuelTrim) > 25 {
-            newAlerts.append(CarPlayAlert(severity: .warning, message: "STFT: \(String(format: "%+.1f", state.shortTermFuelTrim))%", timestamp: Date()))
+            newAlerts.append(Alert(severity: .warning, message: "STFT anormal"))
         }
 
         if state.rpm > 800 && abs(state.longTermFuelTrim) > 15 {
-            newAlerts.append(CarPlayAlert(severity: .warning, message: "LTFT: \(String(format: "%+.1f", state.longTermFuelTrim))%", timestamp: Date()))
+            newAlerts.append(Alert(severity: .warning, message: "LTFT anormal"))
         }
 
         if fuelLevel > 0 && fuelLevel < 10 {
-            newAlerts.append(CarPlayAlert(severity: .warning, message: "Combustible bajo", timestamp: Date()))
+            newAlerts.append(Alert(severity: .warning, message: "Combustible bajo"))
         }
 
         alerts = newAlerts
