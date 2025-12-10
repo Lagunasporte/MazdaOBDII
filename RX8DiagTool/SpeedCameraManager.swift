@@ -175,11 +175,6 @@ public class SpeedCameraManager: NSObject, ObservableObject {
     }
 
     public func startMonitoring() {
-        guard CLLocationManager.locationServicesEnabled() else {
-            print("Location services not enabled")
-            return
-        }
-
         let status = locationManager.authorizationStatus
         locationPermissionStatus = status
 
