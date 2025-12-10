@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - App Principal RX-8 Diagnostic Tool
 
@@ -745,6 +746,9 @@ public class EngineMonitor: ObservableObject {
         updateCount = 0
         lastUpdateTimestamp = Date()
 
+        // Mantener pantalla encendida mientras monitoreamos
+        UIApplication.shared.isIdleTimerDisabled = true
+
         // Iniciar trip en fuel tracker
         fuelTracker?.startTrip()
 
@@ -765,6 +769,9 @@ public class EngineMonitor: ObservableObject {
         isMonitoring = false
         monitoringTask?.cancel()
         monitoringTask = nil
+
+        // Permitir que la pantalla se apague cuando no monitoreamos
+        UIApplication.shared.isIdleTimerDisabled = false
     }
 
     // MARK: - Lectura Rápida de Sensores

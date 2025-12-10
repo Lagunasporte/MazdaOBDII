@@ -887,14 +887,25 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     }
 
     /// Lee temperatura del aceite vía Mode 22 PID 1310 (Mazda RX-8)
-    /// Nota: En RX-8 es un valor CALCULADO por la ECU, no un sensor físico
-    /// Fórmula: (((A*256)+B)/100) - 40 = °C
+    /// Nota: En RX-8 es un valor CALCULADO por la ECU basado en RPM, carga,
+    /// posición solenoide bomba aceite, temp refrigerante y velocidad.
+    /// NO es un sensor físico real.
+    /// Fórmula corregida: (((A*256)+B)/10) - 40 = °C
     public func readOilTempMazda() async throws -> Double {
         let bytes = try await readEnhancedPID(0x1310)
         guard bytes.count >= 2 else { throw OBDError.invalidResponse }
 
         let rawValue = Double(bytes[0]) * 256.0 + Double(bytes[1])
-        return (rawValue / 100.0) - 40.0
+        // Fórmula: dividir por 10 (no 100), restar 40
+        let tempC = (rawValue / 10.0) - 40.0
+
+        // Validar rango razonable (-40°C a 200°C)
+        // Si está fuera de rango, el PID probablemente no es correcto para esta ECU
+        guard tempC >= -40 && tempC <= 200 else {
+            throw OBDError.invalidResponse
+        }
+
+        return tempC
     }
 
     /// Lee voltaje MAF vía Mode 22 PID 1177 (Mazda específico)
@@ -909,53 +920,59 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
     // MARK: - Fuel Level Senders (RX-8 Dual Tank)
 
-    /// El RX-8 tiene un depósito dividido en dos secciones con dos sondas independientes.
-    /// Esto permite detectar cuando una sonda falla y calcular el nivel real.
+    /// El RX-8 tiene un depósito "saddle tank" dividido en dos secciones
+    /// con sondas independientes. Una sonda defectuosa causa lecturas incorrectas.
 
-    /// Lee el nivel de combustible del tanque izquierdo (Mode 22 PID 1170)
-    /// El RX-8 tiene un "saddle tank" con dos sondas separadas
-    /// Fórmula: A * 100 / 255 = % (estimado, puede variar)
-    public func readFuelLevelLeftMazda() async throws -> Double {
-        // Intentar PID 1170 para sonda izquierda
-        let bytes = try await readEnhancedPID(0x1170)
-        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
-        return Double(bytes[0]) * 100.0 / 255.0
+    /// PIDs posibles para sondas de combustible Mazda (Mode 22)
+    /// Nota: Los PIDs exactos pueden variar según año/versión de ECU
+    private static let fuelSenderPIDsLeft: [UInt16] = [0x1170, 0x1172, 0x1168]
+    private static let fuelSenderPIDsRight: [UInt16] = [0x1171, 0x1173, 0x1169]
+
+    /// Lee el nivel de combustible de una sonda específica
+    /// Intenta múltiples PIDs hasta encontrar uno que funcione
+    private func readFuelSenderMazda(pids: [UInt16]) async -> Double? {
+        for pid in pids {
+            if let bytes = try? await readEnhancedPID(pid), bytes.count >= 1 {
+                let value = Double(bytes[0]) * 100.0 / 255.0
+                // Validar que el valor es razonable (0-100%)
+                if value >= 0 && value <= 100 {
+                    return value
+                }
+            }
+        }
+        return nil
     }
 
-    /// Lee el nivel de combustible del tanque derecho (Mode 22 PID 1171)
+    /// Lee el nivel de combustible del tanque izquierdo
+    public func readFuelLevelLeftMazda() async throws -> Double {
+        if let level = await readFuelSenderMazda(pids: Self.fuelSenderPIDsLeft) {
+            return level
+        }
+        throw OBDError.noData
+    }
+
+    /// Lee el nivel de combustible del tanque derecho
     public func readFuelLevelRightMazda() async throws -> Double {
-        // Intentar PID 1171 para sonda derecha
-        let bytes = try await readEnhancedPID(0x1171)
-        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
-        return Double(bytes[0]) * 100.0 / 255.0
+        if let level = await readFuelSenderMazda(pids: Self.fuelSenderPIDsRight) {
+            return level
+        }
+        throw OBDError.noData
     }
 
     /// Lee ambas sondas de combustible y devuelve el estado completo
-    /// Incluye detección de sonda defectuosa
+    /// Siempre incluye el nivel estándar OBD como referencia
     public func readDualFuelLevel() async throws -> DualFuelLevelReading {
-        var leftLevel: Double?
-        var rightLevel: Double?
-        var standardLevel: Double?
+        // SIEMPRE leer nivel estándar primero (más confiable)
+        let standardLevel = try? await readFuelLevel()
 
-        // Intentar leer sonda izquierda
-        if let left = try? await readFuelLevelLeftMazda() {
-            leftLevel = left
-        }
-
-        // Intentar leer sonda derecha
-        if let right = try? await readFuelLevelRightMazda() {
-            rightLevel = right
-        }
-
-        // Leer nivel estándar como referencia/fallback
-        if let standard = try? await readFuelLevel() {
-            standardLevel = Double(standard)
-        }
+        // Intentar leer sondas individuales (puede fallar si ECU no soporta)
+        let leftLevel = await readFuelSenderMazda(pids: Self.fuelSenderPIDsLeft)
+        let rightLevel = await readFuelSenderMazda(pids: Self.fuelSenderPIDsRight)
 
         return DualFuelLevelReading(
             leftSender: leftLevel,
             rightSender: rightLevel,
-            standardReading: standardLevel
+            standardReading: standardLevel.map { Double($0) }
         )
     }
 
