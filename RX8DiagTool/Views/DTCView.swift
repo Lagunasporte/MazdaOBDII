@@ -41,13 +41,13 @@ struct DTCView: View {
             }
         }
         .background(Color.black)
-        .alert("Borrar Códigos", isPresented: $showClearConfirmation) {
-            Button("Cancelar", role: .cancel) {}
-            Button("Borrar", role: .destructive) {
+        .alert("diagnostics.clear_dtcs_title".localized, isPresented: $showClearConfirmation) {
+            Button("common.cancel".localized, role: .cancel) {}
+            Button("common.delete".localized, role: .destructive) {
                 clearDTCs()
             }
         } message: {
-            Text("¿Borrar todos los códigos? Esto apagará la luz Check Engine.")
+            Text("diagnostics.clear_dtcs_confirm".localized)
         }
     }
 
@@ -103,7 +103,7 @@ struct CarPlayDTCView: View {
                         ProgressView()
                             .scaleEffect(1.5)
                             .tint(.orange)
-                        Text("Escaneando...")
+                        Text("dtc.scanning".localized)
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
@@ -112,7 +112,7 @@ struct CarPlayDTCView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 50))
                             .foregroundColor(.green)
-                        Text("Sin errores")
+                        Text("dtc.no_errors".localized)
                             .font(.headline)
                             .foregroundColor(.white)
                     }
@@ -121,7 +121,7 @@ struct CarPlayDTCView: View {
                         Text("\(totalCodes)")
                             .font(.system(size: 56, weight: .bold, design: .rounded))
                             .foregroundColor(.red)
-                        Text(totalCodes == 1 ? "código" : "códigos")
+                        Text(totalCodes == 1 ? "dtc.code_singular".localized : "dtc.codes_plural".localized)
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
@@ -135,7 +135,7 @@ struct CarPlayDTCView: View {
                         VStack(spacing: 4) {
                             Image(systemName: "magnifyingglass")
                                 .font(.title3)
-                            Text("Escanear")
+                            Text("diagnostics.scan_dtcs".localized)
                                 .font(.caption2)
                         }
                         .frame(maxWidth: .infinity)
@@ -150,7 +150,7 @@ struct CarPlayDTCView: View {
                         VStack(spacing: 4) {
                             Image(systemName: "trash")
                                 .font(.title3)
-                            Text("Borrar")
+                            Text("diagnostics.clear_dtcs".localized)
                                 .font(.caption2)
                         }
                         .frame(maxWidth: .infinity)
@@ -172,7 +172,7 @@ struct CarPlayDTCView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.red)
                             .font(.caption)
-                        Text("ACTIVOS")
+                        Text("dtc.active".localized.uppercased())
                             .font(.caption)
                             .fontWeight(.bold)
                             .foregroundColor(.red)
@@ -193,7 +193,7 @@ struct CarPlayDTCView: View {
                         Image(systemName: "clock")
                             .foregroundColor(.orange)
                             .font(.caption)
-                        Text("PENDIENTES")
+                        Text("dtc.pending".localized.uppercased())
                             .font(.caption)
                             .fontWeight(.bold)
                             .foregroundColor(.orange)
@@ -217,7 +217,7 @@ struct CarPlayDTCView: View {
                             Image(systemName: "checkmark.seal.fill")
                                 .font(.largeTitle)
                                 .foregroundColor(.green)
-                            Text("Motor OK")
+                            Text("dtc.engine_ok".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
@@ -298,7 +298,7 @@ struct MobileDTCView: View {
                             VStack {
                                 Image(systemName: "magnifyingglass")
                                     .font(.title2)
-                                Text("Escanear")
+                                Text("diagnostics.scan_dtcs".localized)
                                     .font(.caption)
                             }
                             .padding()
@@ -313,7 +313,7 @@ struct MobileDTCView: View {
                             VStack {
                                 Image(systemName: "trash")
                                     .font(.title2)
-                                Text("Borrar")
+                                Text("diagnostics.clear_dtcs".localized)
                                     .font(.caption)
                             }
                             .padding()
@@ -331,9 +331,9 @@ struct MobileDTCView: View {
                             ProgressView()
                                 .scaleEffect(1.5)
                                 .tint(.orange)
-                            Text("Escaneando códigos de error...")
+                            Text("dtc.scanning_codes".localized)
                                 .foregroundColor(.white)
-                            Text("Leyendo PCM, ABS, Airbag...")
+                            Text("dtc.reading_modules".localized)
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -346,16 +346,16 @@ struct MobileDTCView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 60))
                                 .foregroundColor(.green)
-                            Text("Sin códigos de error")
+                            Text("diagnostics.no_dtcs_found".localized)
                                 .font(.title3)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
-                            Text("No se encontraron códigos de error activos ni pendientes")
+                            Text("dtc.no_active_or_pending".localized)
                                 .font(.caption)
                                 .foregroundColor(.gray)
                                 .multilineTextAlignment(.center)
                             if let lastScan = lastScan {
-                                Text("Último escaneo: \(lastScan.formatted(date: .abbreviated, time: .shortened))")
+                                Text("dtc.last_scan".localized + ": \(lastScan.formatted(date: .abbreviated, time: .shortened))")
                                     .font(.caption2)
                                     .foregroundColor(.gray)
                             }
@@ -366,10 +366,10 @@ struct MobileDTCView: View {
                         .cornerRadius(16)
                     } else {
                         if !currentDTCs.isEmpty {
-                            DTCListCard(title: "Códigos Activos", codes: currentDTCs, isActive: true)
+                            DTCListCard(title: "diagnostics.current_dtcs".localized, codes: currentDTCs, isActive: true)
                         }
                         if !pendingDTCs.isEmpty {
-                            DTCListCard(title: "Códigos Pendientes", codes: pendingDTCs, isActive: false)
+                            DTCListCard(title: "diagnostics.pending_dtcs".localized, codes: pendingDTCs, isActive: false)
                         }
                     }
 
@@ -379,7 +379,7 @@ struct MobileDTCView: View {
                 .padding()
             }
             .background(Color.black)
-            .navigationTitle("Códigos DTC")
+            .navigationTitle("tabs.dtcs".localized)
         }
     }
 }
@@ -472,7 +472,7 @@ struct DTCRow: View {
                 VStack(alignment: .leading, spacing: 12) {
                     // Severidad
                     HStack {
-                        Text("Severidad:")
+                        Text("dtc.severity".localized + ":")
                             .font(.caption)
                             .foregroundColor(.gray)
                         Text(info.severity.rawValue)
@@ -488,7 +488,7 @@ struct DTCRow: View {
 
                     // Causas
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Posibles causas:")
+                        Text("dtc.possible_causes".localized + ":")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundColor(.orange)
@@ -505,7 +505,7 @@ struct DTCRow: View {
 
                     // Síntomas
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Síntomas:")
+                        Text("dtc.symptoms".localized + ":")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundColor(.blue)
@@ -522,7 +522,7 @@ struct DTCRow: View {
 
                     // Soluciones
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Soluciones:")
+                        Text("dtc.solutions".localized + ":")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundColor(.green)
@@ -540,10 +540,10 @@ struct DTCRow: View {
                     // Badges
                     HStack {
                         if info.rotarySpecific {
-                            Badge(text: "Específico Rotativo", color: .orange)
+                            Badge(text: "dtc.rotary_specific".localized, color: .orange)
                         }
                         if info.affectsApexSeals {
-                            Badge(text: "Afecta Apex Seals", color: .red)
+                            Badge(text: "dtc.affects_apex_seals".localized, color: .red)
                         }
                     }
                 }
@@ -591,19 +591,19 @@ struct DTCDatabaseCard: View {
             HStack {
                 Image(systemName: "book.closed.fill")
                     .foregroundColor(.blue)
-                Text("Base de Datos RX-8")
+                Text("dtc.database_rx8".localized)
                     .font(.headline)
                     .foregroundColor(.white)
             }
 
-            Text("Consulta códigos específicos del motor rotativo y sus soluciones")
+            Text("dtc.database_description".localized)
                 .font(.caption)
                 .foregroundColor(.gray)
 
             Button(action: { showDatabase = true }) {
                 HStack {
                     Image(systemName: "magnifyingglass")
-                    Text("Buscar Código")
+                    Text("dtc.search_code".localized)
                 }
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -614,9 +614,9 @@ struct DTCDatabaseCard: View {
 
             // Estadísticas
             HStack {
-                DTCStatItem(value: "\(RX8DTCDatabase.allCodes.count)", label: "Códigos")
-                DTCStatItem(value: "\(RX8DTCDatabase.rotarySpecificCodes.count)", label: "Rotativo")
-                DTCStatItem(value: "\(RX8DTCDatabase.criticalCodes.count)", label: "Críticos")
+                DTCStatItem(value: "\(RX8DTCDatabase.allCodes.count)", label: "dtc.codes".localized)
+                DTCStatItem(value: "\(RX8DTCDatabase.rotarySpecificCodes.count)", label: "dtc.rotary".localized)
+                DTCStatItem(value: "\(RX8DTCDatabase.criticalCodes.count)", label: "dtc.critical".localized)
             }
         }
         .padding()
@@ -654,10 +654,19 @@ struct DTCDatabaseView: View {
     @State private var selectedFilter: DTCFilter = .all
 
     enum DTCFilter: String, CaseIterable {
-        case all = "Todos"
-        case rotary = "Rotativo"
-        case critical = "Críticos"
-        case apexSeals = "Apex Seals"
+        case all
+        case rotary
+        case critical
+        case apexSeals
+
+        var displayName: String {
+            switch self {
+            case .all: return "dtc.filter_all".localized
+            case .rotary: return "dtc.filter_rotary".localized
+            case .critical: return "dtc.filter_critical".localized
+            case .apexSeals: return "dtc.filter_apex_seals".localized
+            }
+        }
     }
 
     var filteredCodes: [DTCCode] {
@@ -688,7 +697,7 @@ struct DTCDatabaseView: View {
                     HStack {
                         ForEach(DTCFilter.allCases, id: \.self) { filter in
                             FilterChip(
-                                title: filter.rawValue,
+                                title: filter.displayName,
                                 isSelected: selectedFilter == filter
                             ) {
                                 selectedFilter = filter
@@ -704,12 +713,12 @@ struct DTCDatabaseView: View {
                 }
                 .listStyle(.plain)
             }
-            .searchable(text: $searchText, prompt: "Buscar código o nombre")
-            .navigationTitle("Códigos RX-8")
+            .searchable(text: $searchText, prompt: "dtc.search_code_or_name".localized)
+            .navigationTitle("dtc.rx8_codes".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cerrar") { dismiss() }
+                    Button("common.close".localized) { dismiss() }
                 }
             }
         }
