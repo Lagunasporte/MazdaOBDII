@@ -1134,11 +1134,24 @@ public class EngineMonitor: ObservableObject {
         // La caja negra ahora detecta automáticamente cuando el motor arranca
         // y gestiona las sesiones automáticamente
 
+        // Leer odómetro inicial para cálculo de distancia del viaje
+        Task {
+            if let odometer = try? await cm.readOdometer() {
+                await MainActor.run {
+                    fuelTracker?.setTripStartOdometer(odometer)
+                }
+            }
+        }
+
         monitoringTask = Task { @MainActor in
             while isMonitoring && cm.connectionState == .connectedToVehicle {
                 await readAllSensors()
-                // Sin espera adicional - leer lo más rápido posible
-                // El límite de velocidad lo impone el adaptador OBD
+
+                // Usar intervalo configurable desde Settings
+                // Adaptadores baratos necesitan más tiempo entre lecturas
+                let pollingMs = UserDefaults.standard.integer(forKey: "pollingInterval")
+                let interval = pollingMs > 0 ? pollingMs : 100 // default 100ms
+                try? await Task.sleep(nanoseconds: UInt64(interval) * 1_000_000)
             }
             isMonitoring = false
         }

@@ -10,8 +10,26 @@ struct SettingsView: View {
     @AppStorage("alertsEnabled") private var alertsEnabled = true
     @AppStorage("hapticFeedback") private var hapticFeedback = true
     @AppStorage("keepScreenOn") private var keepScreenOn = false
+    @AppStorage("pollingInterval") private var pollingInterval = 100 // ms
     @State private var showVehicleInfo = false
     @State private var showAbout = false
+    @State private var showAdapterTest = false
+    @State private var isTestingAdapter = false
+    @State private var adapterTestResults: AdapterTestResults?
+
+    // Color según estado de conexión
+    private var connectionStateColor: Color {
+        switch connectionManager.connectionState {
+        case .connectedToVehicle:
+            return .green
+        case .connectedToAdapter, .connecting, .initializing:
+            return .orange
+        case .disconnected:
+            return .gray
+        case .scanning:
+            return .blue
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -90,13 +108,95 @@ struct SettingsView: View {
                     Text("Evita que la pantalla se apague automáticamente mientras usas la app")
                 }
 
+                // Rendimiento OBD
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Intervalo de lectura")
+                            Spacer()
+                            Text("\(pollingInterval) ms")
+                                .foregroundColor(.orange)
+                                .monospacedDigit()
+                        }
+
+                        Slider(value: Binding(
+                            get: { Double(pollingInterval) },
+                            set: { pollingInterval = Int($0) }
+                        ), in: 50...500, step: 25)
+
+                        HStack {
+                            Text("Rápido")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                            Spacer()
+                            Text("Estable")
+                                .font(.caption2)
+                                .foregroundColor(.blue)
+                        }
+                    }
+
+                    // Test de velocidad del adaptador
+                    Button {
+                        runAdapterSpeedTest()
+                    } label: {
+                        HStack {
+                            Image(systemName: "speedometer")
+                                .foregroundColor(.orange)
+                            Text("Test de velocidad del adaptador")
+                            Spacer()
+                            if isTestingAdapter {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                    }
+                    .disabled(connectionManager.connectionState != .connectedToVehicle || isTestingAdapter)
+
+                    if let results = adapterTestResults {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: results.recommendedInterval <= 100 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                    .foregroundColor(results.recommendedInterval <= 100 ? .green : .orange)
+                                Text("Intervalo recomendado: \(results.recommendedInterval) ms")
+                                    .font(.caption)
+                            }
+                            Text("Tiempo respuesta: \(String(format: "%.0f", results.avgResponseTime)) ms")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            Text("Errores: \(results.errorCount)/\(results.totalTests)")
+                                .font(.caption)
+                                .foregroundColor(results.errorCount > 0 ? .orange : .gray)
+
+                            Button("Aplicar recomendado") {
+                                pollingInterval = results.recommendedInterval
+                            }
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                } header: {
+                    Text("Rendimiento OBD")
+                } footer: {
+                    Text("Adaptadores baratos pueden necesitar intervalos más largos (200-300ms). El Carista funciona bien a 50-100ms.")
+                }
+
                 // Conexión
                 Section {
                     HStack {
                         Text("Estado")
                         Spacer()
-                        Text(connectionManager.connectionState.rawValue)
-                            .foregroundColor(.gray)
+                        if connectionManager.isAutoConnecting {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Conectando...")
+                                    .foregroundColor(.orange)
+                            }
+                        } else {
+                            Text(connectionManager.connectionState.rawValue)
+                                .foregroundColor(connectionStateColor)
+                        }
                     }
 
                     if let adapter = connectionManager.adapterInfo {
@@ -117,8 +217,72 @@ struct SettingsView: View {
                                 .font(.caption)
                         }
                     }
+
+                    NavigationLink {
+                        AdapterDiagnosticView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "stethoscope")
+                                .foregroundColor(.green)
+                            Text("Diagnóstico del adaptador")
+                        }
+                    }
                 } header: {
                     Text("Conexión OBD2")
+                }
+
+                // Auto-conexión
+                Section {
+                    Toggle("Conexión automática", isOn: Binding(
+                        get: { connectionManager.isAutoConnectEnabled },
+                        set: { connectionManager.isAutoConnectEnabled = $0 }
+                    ))
+
+                    if let savedName = connectionManager.savedAdapterName {
+                        HStack {
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading) {
+                                Text("Adaptador guardado")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Text(savedName)
+                                    .foregroundColor(.white)
+                            }
+                            Spacer()
+                            if connectionManager.connectionState == .connectedToVehicle ||
+                               connectionManager.connectionState == .connectedToAdapter {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            }
+                        }
+
+                        Button(role: .destructive) {
+                            connectionManager.forgetSavedAdapter()
+                        } label: {
+                            Label("Olvidar adaptador", systemImage: "trash")
+                        }
+                    } else {
+                        HStack {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(.blue)
+                            Text("Conecta un adaptador para guardar")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    }
+
+                    if connectionManager.connectionState == .disconnected && connectionManager.savedAdapterUUID != nil {
+                        Button {
+                            connectionManager.attemptAutoConnect()
+                        } label: {
+                            Label("Conectar ahora", systemImage: "bolt.fill")
+                        }
+                    }
+                } header: {
+                    Text("Auto-conexión")
+                } footer: {
+                    Text("La app intentará conectar automáticamente al adaptador guardado al iniciar")
                 }
 
                 // Datos
@@ -185,6 +349,79 @@ struct SettingsView: View {
             }
         }
     }
+
+    // MARK: - Test de Velocidad del Adaptador
+
+    private func runAdapterSpeedTest() {
+        guard connectionManager.connectionState == .connectedToVehicle else { return }
+
+        isTestingAdapter = true
+        adapterTestResults = nil
+
+        Task {
+            var responseTimes: [Double] = []
+            var errorCount = 0
+            let totalTests = 20
+
+            for _ in 0..<totalTests {
+                let startTime = Date()
+                do {
+                    // Leer RPM (PID rápido y confiable)
+                    _ = try await connectionManager.readRPM()
+                    let elapsed = Date().timeIntervalSince(startTime) * 1000 // ms
+                    responseTimes.append(elapsed)
+                } catch {
+                    errorCount += 1
+                }
+                // Pequeña pausa entre tests
+                try? await Task.sleep(nanoseconds: 20_000_000) // 20ms
+            }
+
+            let avgTime = responseTimes.isEmpty ? 500.0 : responseTimes.reduce(0, +) / Double(responseTimes.count)
+            let maxTime = responseTimes.max() ?? 500.0
+
+            // Calcular intervalo recomendado basado en resultados
+            var recommendedInterval: Int
+            if errorCount > 5 {
+                // Muchos errores - adaptador lento, necesita más tiempo
+                recommendedInterval = 300
+            } else if avgTime < 50 && errorCount == 0 {
+                // Muy rápido - probablemente Carista o STN
+                recommendedInterval = 50
+            } else if avgTime < 100 && errorCount <= 2 {
+                // Rápido - buen adaptador
+                recommendedInterval = 75
+            } else if avgTime < 150 {
+                recommendedInterval = 100
+            } else if avgTime < 250 {
+                recommendedInterval = 150
+            } else {
+                // Lento - adaptador barato
+                recommendedInterval = Int(maxTime * 1.2)
+            }
+
+            await MainActor.run {
+                adapterTestResults = AdapterTestResults(
+                    avgResponseTime: avgTime,
+                    maxResponseTime: maxTime,
+                    errorCount: errorCount,
+                    totalTests: totalTests,
+                    recommendedInterval: recommendedInterval
+                )
+                isTestingAdapter = false
+            }
+        }
+    }
+}
+
+// MARK: - Adapter Test Results
+
+struct AdapterTestResults {
+    let avgResponseTime: Double // ms
+    let maxResponseTime: Double // ms
+    let errorCount: Int
+    let totalTests: Int
+    let recommendedInterval: Int // ms
 }
 
 // MARK: - Enums de Configuración

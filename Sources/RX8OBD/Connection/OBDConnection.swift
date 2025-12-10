@@ -759,33 +759,60 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return Int(bytes[0]) * 256 + Int(bytes[1])
     }
 
-    /// Lee odómetro total del vehículo (PID 0xA6 - Service 01)
+    /// PIDs conocidos para odómetro Mazda RX-8
+    /// Fuentes: VersaTuner, RX8Club, Mazda WDS
+    private static let odometerPIDs: [(pid: UInt16, bytes: Int, mode22: Bool)] = [
+        (0x00A6, 4, false),  // OBD2 estándar PID 0xA6 (4 bytes)
+        (0x1254, 3, true),   // Mazda común
+        (0x1255, 3, true),   // Mazda alternativo
+        (0x1001, 3, true),   // Mazda WDS
+        (0x1200, 4, true),   // Serie 2
+        (0x0021, 2, false),  // Distance since DTC cleared (fallback)
+    ]
+
+    /// Lee odómetro total del vehículo
     /// Retorna kilómetros totales del vehículo
-    /// Nota: Este PID no está soportado por todas las ECUs
+    /// Intenta múltiples PIDs para máxima compatibilidad
     public func readOdometer() async throws -> Int {
-        // Primero intentar PID estándar 0xA6 (4 bytes)
-        if let bytes = try? await readStandardPID(mode: 0x01, pid: 0xA6), bytes.count >= 4 {
-            let km = Int(bytes[0]) * 16777216 + Int(bytes[1]) * 65536 + Int(bytes[2]) * 256 + Int(bytes[3])
-            // Validar rango razonable (0 - 1,000,000 km)
-            if km > 0 && km < 1_000_000 {
-                return km
-            }
-        }
+        for (pid, expectedBytes, isMode22) in Self.odometerPIDs {
+            do {
+                let bytes: [UInt8]
 
-        // Intentar Mode 22 PIDs de Mazda para odómetro
-        // PID 0x1254 - Odómetro común en Mazda
-        if let bytes = try? await readEnhancedPID(0x1254), bytes.count >= 3 {
-            let km = Int(bytes[0]) * 65536 + Int(bytes[1]) * 256 + Int(bytes[2])
-            if km > 0 && km < 1_000_000 {
-                return km
-            }
-        }
+                if isMode22 {
+                    bytes = try await readEnhancedPID(pid)
+                } else if pid == 0x0021 {
+                    // Distance since DTC cleared (PID 0x31)
+                    bytes = try await readStandardPID(mode: 0x01, pid: 0x31)
+                } else {
+                    bytes = try await readStandardPID(mode: 0x01, pid: UInt8(pid & 0xFF))
+                }
 
-        // PID 0x1001 - Otro posible PID de odómetro Mazda
-        if let bytes = try? await readEnhancedPID(0x1001), bytes.count >= 3 {
-            let km = Int(bytes[0]) * 65536 + Int(bytes[1]) * 256 + Int(bytes[2])
-            if km > 0 && km < 1_000_000 {
-                return km
+                guard bytes.count >= min(expectedBytes, 2) else { continue }
+
+                var km: Int
+
+                if bytes.count >= 4 {
+                    // 4 bytes: A*16777216 + B*65536 + C*256 + D
+                    km = Int(bytes[0]) * 16777216 + Int(bytes[1]) * 65536 + Int(bytes[2]) * 256 + Int(bytes[3])
+                    // Algunos ECU reportan en decímetros, convertir a km si es muy alto
+                    if km > 5_000_000 {
+                        km = km / 10
+                    }
+                } else if bytes.count >= 3 {
+                    // 3 bytes: A*65536 + B*256 + C
+                    km = Int(bytes[0]) * 65536 + Int(bytes[1]) * 256 + Int(bytes[2])
+                } else {
+                    // 2 bytes: A*256 + B
+                    km = Int(bytes[0]) * 256 + Int(bytes[1])
+                }
+
+                // Validar rango razonable (0 - 1,000,000 km)
+                if km > 0 && km < 1_000_000 {
+                    return km
+                }
+            } catch {
+                // Continuar con el siguiente PID
+                continue
             }
         }
 
@@ -945,54 +972,63 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return bytes
     }
 
-    /// Lee temperatura del aceite vía Mode 22 PID 1310 (Mazda RX-8)
+    /// PIDs conocidos para temperatura de aceite Mazda RX-8
+    /// Fuente: VersaTuner, RX8Club, equinox311 GitHub
+    private static let oilTempPIDs: [(pid: UInt16, formula: (Data) -> Double)] = [
+        // PID principal verificado: 22 1200 - Fórmula: (A*256+B)/10-40
+        (0x1200, { data in
+            guard data.count >= 2 else { return -100 }
+            return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
+        }),
+        // PID alternativo: 22 1310 (algunos modelos)
+        (0x1310, { data in
+            guard data.count >= 2 else { return -100 }
+            return (Double(data[0]) * 256.0 + Double(data[1])) / 10.0 - 40.0
+        }),
+        // PID estándar OBD2: 01 5C
+        (0x005C, { data in
+            guard data.count >= 1 else { return -100 }
+            return Double(data[0]) - 40.0
+        })
+    ]
+
+    /// Lee temperatura del aceite vía Mode 22 (Mazda RX-8)
     /// IMPORTANTE: El RX-8 NO tiene sensor físico de temperatura de aceite.
     /// La ECU CALCULA este valor basándose en: RPM, carga del motor,
     /// posición del solenoide de la bomba de aceite, temp refrigerante y velocidad.
     /// Cuando el motor está frío o la ECU no ha convergido, el valor es basura.
+    /// Intenta múltiples PIDs conocidos para máxima compatibilidad.
     public func readOilTempMazda() async throws -> Double {
-        let bytes = try await readEnhancedPID(0x1310)
-        guard bytes.count >= 1 else { throw OBDError.invalidResponse }
+        var lastError: Error = OBDError.noData
 
-        var tempC: Double
+        // Intentar cada PID conocido
+        for (pid, formula) in Self.oilTempPIDs {
+            do {
+                let bytes: [UInt8]
+                if pid < 0x0100 {
+                    // PID estándar Mode 01
+                    bytes = try await readStandardPID(mode: 0x01, pid: UInt8(pid))
+                } else {
+                    // PID extendido Mode 22
+                    bytes = try await readEnhancedPID(pid)
+                }
 
-        // Probar diferentes fórmulas según el número de bytes recibidos
-        if bytes.count >= 2 {
-            let rawValue = Double(bytes[0]) * 256.0 + Double(bytes[1])
+                guard !bytes.isEmpty else { continue }
 
-            // Intentar varias fórmulas comunes de Mazda
-            // Fórmula 1: (rawValue / 10) - 40 (común en Mazda)
-            let temp1 = (rawValue / 10.0) - 40.0
+                let tempC = formula(Data(bytes))
 
-            // Fórmula 2: (rawValue / 100) - 40
-            let temp2 = (rawValue / 100.0) - 40.0
-
-            // Fórmula 3: rawValue - 40 (si rawValue es pequeño)
-            let temp3 = rawValue - 40.0
-
-            // Usar la que dé un valor más razonable (80-130°C para motor caliente)
-            if temp1 >= 50 && temp1 <= 150 {
-                tempC = temp1
-            } else if temp2 >= 50 && temp2 <= 150 {
-                tempC = temp2
-            } else if temp3 >= 50 && temp3 <= 150 {
-                tempC = temp3
-            } else {
-                // Ninguna fórmula da valor razonable - usar fórmula estándar
-                tempC = temp1
+                // Validar rango razonable (20-150°C)
+                // Permitimos valores más bajos para detectar motor frío
+                if tempC >= 20 && tempC <= 150 {
+                    return tempC
+                }
+            } catch {
+                lastError = error
+                // Continuar con el siguiente PID
             }
-        } else {
-            // Un solo byte - fórmula estándar OBD: A - 40
-            tempC = Double(bytes[0]) - 40.0
         }
 
-        // Si el valor es menor a 50°C, considerarlo no válido
-        // (el motor no ha calentado o la ECU no ha calculado bien)
-        guard tempC >= 50 else {
-            throw OBDError.noData
-        }
-
-        return tempC
+        throw lastError
     }
 
     /// Lee voltaje MAF vía Mode 22 PID 1177 (Mazda específico)
@@ -1011,20 +1047,70 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     /// con sondas independientes. Una sonda defectuosa causa lecturas incorrectas.
 
     /// PIDs posibles para sondas de combustible Mazda (Mode 22)
-    /// Nota: Los PIDs exactos pueden variar según año/versión de ECU
-    private static let fuelSenderPIDsLeft: [UInt16] = [0x1170, 0x1172, 0x1168]
-    private static let fuelSenderPIDsRight: [UInt16] = [0x1171, 0x1173, 0x1169]
+    /// Fuentes: VersaTuner, RX8Club, equinox311 GitHub
+    /// Los PIDs exactos varían según año/versión de ECU
+    private static let fuelSenderPIDsMain: [UInt16] = [
+        0x012F,  // PID estándar OBD2 0x2F (Mode 01)
+        0x1170,  // Mazda específico - nivel principal
+        0x1165,  // Alternativo Serie 1
+        0x1166,  // Alternativo Serie 2
+    ]
+
+    private static let fuelSenderPIDsLeft: [UInt16] = [
+        0x1170,  // Sonda izquierda principal
+        0x1172,  // Alternativo
+        0x1168,  // Serie 1
+        0x1174,  // Serie 2
+    ]
+
+    private static let fuelSenderPIDsRight: [UInt16] = [
+        0x1171,  // Sonda derecha principal
+        0x1173,  // Alternativo
+        0x1169,  // Serie 1
+        0x1175,  // Serie 2
+    ]
 
     /// Lee el nivel de combustible de una sonda específica
     /// Intenta múltiples PIDs hasta encontrar uno que funcione
     private func readFuelSenderMazda(pids: [UInt16]) async -> Double? {
         for pid in pids {
-            if let bytes = try? await readEnhancedPID(pid), bytes.count >= 1 {
-                let value = Double(bytes[0]) * 100.0 / 255.0
+            do {
+                let bytes: [UInt8]
+
+                if pid == 0x012F {
+                    // PID estándar Mode 01
+                    bytes = try await readStandardPID(mode: 0x01, pid: 0x2F)
+                } else {
+                    // PID extendido Mode 22
+                    bytes = try await readEnhancedPID(pid)
+                }
+
+                guard !bytes.isEmpty else { continue }
+
+                // Probar diferentes fórmulas
+                var value: Double
+
+                if bytes.count >= 2 {
+                    // Fórmula 1: (A*256+B) / 655.35 para 2 bytes
+                    let raw = Double(bytes[0]) * 256.0 + Double(bytes[1])
+                    value = raw / 655.35
+
+                    // Si no es válido, probar A*100/255
+                    if value < 0 || value > 100 {
+                        value = Double(bytes[0]) * 100.0 / 255.0
+                    }
+                } else {
+                    // Un byte: A*100/255
+                    value = Double(bytes[0]) * 100.0 / 255.0
+                }
+
                 // Validar que el valor es razonable (0-100%)
                 if value >= 0 && value <= 100 {
                     return value
                 }
+            } catch {
+                // Continuar con el siguiente PID
+                continue
             }
         }
         return nil
@@ -1050,7 +1136,14 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     /// Siempre incluye el nivel estándar OBD como referencia
     public func readDualFuelLevel() async throws -> DualFuelLevelReading {
         // SIEMPRE leer nivel estándar primero (más confiable)
-        let standardLevel = try? await readFuelLevel()
+        // El PID estándar 0x2F debería funcionar siempre
+        var standardLevel: Double?
+        if let level = try? await readFuelLevel() {
+            standardLevel = level
+        } else {
+            // Fallback a PIDs Mazda específicos
+            standardLevel = await readFuelSenderMazda(pids: Self.fuelSenderPIDsMain)
+        }
 
         // Intentar leer sondas individuales (puede fallar si ECU no soporta)
         let leftLevel = await readFuelSenderMazda(pids: Self.fuelSenderPIDsLeft)
@@ -1059,7 +1152,7 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         return DualFuelLevelReading(
             leftSender: leftLevel,
             rightSender: rightLevel,
-            standardReading: standardLevel.map { Double($0) }
+            standardReading: standardLevel
         )
     }
 
