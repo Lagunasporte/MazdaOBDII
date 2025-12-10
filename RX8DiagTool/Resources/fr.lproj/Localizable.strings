@@ -616,3 +616,95 @@
 "dtc.filter_rotary" = "Rotatif";
 "dtc.filter_critical" = "Critiques";
 "dtc.filter_apex_seals" = "Apex Seals";
+
+// MARK: - DTC Severity Levels
+"dtc.severity.low" = "Faible";
+"dtc.severity.medium" = "Moyen";
+"dtc.severity.high" = "Élevé";
+"dtc.severity.critical" = "Critique";
+"dtc.severity.low.description" = "Peut continuer à rouler, vérifier bientôt";
+"dtc.severity.medium.description" = "Conduire avec prudence, réparer prochainement";
+"dtc.severity.high.description" = "Éviter une utilisation prolongée, réparer dès que possible";
+"dtc.severity.critical.description" = "ARRÊT! Risque de dommages graves au moteur";
+
+// MARK: - DTC Code Translations (Critical Misfire Codes)
+// P0300 - Raté d'allumage aléatoire
+"dtc.p0300.name" = "Raté d'allumage aléatoire détecté";
+"dtc.p0300.description" = "Ratés d'allumage détectés dans plusieurs chambres du moteur rotatif";
+"dtc.p0300.cause.0" = "Bobines d'allumage défectueuses (très courant sur RX-8)";
+"dtc.p0300.cause.1" = "Bougies usées ou incorrectes";
+"dtc.p0300.cause.2" = "Câbles de bougies en mauvais état";
+"dtc.p0300.cause.3" = "Compression basse (joints apex usés)";
+"dtc.p0300.cause.4" = "Fuite de vide";
+"dtc.p0300.cause.5" = "Injecteurs sales ou défectueux";
+"dtc.p0300.cause.6" = "Profil d'arbre excentrique non synchronisé (après rebuild)";
+"dtc.p0300.symptom.0" = "Ralenti irrégulier/instable";
+"dtc.p0300.symptom.1" = "Perte de puissance";
+"dtc.p0300.symptom.2" = "Consommation accrue";
+"dtc.p0300.symptom.3" = "Odeur de carburant non brûlé";
+"dtc.p0300.symptom.4" = "Dommage progressif au catalyseur";
+"dtc.p0300.solution.0" = "Remplacer les 4 bobines d'allumage (toujours les 4 ensemble!)";
+"dtc.p0300.solution.1" = "Changer les 4 bougies pour NGK RE7C-L ou RE9B-T";
+"dtc.p0300.solution.2" = "Vérifier les câbles d'allumage";
+"dtc.p0300.solution.3" = "Effectuer un test de compression";
+"dtc.p0300.solution.4" = "Si moteur remplacé: effacer le profil d'arbre excentrique du PCM";
+
+// P0301 - Raté rotor avant
+"dtc.p0301.name" = "Raté d'allumage rotor avant";
+"dtc.p0301.description" = "Raté détecté dans le rotor avant (chambre 1)";
+"dtc.p0301.cause.0" = "Bobine leading avant défaillante";
+"dtc.p0301.cause.1" = "Bobine trailing avant défaillante";
+"dtc.p0301.cause.2" = "Bougies avant usées";
+"dtc.p0301.cause.3" = "Compression basse rotor avant";
+"dtc.p0301.cause.4" = "Injecteur avant bouché";
+"dtc.p0301.symptom.0" = "Vibration au ralenti";
+"dtc.p0301.symptom.1" = "Perte de puissance";
+"dtc.p0301.symptom.2" = "Démarrage à chaud difficile";
+"dtc.p0301.solution.0" = "Remplacer bobines avant (leading + trailing)";
+"dtc.p0301.solution.1" = "Changer bougies avant";
+"dtc.p0301.solution.2" = "Test de compression rotor avant";
+
+// P0302 - Raté rotor arrière
+"dtc.p0302.name" = "Raté d'allumage rotor arrière";
+"dtc.p0302.description" = "Raté détecté dans le rotor arrière (chambre 2)";
+"dtc.p0302.cause.0" = "Bobine leading arrière défaillante";
+"dtc.p0302.cause.1" = "Bobine trailing arrière défaillante";
+"dtc.p0302.cause.2" = "Bougies arrière usées";
+"dtc.p0302.cause.3" = "Compression basse rotor arrière";
+"dtc.p0302.cause.4" = "Injecteur arrière bouché";
+"dtc.p0302.symptom.0" = "Vibration au ralenti";
+"dtc.p0302.symptom.1" = "Perte de puissance";
+"dtc.p0302.symptom.2" = "Fumée bleue (huile brûlante)";
+"dtc.p0302.solution.0" = "Remplacer bobines arrière (leading + trailing)";
+"dtc.p0302.solution.1" = "Changer bougies arrière";
+"dtc.p0302.solution.2" = "Test de compression rotor arrière";
+
+// P0101 - Capteur MAF
+"dtc.p0101.name" = "MAF Plage/Performance";
+"dtc.p0101.description" = "Capteur MAF signale des valeurs hors plage";
+"dtc.p0101.cause.0" = "Capteur MAF sale";
+"dtc.p0101.cause.1" = "Filtre à air bouché";
+"dtc.p0101.cause.2" = "Fuite d'air après le MAF";
+"dtc.p0101.cause.3" = "Capteur MAF défectueux";
+"dtc.p0101.symptom.0" = "Ralenti irrégulier";
+"dtc.p0101.symptom.1" = "Perte de puissance";
+"dtc.p0101.symptom.2" = "Consommation excessive";
+"dtc.p0101.solution.0" = "Nettoyer MAF avec spray spécifique";
+"dtc.p0101.solution.1" = "Remplacer filtre à air";
+"dtc.p0101.solution.2" = "Inspecter les durites d'admission";
+"dtc.p0101.solution.3" = "Remplacer MAF si nettoyage inefficace";
+
+// P0107 - Capteur BARO
+"dtc.p0107.name" = "Capteur BARO bas";
+"dtc.p0107.description" = "Signal du capteur barométrique en dessous de la plage";
+"dtc.p0107.cause.0" = "Capteur BARO défectueux";
+"dtc.p0107.cause.1" = "Câblage endommagé";
+"dtc.p0107.cause.2" = "Problème PCM";
+"dtc.p0107.symptom.0" = "Performance réduite en altitude";
+"dtc.p0107.symptom.1" = "Mélange incorrect";
+"dtc.p0107.solution.0" = "Vérifier connexions du capteur";
+"dtc.p0107.solution.1" = "Remplacer capteur BARO si défectueux";
+
+// P0113 - Capteur IAT
+"dtc.p0113.name" = "Signal IAT élevé";
+"dtc.p0113.description" = "Capteur température air admission signale un signal élevé (circuit ouvert)";

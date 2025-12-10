@@ -616,3 +616,95 @@
 "dtc.filter_rotary" = "Rotativo";
 "dtc.filter_critical" = "Críticos";
 "dtc.filter_apex_seals" = "Apex Seals";
+
+// MARK: - DTC Severity Levels
+"dtc.severity.low" = "Baixo";
+"dtc.severity.medium" = "Médio";
+"dtc.severity.high" = "Alto";
+"dtc.severity.critical" = "Crítico";
+"dtc.severity.low.description" = "Pode continuar dirigindo, verificar em breve";
+"dtc.severity.medium.description" = "Dirigir com cuidado, reparar em breve";
+"dtc.severity.high.description" = "Evitar uso prolongado, reparar o mais rápido possível";
+"dtc.severity.critical.description" = "PARE! Risco de danos graves ao motor";
+
+// MARK: - DTC Code Translations (Critical Misfire Codes)
+// P0300 - Falha de ignição aleatória
+"dtc.p0300.name" = "Falha de ignição aleatória detectada";
+"dtc.p0300.description" = "Falhas de ignição detectadas em múltiplas câmaras do motor rotativo";
+"dtc.p0300.cause.0" = "Bobinas de ignição defeituosas (muito comum no RX-8)";
+"dtc.p0300.cause.1" = "Velas desgastadas ou incorretas";
+"dtc.p0300.cause.2" = "Cabos de vela em mau estado";
+"dtc.p0300.cause.3" = "Compressão baixa (vedações apex desgastadas)";
+"dtc.p0300.cause.4" = "Vazamento de vácuo";
+"dtc.p0300.cause.5" = "Injetores sujos ou defeituosos";
+"dtc.p0300.cause.6" = "Perfil do eixo excêntrico não sincronizado (após rebuild)";
+"dtc.p0300.symptom.0" = "Marcha lenta irregular/instável";
+"dtc.p0300.symptom.1" = "Perda de potência";
+"dtc.p0300.symptom.2" = "Aumento do consumo";
+"dtc.p0300.symptom.3" = "Cheiro de combustível não queimado";
+"dtc.p0300.symptom.4" = "Dano progressivo ao catalisador";
+"dtc.p0300.solution.0" = "Substituir as 4 bobinas de ignição (sempre as 4 juntas!)";
+"dtc.p0300.solution.1" = "Trocar as 4 velas por NGK RE7C-L ou RE9B-T";
+"dtc.p0300.solution.2" = "Verificar cabos de ignição";
+"dtc.p0300.solution.3" = "Realizar teste de compressão";
+"dtc.p0300.solution.4" = "Se motor foi substituído: apagar perfil eixo excêntrico do PCM";
+
+// P0301 - Falha rotor dianteiro
+"dtc.p0301.name" = "Falha de ignição rotor dianteiro";
+"dtc.p0301.description" = "Falha detectada no rotor dianteiro (câmara 1)";
+"dtc.p0301.cause.0" = "Bobina leading dianteira falhando";
+"dtc.p0301.cause.1" = "Bobina trailing dianteira falhando";
+"dtc.p0301.cause.2" = "Velas dianteiras desgastadas";
+"dtc.p0301.cause.3" = "Compressão baixa rotor dianteiro";
+"dtc.p0301.cause.4" = "Injetor dianteiro obstruído";
+"dtc.p0301.symptom.0" = "Vibração em marcha lenta";
+"dtc.p0301.symptom.1" = "Perda de potência";
+"dtc.p0301.symptom.2" = "Partida a quente difícil";
+"dtc.p0301.solution.0" = "Substituir bobinas dianteiras (leading + trailing)";
+"dtc.p0301.solution.1" = "Trocar velas dianteiras";
+"dtc.p0301.solution.2" = "Teste de compressão rotor dianteiro";
+
+// P0302 - Falha rotor traseiro
+"dtc.p0302.name" = "Falha de ignição rotor traseiro";
+"dtc.p0302.description" = "Falha detectada no rotor traseiro (câmara 2)";
+"dtc.p0302.cause.0" = "Bobina leading traseira falhando";
+"dtc.p0302.cause.1" = "Bobina trailing traseira falhando";
+"dtc.p0302.cause.2" = "Velas traseiras desgastadas";
+"dtc.p0302.cause.3" = "Compressão baixa rotor traseiro";
+"dtc.p0302.cause.4" = "Injetor traseiro obstruído";
+"dtc.p0302.symptom.0" = "Vibração em marcha lenta";
+"dtc.p0302.symptom.1" = "Perda de potência";
+"dtc.p0302.symptom.2" = "Fumaça azul (óleo queimando)";
+"dtc.p0302.solution.0" = "Substituir bobinas traseiras (leading + trailing)";
+"dtc.p0302.solution.1" = "Trocar velas traseiras";
+"dtc.p0302.solution.2" = "Teste de compressão rotor traseiro";
+
+// P0101 - Sensor MAF
+"dtc.p0101.name" = "MAF Faixa/Desempenho";
+"dtc.p0101.description" = "Sensor MAF reportando valores fora da faixa esperada";
+"dtc.p0101.cause.0" = "Sensor MAF sujo";
+"dtc.p0101.cause.1" = "Filtro de ar obstruído";
+"dtc.p0101.cause.2" = "Vazamento de ar após o MAF";
+"dtc.p0101.cause.3" = "Sensor MAF defeituoso";
+"dtc.p0101.symptom.0" = "Marcha lenta irregular";
+"dtc.p0101.symptom.1" = "Perda de potência";
+"dtc.p0101.symptom.2" = "Consumo excessivo";
+"dtc.p0101.solution.0" = "Limpar MAF com spray específico";
+"dtc.p0101.solution.1" = "Substituir filtro de ar";
+"dtc.p0101.solution.2" = "Inspecionar mangueiras de admissão";
+"dtc.p0101.solution.3" = "Substituir MAF se limpeza não funcionar";
+
+// P0107 - Sensor BARO
+"dtc.p0107.name" = "Sensor BARO baixo";
+"dtc.p0107.description" = "Sinal do sensor barométrico abaixo da faixa";
+"dtc.p0107.cause.0" = "Sensor BARO defeituoso";
+"dtc.p0107.cause.1" = "Fiação danificada";
+"dtc.p0107.cause.2" = "Problema no PCM";
+"dtc.p0107.symptom.0" = "Desempenho reduzido em altitude";
+"dtc.p0107.symptom.1" = "Mistura incorreta";
+"dtc.p0107.solution.0" = "Verificar conexões do sensor";
+"dtc.p0107.solution.1" = "Substituir sensor BARO se defeituoso";
+
+// P0113 - Sensor IAT
+"dtc.p0113.name" = "Sinal IAT alto";
+"dtc.p0113.description" = "Sensor de temperatura do ar de admissão reportando sinal alto (circuito aberto)";

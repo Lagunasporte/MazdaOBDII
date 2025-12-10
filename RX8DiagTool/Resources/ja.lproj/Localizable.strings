@@ -616,3 +616,95 @@
 "dtc.filter_rotary" = "ロータリー";
 "dtc.filter_critical" = "重大";
 "dtc.filter_apex_seals" = "アペックスシール";
+
+// MARK: - DTC Severity Levels
+"dtc.severity.low" = "低";
+"dtc.severity.medium" = "中";
+"dtc.severity.high" = "高";
+"dtc.severity.critical" = "危険";
+"dtc.severity.low.description" = "走行可能、早めに点検してください";
+"dtc.severity.medium.description" = "注意して運転、早めに修理してください";
+"dtc.severity.high.description" = "長時間の使用を避け、できるだけ早く修理してください";
+"dtc.severity.critical.description" = "停止！エンジンに深刻なダメージを与える危険性があります";
+
+// MARK: - DTC Code Translations (Critical Misfire Codes)
+// P0300 - ランダム失火
+"dtc.p0300.name" = "ランダム失火検出";
+"dtc.p0300.description" = "ロータリーエンジンの複数の燃焼室で失火を検出";
+"dtc.p0300.cause.0" = "イグニッションコイル不良（RX-8で非常に多い）";
+"dtc.p0300.cause.1" = "スパークプラグの摩耗または不適合";
+"dtc.p0300.cause.2" = "プラグコードの劣化";
+"dtc.p0300.cause.3" = "圧縮低下（アペックスシール摩耗）";
+"dtc.p0300.cause.4" = "バキュームリーク";
+"dtc.p0300.cause.5" = "インジェクター汚れまたは不良";
+"dtc.p0300.cause.6" = "エキセントリックシャフトプロファイル未同期（リビルド後）";
+"dtc.p0300.symptom.0" = "アイドリング不安定";
+"dtc.p0300.symptom.1" = "パワーロス";
+"dtc.p0300.symptom.2" = "燃費悪化";
+"dtc.p0300.symptom.3" = "未燃焼燃料の臭い";
+"dtc.p0300.symptom.4" = "触媒の進行性損傷";
+"dtc.p0300.solution.0" = "4本すべてのイグニッションコイルを交換（必ず4本同時に！）";
+"dtc.p0300.solution.1" = "スパークプラグをNGK RE7C-LまたはRE9B-Tに交換";
+"dtc.p0300.solution.2" = "イグニッションワイヤーを点検";
+"dtc.p0300.solution.3" = "コンプレッションテストを実施";
+"dtc.p0300.solution.4" = "エンジン交換時：PCMからエキセントリックシャフトプロファイルを消去";
+
+// P0301 - フロントローター失火
+"dtc.p0301.name" = "フロントローター失火";
+"dtc.p0301.description" = "フロントローター（チャンバー1）で失火を検出";
+"dtc.p0301.cause.0" = "フロントリーディングコイル不良";
+"dtc.p0301.cause.1" = "フロントトレーリングコイル不良";
+"dtc.p0301.cause.2" = "フロントスパークプラグ摩耗";
+"dtc.p0301.cause.3" = "フロントローター圧縮低下";
+"dtc.p0301.cause.4" = "フロントインジェクター詰まり";
+"dtc.p0301.symptom.0" = "アイドリング振動";
+"dtc.p0301.symptom.1" = "パワーロス";
+"dtc.p0301.symptom.2" = "温間始動困難";
+"dtc.p0301.solution.0" = "フロントコイル交換（リーディング＋トレーリング）";
+"dtc.p0301.solution.1" = "フロントスパークプラグ交換";
+"dtc.p0301.solution.2" = "フロントローターコンプレッションテスト";
+
+// P0302 - リアローター失火
+"dtc.p0302.name" = "リアローター失火";
+"dtc.p0302.description" = "リアローター（チャンバー2）で失火を検出";
+"dtc.p0302.cause.0" = "リアリーディングコイル不良";
+"dtc.p0302.cause.1" = "リアトレーリングコイル不良";
+"dtc.p0302.cause.2" = "リアスパークプラグ摩耗";
+"dtc.p0302.cause.3" = "リアローター圧縮低下";
+"dtc.p0302.cause.4" = "リアインジェクター詰まり";
+"dtc.p0302.symptom.0" = "アイドリング振動";
+"dtc.p0302.symptom.1" = "パワーロス";
+"dtc.p0302.symptom.2" = "青煙（オイル燃焼）";
+"dtc.p0302.solution.0" = "リアコイル交換（リーディング＋トレーリング）";
+"dtc.p0302.solution.1" = "リアスパークプラグ交換";
+"dtc.p0302.solution.2" = "リアローターコンプレッションテスト";
+
+// P0101 - MAFセンサー
+"dtc.p0101.name" = "MAF範囲/性能";
+"dtc.p0101.description" = "MAFセンサーが予想範囲外の値を報告";
+"dtc.p0101.cause.0" = "MAFセンサー汚れ";
+"dtc.p0101.cause.1" = "エアフィルター詰まり";
+"dtc.p0101.cause.2" = "MAF後方のエアリーク";
+"dtc.p0101.cause.3" = "MAFセンサー不良";
+"dtc.p0101.symptom.0" = "アイドリング不安定";
+"dtc.p0101.symptom.1" = "パワーロス";
+"dtc.p0101.symptom.2" = "燃費悪化";
+"dtc.p0101.solution.0" = "MAFを専用クリーナーで清掃";
+"dtc.p0101.solution.1" = "エアフィルター交換";
+"dtc.p0101.solution.2" = "インテークホースを点検";
+"dtc.p0101.solution.3" = "清掃で改善しない場合はMAF交換";
+
+// P0107 - BAROセンサー
+"dtc.p0107.name" = "BAROセンサー低";
+"dtc.p0107.description" = "大気圧センサー信号が範囲以下";
+"dtc.p0107.cause.0" = "BAROセンサー不良";
+"dtc.p0107.cause.1" = "配線損傷";
+"dtc.p0107.cause.2" = "PCM問題";
+"dtc.p0107.symptom.0" = "高地での性能低下";
+"dtc.p0107.symptom.1" = "混合気不適正";
+"dtc.p0107.solution.0" = "センサー接続を確認";
+"dtc.p0107.solution.1" = "不良の場合BAROセンサー交換";
+
+// P0113 - IATセンサー
+"dtc.p0113.name" = "IAT信号高";
+"dtc.p0113.description" = "吸気温度センサーが高信号を報告（オープン回路）";

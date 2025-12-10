@@ -616,3 +616,95 @@
 "dtc.filter_rotary" = "Rotativo";
 "dtc.filter_critical" = "Critici";
 "dtc.filter_apex_seals" = "Apex Seals";
+
+// MARK: - DTC Severity Levels
+"dtc.severity.low" = "Basso";
+"dtc.severity.medium" = "Medio";
+"dtc.severity.high" = "Alto";
+"dtc.severity.critical" = "Critico";
+"dtc.severity.low.description" = "Puoi continuare a guidare, controllare presto";
+"dtc.severity.medium.description" = "Guidare con cautela, riparare a breve";
+"dtc.severity.high.description" = "Evitare uso prolungato, riparare il prima possibile";
+"dtc.severity.critical.description" = "STOP! Rischio di gravi danni al motore";
+
+// MARK: - DTC Code Translations (Critical Misfire Codes)
+// P0300 - Mancata accensione casuale
+"dtc.p0300.name" = "Mancata accensione casuale rilevata";
+"dtc.p0300.description" = "Mancate accensioni rilevate in più camere del motore rotativo";
+"dtc.p0300.cause.0" = "Bobine di accensione difettose (molto comune su RX-8)";
+"dtc.p0300.cause.1" = "Candele usurate o errate";
+"dtc.p0300.cause.2" = "Cavi candele in cattivo stato";
+"dtc.p0300.cause.3" = "Compressione bassa (guarnizioni apex usurate)";
+"dtc.p0300.cause.4" = "Perdita di vuoto";
+"dtc.p0300.cause.5" = "Iniettori sporchi o difettosi";
+"dtc.p0300.cause.6" = "Profilo albero eccentrico non sincronizzato (dopo rebuild)";
+"dtc.p0300.symptom.0" = "Minimo irregolare/instabile";
+"dtc.p0300.symptom.1" = "Perdita di potenza";
+"dtc.p0300.symptom.2" = "Aumento dei consumi";
+"dtc.p0300.symptom.3" = "Odore di carburante incombusto";
+"dtc.p0300.symptom.4" = "Danno progressivo al catalizzatore";
+"dtc.p0300.solution.0" = "Sostituire tutte le 4 bobine (sempre tutte 4 insieme!)";
+"dtc.p0300.solution.1" = "Cambiare le 4 candele con NGK RE7C-L o RE9B-T";
+"dtc.p0300.solution.2" = "Verificare cavi di accensione";
+"dtc.p0300.solution.3" = "Eseguire test di compressione";
+"dtc.p0300.solution.4" = "Se motore sostituito: cancellare profilo albero eccentrico dal PCM";
+
+// P0301 - Mancata accensione rotore anteriore
+"dtc.p0301.name" = "Mancata accensione rotore anteriore";
+"dtc.p0301.description" = "Mancata accensione rilevata nel rotore anteriore (camera 1)";
+"dtc.p0301.cause.0" = "Bobina leading anteriore difettosa";
+"dtc.p0301.cause.1" = "Bobina trailing anteriore difettosa";
+"dtc.p0301.cause.2" = "Candele anteriori usurate";
+"dtc.p0301.cause.3" = "Compressione bassa rotore anteriore";
+"dtc.p0301.cause.4" = "Iniettore anteriore ostruito";
+"dtc.p0301.symptom.0" = "Vibrazione al minimo";
+"dtc.p0301.symptom.1" = "Perdita di potenza";
+"dtc.p0301.symptom.2" = "Avviamento a caldo difficile";
+"dtc.p0301.solution.0" = "Sostituire bobine anteriori (leading + trailing)";
+"dtc.p0301.solution.1" = "Cambiare candele anteriori";
+"dtc.p0301.solution.2" = "Test di compressione rotore anteriore";
+
+// P0302 - Mancata accensione rotore posteriore
+"dtc.p0302.name" = "Mancata accensione rotore posteriore";
+"dtc.p0302.description" = "Mancata accensione rilevata nel rotore posteriore (camera 2)";
+"dtc.p0302.cause.0" = "Bobina leading posteriore difettosa";
+"dtc.p0302.cause.1" = "Bobina trailing posteriore difettosa";
+"dtc.p0302.cause.2" = "Candele posteriori usurate";
+"dtc.p0302.cause.3" = "Compressione bassa rotore posteriore";
+"dtc.p0302.cause.4" = "Iniettore posteriore ostruito";
+"dtc.p0302.symptom.0" = "Vibrazione al minimo";
+"dtc.p0302.symptom.1" = "Perdita di potenza";
+"dtc.p0302.symptom.2" = "Fumo blu (olio che brucia)";
+"dtc.p0302.solution.0" = "Sostituire bobine posteriori (leading + trailing)";
+"dtc.p0302.solution.1" = "Cambiare candele posteriori";
+"dtc.p0302.solution.2" = "Test di compressione rotore posteriore";
+
+// P0101 - Sensore MAF
+"dtc.p0101.name" = "MAF Gamma/Prestazioni";
+"dtc.p0101.description" = "Sensore MAF segnala valori fuori gamma";
+"dtc.p0101.cause.0" = "Sensore MAF sporco";
+"dtc.p0101.cause.1" = "Filtro aria ostruito";
+"dtc.p0101.cause.2" = "Perdita d'aria dopo il MAF";
+"dtc.p0101.cause.3" = "Sensore MAF difettoso";
+"dtc.p0101.symptom.0" = "Minimo irregolare";
+"dtc.p0101.symptom.1" = "Perdita di potenza";
+"dtc.p0101.symptom.2" = "Consumo eccessivo";
+"dtc.p0101.solution.0" = "Pulire MAF con spray specifico";
+"dtc.p0101.solution.1" = "Sostituire filtro aria";
+"dtc.p0101.solution.2" = "Ispezionare tubi di aspirazione";
+"dtc.p0101.solution.3" = "Sostituire MAF se pulizia non funziona";
+
+// P0107 - Sensore BARO
+"dtc.p0107.name" = "Sensore BARO basso";
+"dtc.p0107.description" = "Segnale sensore barometrico sotto la gamma";
+"dtc.p0107.cause.0" = "Sensore BARO difettoso";
+"dtc.p0107.cause.1" = "Cablaggio danneggiato";
+"dtc.p0107.cause.2" = "Problema PCM";
+"dtc.p0107.symptom.0" = "Prestazioni ridotte in altitudine";
+"dtc.p0107.symptom.1" = "Miscela errata";
+"dtc.p0107.solution.0" = "Verificare connessioni sensore";
+"dtc.p0107.solution.1" = "Sostituire sensore BARO se difettoso";
+
+// P0113 - Sensore IAT
+"dtc.p0113.name" = "Segnale IAT alto";
+"dtc.p0113.description" = "Sensore temperatura aria aspirazione segnala segnale alto (circuito aperto)";

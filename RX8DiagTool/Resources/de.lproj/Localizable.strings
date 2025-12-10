@@ -616,3 +616,95 @@
 "dtc.filter_rotary" = "Rotativ";
 "dtc.filter_critical" = "Kritisch";
 "dtc.filter_apex_seals" = "Apex Seals";
+
+// MARK: - DTC Severity Levels
+"dtc.severity.low" = "Niedrig";
+"dtc.severity.medium" = "Mittel";
+"dtc.severity.high" = "Hoch";
+"dtc.severity.critical" = "Kritisch";
+"dtc.severity.low.description" = "Kann weiterfahren, bald überprüfen";
+"dtc.severity.medium.description" = "Vorsichtig fahren, bald reparieren";
+"dtc.severity.high.description" = "Längere Nutzung vermeiden, so schnell wie möglich reparieren";
+"dtc.severity.critical.description" = "STOPP! Risiko schwerer Motorschäden";
+
+// MARK: - DTC Code Translations (Critical Misfire Codes)
+// P0300 - Zufällige Fehlzündung
+"dtc.p0300.name" = "Zufällige Fehlzündung erkannt";
+"dtc.p0300.description" = "Fehlzündungen in mehreren Kammern des Wankelmotors erkannt";
+"dtc.p0300.cause.0" = "Defekte Zündspulen (sehr häufig beim RX-8)";
+"dtc.p0300.cause.1" = "Verschlissene oder falsche Zündkerzen";
+"dtc.p0300.cause.2" = "Beschädigte Zündkabel";
+"dtc.p0300.cause.3" = "Niedrige Kompression (verschlissene Apex-Dichtungen)";
+"dtc.p0300.cause.4" = "Vakuumleck";
+"dtc.p0300.cause.5" = "Verschmutzte oder defekte Einspritzdüsen";
+"dtc.p0300.cause.6" = "Exzenterwellenprofil nicht synchronisiert (nach Rebuild)";
+"dtc.p0300.symptom.0" = "Unregelmäßiger/instabiler Leerlauf";
+"dtc.p0300.symptom.1" = "Leistungsverlust";
+"dtc.p0300.symptom.2" = "Erhöhter Kraftstoffverbrauch";
+"dtc.p0300.symptom.3" = "Geruch nach unverbranntem Kraftstoff";
+"dtc.p0300.symptom.4" = "Fortschreitender Katalysatorschaden";
+"dtc.p0300.solution.0" = "Alle 4 Zündspulen ersetzen (immer alle 4 zusammen!)";
+"dtc.p0300.solution.1" = "Alle 4 Zündkerzen auf NGK RE7C-L oder RE9B-T wechseln";
+"dtc.p0300.solution.2" = "Zündkabel prüfen";
+"dtc.p0300.solution.3" = "Kompressionstest durchführen";
+"dtc.p0300.solution.4" = "Bei Motorwechsel: Exzenterwellenprofil aus PCM löschen";
+
+// P0301 - Vorderer Rotor Fehlzündung
+"dtc.p0301.name" = "Fehlzündung Vorderer Rotor";
+"dtc.p0301.description" = "Fehlzündung im vorderen Rotor erkannt (Kammer 1)";
+"dtc.p0301.cause.0" = "Vordere Leading-Spule defekt";
+"dtc.p0301.cause.1" = "Vordere Trailing-Spule defekt";
+"dtc.p0301.cause.2" = "Vordere Zündkerzen verschlissen";
+"dtc.p0301.cause.3" = "Niedrige Kompression vorderer Rotor";
+"dtc.p0301.cause.4" = "Vorderer Injektor verstopft";
+"dtc.p0301.symptom.0" = "Vibration im Leerlauf";
+"dtc.p0301.symptom.1" = "Leistungsverlust";
+"dtc.p0301.symptom.2" = "Schwieriger Warmstart";
+"dtc.p0301.solution.0" = "Vordere Spulen ersetzen (Leading + Trailing)";
+"dtc.p0301.solution.1" = "Vordere Zündkerzen wechseln";
+"dtc.p0301.solution.2" = "Kompressionstest vorderer Rotor";
+
+// P0302 - Hinterer Rotor Fehlzündung
+"dtc.p0302.name" = "Fehlzündung Hinterer Rotor";
+"dtc.p0302.description" = "Fehlzündung im hinteren Rotor erkannt (Kammer 2)";
+"dtc.p0302.cause.0" = "Hintere Leading-Spule defekt";
+"dtc.p0302.cause.1" = "Hintere Trailing-Spule defekt";
+"dtc.p0302.cause.2" = "Hintere Zündkerzen verschlissen";
+"dtc.p0302.cause.3" = "Niedrige Kompression hinterer Rotor";
+"dtc.p0302.cause.4" = "Hinterer Injektor verstopft";
+"dtc.p0302.symptom.0" = "Vibration im Leerlauf";
+"dtc.p0302.symptom.1" = "Leistungsverlust";
+"dtc.p0302.symptom.2" = "Blauer Rauch (Ölverbrennung)";
+"dtc.p0302.solution.0" = "Hintere Spulen ersetzen (Leading + Trailing)";
+"dtc.p0302.solution.1" = "Hintere Zündkerzen wechseln";
+"dtc.p0302.solution.2" = "Kompressionstest hinterer Rotor";
+
+// P0101 - MAF-Sensor
+"dtc.p0101.name" = "MAF Bereich/Leistung";
+"dtc.p0101.description" = "MAF-Sensor meldet Werte außerhalb des erwarteten Bereichs";
+"dtc.p0101.cause.0" = "Verschmutzter MAF-Sensor";
+"dtc.p0101.cause.1" = "Verstopfter Luftfilter";
+"dtc.p0101.cause.2" = "Luftleck nach dem MAF";
+"dtc.p0101.cause.3" = "Defekter MAF-Sensor";
+"dtc.p0101.symptom.0" = "Unregelmäßiger Leerlauf";
+"dtc.p0101.symptom.1" = "Leistungsverlust";
+"dtc.p0101.symptom.2" = "Überhöhter Kraftstoffverbrauch";
+"dtc.p0101.solution.0" = "MAF mit speziellem Spray reinigen";
+"dtc.p0101.solution.1" = "Luftfilter ersetzen";
+"dtc.p0101.solution.2" = "Ansaugschläuche prüfen";
+"dtc.p0101.solution.3" = "MAF ersetzen wenn Reinigung nicht hilft";
+
+// P0107 - BARO-Sensor
+"dtc.p0107.name" = "BARO-Sensor niedrig";
+"dtc.p0107.description" = "Barometrisches Sensorsignal unter dem Bereich";
+"dtc.p0107.cause.0" = "Defekter BARO-Sensor";
+"dtc.p0107.cause.1" = "Beschädigte Verkabelung";
+"dtc.p0107.cause.2" = "PCM-Problem";
+"dtc.p0107.symptom.0" = "Reduzierte Leistung in der Höhe";
+"dtc.p0107.symptom.1" = "Falsches Gemisch";
+"dtc.p0107.solution.0" = "Sensorverbindungen prüfen";
+"dtc.p0107.solution.1" = "BARO-Sensor ersetzen wenn defekt";
+
+// P0113 - IAT-Sensor
+"dtc.p0113.name" = "IAT-Signal hoch";
+"dtc.p0113.description" = "Ansauglufttemperatursensor meldet hohes Signal (offener Stromkreis)";

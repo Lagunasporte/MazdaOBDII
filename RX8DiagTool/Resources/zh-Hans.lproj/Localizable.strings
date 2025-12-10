@@ -616,3 +616,95 @@
 "dtc.filter_rotary" = "转子";
 "dtc.filter_critical" = "严重";
 "dtc.filter_apex_seals" = "顶部密封条";
+
+// MARK: - DTC Severity Levels
+"dtc.severity.low" = "低";
+"dtc.severity.medium" = "中";
+"dtc.severity.high" = "高";
+"dtc.severity.critical" = "危急";
+"dtc.severity.low.description" = "可以继续驾驶，尽快检查";
+"dtc.severity.medium.description" = "谨慎驾驶，尽快维修";
+"dtc.severity.high.description" = "避免长时间使用，尽快修理";
+"dtc.severity.critical.description" = "停止！存在严重发动机损坏风险";
+
+// MARK: - DTC Code Translations (Critical Misfire Codes)
+// P0300 - 随机失火
+"dtc.p0300.name" = "检测到随机失火";
+"dtc.p0300.description" = "转子发动机多个燃烧室检测到失火";
+"dtc.p0300.cause.0" = "点火线圈故障（RX-8非常常见）";
+"dtc.p0300.cause.1" = "火花塞磨损或型号不对";
+"dtc.p0300.cause.2" = "点火线老化";
+"dtc.p0300.cause.3" = "压缩力低（顶部密封条磨损）";
+"dtc.p0300.cause.4" = "真空泄漏";
+"dtc.p0300.cause.5" = "喷油嘴脏污或故障";
+"dtc.p0300.cause.6" = "偏心轴配置未同步（重建后）";
+"dtc.p0300.symptom.0" = "怠速不稳";
+"dtc.p0300.symptom.1" = "动力不足";
+"dtc.p0300.symptom.2" = "油耗增加";
+"dtc.p0300.symptom.3" = "未燃烧燃油气味";
+"dtc.p0300.symptom.4" = "催化转化器渐进损坏";
+"dtc.p0300.solution.0" = "更换全部4个点火线圈（必须同时更换4个！）";
+"dtc.p0300.solution.1" = "更换4个火花塞为NGK RE7C-L或RE9B-T";
+"dtc.p0300.solution.2" = "检查点火线";
+"dtc.p0300.solution.3" = "进行压缩测试";
+"dtc.p0300.solution.4" = "如果更换了发动机：从PCM清除偏心轴配置";
+
+// P0301 - 前转子失火
+"dtc.p0301.name" = "前转子失火";
+"dtc.p0301.description" = "前转子（燃烧室1）检测到失火";
+"dtc.p0301.cause.0" = "前导点火线圈故障";
+"dtc.p0301.cause.1" = "前随动点火线圈故障";
+"dtc.p0301.cause.2" = "前火花塞磨损";
+"dtc.p0301.cause.3" = "前转子压缩力低";
+"dtc.p0301.cause.4" = "前喷油嘴堵塞";
+"dtc.p0301.symptom.0" = "怠速振动";
+"dtc.p0301.symptom.1" = "动力不足";
+"dtc.p0301.symptom.2" = "热车启动困难";
+"dtc.p0301.solution.0" = "更换前点火线圈（导+随动）";
+"dtc.p0301.solution.1" = "更换前火花塞";
+"dtc.p0301.solution.2" = "前转子压缩测试";
+
+// P0302 - 后转子失火
+"dtc.p0302.name" = "后转子失火";
+"dtc.p0302.description" = "后转子（燃烧室2）检测到失火";
+"dtc.p0302.cause.0" = "后导点火线圈故障";
+"dtc.p0302.cause.1" = "后随动点火线圈故障";
+"dtc.p0302.cause.2" = "后火花塞磨损";
+"dtc.p0302.cause.3" = "后转子压缩力低";
+"dtc.p0302.cause.4" = "后喷油嘴堵塞";
+"dtc.p0302.symptom.0" = "怠速振动";
+"dtc.p0302.symptom.1" = "动力不足";
+"dtc.p0302.symptom.2" = "蓝烟（机油燃烧）";
+"dtc.p0302.solution.0" = "更换后点火线圈（导+随动）";
+"dtc.p0302.solution.1" = "更换后火花塞";
+"dtc.p0302.solution.2" = "后转子压缩测试";
+
+// P0101 - MAF传感器
+"dtc.p0101.name" = "MAF范围/性能";
+"dtc.p0101.description" = "MAF传感器报告超出预期范围的值";
+"dtc.p0101.cause.0" = "MAF传感器脏污";
+"dtc.p0101.cause.1" = "空气滤清器堵塞";
+"dtc.p0101.cause.2" = "MAF后方漏气";
+"dtc.p0101.cause.3" = "MAF传感器故障";
+"dtc.p0101.symptom.0" = "怠速不稳";
+"dtc.p0101.symptom.1" = "动力不足";
+"dtc.p0101.symptom.2" = "油耗过高";
+"dtc.p0101.solution.0" = "用专用喷剂清洁MAF";
+"dtc.p0101.solution.1" = "更换空气滤清器";
+"dtc.p0101.solution.2" = "检查进气管";
+"dtc.p0101.solution.3" = "清洁无效则更换MAF";
+
+// P0107 - BARO传感器
+"dtc.p0107.name" = "BARO传感器低";
+"dtc.p0107.description" = "大气压传感器信号低于范围";
+"dtc.p0107.cause.0" = "BARO传感器故障";
+"dtc.p0107.cause.1" = "线路损坏";
+"dtc.p0107.cause.2" = "PCM问题";
+"dtc.p0107.symptom.0" = "高海拔性能下降";
+"dtc.p0107.symptom.1" = "混合气不正确";
+"dtc.p0107.solution.0" = "检查传感器连接";
+"dtc.p0107.solution.1" = "如有故障则更换BARO传感器";
+
+// P0113 - IAT传感器
+"dtc.p0113.name" = "IAT信号高";
+"dtc.p0113.description" = "进气温度传感器报告高信号（开路）";

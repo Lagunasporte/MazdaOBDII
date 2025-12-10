@@ -31,13 +31,52 @@ public struct DTCCode: Identifiable, Codable, Sendable, Hashable {
         self.rotarySpecific = rotarySpecific
         self.affectsApexSeals = affectsApexSeals
     }
+
+    // MARK: - Localized Properties
+    // These check for localized versions and fall back to the original text
+
+    public var localizedName: String {
+        let key = "dtc.\(code.lowercased()).name"
+        let localized = key.localized
+        return localized != key ? localized : name
+    }
+
+    public var localizedDescription: String {
+        let key = "dtc.\(code.lowercased()).description"
+        let localized = key.localized
+        return localized != key ? localized : description
+    }
+
+    public var localizedCauses: [String] {
+        return causes.enumerated().map { index, cause in
+            let key = "dtc.\(code.lowercased()).cause.\(index)"
+            let localized = key.localized
+            return localized != key ? localized : cause
+        }
+    }
+
+    public var localizedSymptoms: [String] {
+        return symptoms.enumerated().map { index, symptom in
+            let key = "dtc.\(code.lowercased()).symptom.\(index)"
+            let localized = key.localized
+            return localized != key ? localized : symptom
+        }
+    }
+
+    public var localizedSolutions: [String] {
+        return solutions.enumerated().map { index, solution in
+            let key = "dtc.\(code.lowercased()).solution.\(index)"
+            let localized = key.localized
+            return localized != key ? localized : solution
+        }
+    }
 }
 
 public enum DTCCategory: String, Codable, Sendable, CaseIterable {
-    case powertrain = "Tren Motriz (P)"
-    case chassis = "Chasis (C)"
-    case body = "Carrocería (B)"
-    case network = "Red (U)"
+    case powertrain = "powertrain"
+    case chassis = "chassis"
+    case body = "body"
+    case network = "network"
 
     public var prefix: Character {
         switch self {
@@ -47,13 +86,22 @@ public enum DTCCategory: String, Codable, Sendable, CaseIterable {
         case .network: return "U"
         }
     }
+
+    public var localizedName: String {
+        switch self {
+        case .powertrain: return "dtc.category.powertrain".localized
+        case .chassis: return "dtc.category.chassis".localized
+        case .body: return "dtc.category.body".localized
+        case .network: return "dtc.category.network".localized
+        }
+    }
 }
 
 public enum DTCSeverity: String, Codable, Sendable {
-    case low = "Bajo"
-    case medium = "Medio"
-    case high = "Alto"
-    case critical = "Crítico"
+    case low = "low"
+    case medium = "medium"
+    case high = "high"
+    case critical = "critical"
 
     public var color: String {
         switch self {
@@ -64,16 +112,25 @@ public enum DTCSeverity: String, Codable, Sendable {
         }
     }
 
-    public var description: String {
+    public var localizedName: String {
+        switch self {
+        case .low: return "dtc.severity.low".localized
+        case .medium: return "dtc.severity.medium".localized
+        case .high: return "dtc.severity.high".localized
+        case .critical: return "dtc.severity.critical".localized
+        }
+    }
+
+    public var localizedDescription: String {
         switch self {
         case .low:
-            return "Puede continuar conduciendo, revisar pronto"
+            return "dtc.severity.low.description".localized
         case .medium:
-            return "Conducir con precaución, reparar en breve"
+            return "dtc.severity.medium.description".localized
         case .high:
-            return "Evitar uso prolongado, reparar cuanto antes"
+            return "dtc.severity.high.description".localized
         case .critical:
-            return "¡DETENER! Riesgo de daño severo al motor"
+            return "dtc.severity.critical.description".localized
         }
     }
 }

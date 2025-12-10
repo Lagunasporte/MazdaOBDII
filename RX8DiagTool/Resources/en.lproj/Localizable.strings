@@ -618,3 +618,95 @@
 "dtc.filter_rotary" = "Rotary";
 "dtc.filter_critical" = "Critical";
 "dtc.filter_apex_seals" = "Apex Seals";
+
+// MARK: - DTC Severity Levels
+"dtc.severity.low" = "Low";
+"dtc.severity.medium" = "Medium";
+"dtc.severity.high" = "High";
+"dtc.severity.critical" = "Critical";
+"dtc.severity.low.description" = "Can continue driving, check soon";
+"dtc.severity.medium.description" = "Drive with caution, repair shortly";
+"dtc.severity.high.description" = "Avoid prolonged use, repair as soon as possible";
+"dtc.severity.critical.description" = "STOP! Risk of severe engine damage";
+
+// MARK: - DTC Code Translations (Critical Misfire Codes)
+// P0300 - Random Misfire
+"dtc.p0300.name" = "Random Misfire Detected";
+"dtc.p0300.description" = "Misfires detected in multiple chambers of the rotary engine";
+"dtc.p0300.cause.0" = "Defective ignition coils (very common in RX-8)";
+"dtc.p0300.cause.1" = "Worn or incorrect spark plugs";
+"dtc.p0300.cause.2" = "Bad spark plug wires";
+"dtc.p0300.cause.3" = "Low compression (worn apex seals)";
+"dtc.p0300.cause.4" = "Vacuum leak";
+"dtc.p0300.cause.5" = "Dirty or defective injectors";
+"dtc.p0300.cause.6" = "Eccentric shaft profile not synchronized (after rebuild)";
+"dtc.p0300.symptom.0" = "Irregular/unstable idle";
+"dtc.p0300.symptom.1" = "Power loss";
+"dtc.p0300.symptom.2" = "Increased fuel consumption";
+"dtc.p0300.symptom.3" = "Unburned fuel smell";
+"dtc.p0300.symptom.4" = "Progressive catalytic converter damage";
+"dtc.p0300.solution.0" = "Replace all 4 ignition coils (always all 4 together!)";
+"dtc.p0300.solution.1" = "Change all 4 spark plugs to NGK RE7C-L or RE9B-T";
+"dtc.p0300.solution.2" = "Check ignition wires";
+"dtc.p0300.solution.3" = "Perform compression test";
+"dtc.p0300.solution.4" = "If engine was replaced: clear eccentric shaft profile from PCM";
+
+// P0301 - Front Rotor Misfire
+"dtc.p0301.name" = "Front Rotor Misfire";
+"dtc.p0301.description" = "Misfire detected in front rotor (chamber 1)";
+"dtc.p0301.cause.0" = "Front leading coil failing";
+"dtc.p0301.cause.1" = "Front trailing coil failing";
+"dtc.p0301.cause.2" = "Front spark plugs worn";
+"dtc.p0301.cause.3" = "Low compression front rotor";
+"dtc.p0301.cause.4" = "Front injector clogged";
+"dtc.p0301.symptom.0" = "Idle vibration";
+"dtc.p0301.symptom.1" = "Power loss";
+"dtc.p0301.symptom.2" = "Hard hot start";
+"dtc.p0301.solution.0" = "Replace front coils (leading + trailing)";
+"dtc.p0301.solution.1" = "Change front spark plugs";
+"dtc.p0301.solution.2" = "Front rotor compression test";
+
+// P0302 - Rear Rotor Misfire
+"dtc.p0302.name" = "Rear Rotor Misfire";
+"dtc.p0302.description" = "Misfire detected in rear rotor (chamber 2)";
+"dtc.p0302.cause.0" = "Rear leading coil failing";
+"dtc.p0302.cause.1" = "Rear trailing coil failing";
+"dtc.p0302.cause.2" = "Rear spark plugs worn";
+"dtc.p0302.cause.3" = "Low compression rear rotor";
+"dtc.p0302.cause.4" = "Rear injector clogged";
+"dtc.p0302.symptom.0" = "Idle vibration";
+"dtc.p0302.symptom.1" = "Power loss";
+"dtc.p0302.symptom.2" = "Blue smoke (burning oil)";
+"dtc.p0302.solution.0" = "Replace rear coils (leading + trailing)";
+"dtc.p0302.solution.1" = "Change rear spark plugs";
+"dtc.p0302.solution.2" = "Rear rotor compression test";
+
+// P0101 - MAF Sensor
+"dtc.p0101.name" = "MAF Range/Performance";
+"dtc.p0101.description" = "MAF sensor reporting values outside expected range";
+"dtc.p0101.cause.0" = "Dirty MAF sensor";
+"dtc.p0101.cause.1" = "Clogged air filter";
+"dtc.p0101.cause.2" = "Air leak after MAF";
+"dtc.p0101.cause.3" = "Defective MAF sensor";
+"dtc.p0101.symptom.0" = "Irregular idle";
+"dtc.p0101.symptom.1" = "Power loss";
+"dtc.p0101.symptom.2" = "Excessive fuel consumption";
+"dtc.p0101.solution.0" = "Clean MAF with specific spray";
+"dtc.p0101.solution.1" = "Replace air filter";
+"dtc.p0101.solution.2" = "Inspect intake hoses";
+"dtc.p0101.solution.3" = "Replace MAF if cleaning doesn't work";
+
+// P0107 - BARO Sensor
+"dtc.p0107.name" = "BARO Sensor Low";
+"dtc.p0107.description" = "Barometric sensor signal below range";
+"dtc.p0107.cause.0" = "Defective BARO sensor";
+"dtc.p0107.cause.1" = "Damaged wiring";
+"dtc.p0107.cause.2" = "PCM problem";
+"dtc.p0107.symptom.0" = "Reduced performance at altitude";
+"dtc.p0107.symptom.1" = "Incorrect mixture";
+"dtc.p0107.solution.0" = "Check sensor connections";
+"dtc.p0107.solution.1" = "Replace BARO sensor if defective";
+
+// P0113 - IAT Sensor
+"dtc.p0113.name" = "IAT Signal High";
+"dtc.p0113.description" = "Intake air temperature sensor reporting high signal (open circuit)";
