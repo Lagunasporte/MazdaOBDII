@@ -996,10 +996,11 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     /// IMPORTANTE: El RX-8 NO tiene sensor físico de temperatura de aceite.
     /// La ECU CALCULA este valor basándose en: RPM, carga del motor,
     /// posición del solenoide de la bomba de aceite, temp refrigerante y velocidad.
-    /// Cuando el motor está frío o la ECU no ha convergido, el valor es basura.
+    /// Cuando el motor está frío o la ECU no ha convergido, el valor puede ser impreciso.
     /// Intenta múltiples PIDs conocidos para máxima compatibilidad.
     public func readOilTempMazda() async throws -> Double {
         var lastError: Error = OBDError.noData
+        var bestReading: Double? = nil
 
         // Intentar cada PID conocido
         for (pid, formula) in Self.oilTempPIDs {
@@ -1017,15 +1018,30 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
                 let tempC = formula(Data(bytes))
 
-                // Validar rango razonable (20-150°C)
-                // Permitimos valores más bajos para detectar motor frío
-                if tempC >= 20 && tempC <= 150 {
-                    return tempC
+                // Rango válido ampliado: -10°C a 160°C
+                // -10°C: Motor en clima muy frío
+                // 160°C: Máximo absoluto antes de daño
+                // Valores fuera de este rango son datos corruptos
+                if tempC >= -10 && tempC <= 160 {
+                    // Si está en rango operativo normal (50-150°C), retornar inmediatamente
+                    if tempC >= 50 && tempC <= 150 {
+                        return tempC
+                    }
+                    // Si está en rango frío (-10 a 50°C), guardar como mejor lectura
+                    // pero seguir intentando otros PIDs por si hay mejor dato
+                    if bestReading == nil {
+                        bestReading = tempC
+                    }
                 }
             } catch {
                 lastError = error
                 // Continuar con el siguiente PID
             }
+        }
+
+        // Retornar la mejor lectura encontrada, aunque esté en rango frío
+        if let reading = bestReading {
+            return reading
         }
 
         throw lastError
