@@ -371,6 +371,7 @@ struct RX8SpecificDiagnosticsCard: View {
     @State private var showIgnitionCheck = false
     @State private var showOMPCheck = false
     @State private var showFuelTrimAnalysis = false
+    @State private var showPIDTester = false
 
     var isConnected: Bool {
         connectionManager.connectionState == .connectedToVehicle
@@ -426,6 +427,15 @@ struct RX8SpecificDiagnosticsCard: View {
                 ) {
                     showOMPCheck = true
                 }
+
+                RX8DiagButton(
+                    title: "Test PIDs Mazda",
+                    icon: "wrench.and.screwdriver.fill",
+                    color: .cyan,
+                    isEnabled: isConnected
+                ) {
+                    showPIDTester = true
+                }
             }
 
             // Información importante
@@ -464,6 +474,290 @@ struct RX8SpecificDiagnosticsCard: View {
         .sheet(isPresented: $showOMPCheck) {
             OMPCheckSheet()
         }
+        .sheet(isPresented: $showPIDTester) {
+            PIDTesterSheet()
+        }
+    }
+}
+
+// MARK: - PID Tester Tool
+
+struct PIDTesterSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @State private var testResults: [PIDTestResult] = []
+    @State private var isRunning = false
+    @State private var customCommand = ""
+    @State private var customResponse = ""
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Sección de tests automáticos
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Test de PIDs Mazda")
+                            .font(.headline)
+                            .foregroundColor(.white)
+
+                        Text("Prueba PIDs específicos de Mazda para verificar compatibilidad")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+
+                        Button(action: { Task { await runAllTests() } }) {
+                            HStack {
+                                if isRunning {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .padding(.trailing, 4)
+                                }
+                                Image(systemName: "play.fill")
+                                Text(isRunning ? "Ejecutando..." : "Ejecutar Tests")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.cyan.opacity(0.3))
+                            .foregroundColor(.cyan)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isRunning)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.3))
+                    .cornerRadius(16)
+
+                    // Resultados
+                    if !testResults.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Resultados")
+                                .font(.headline)
+                                .foregroundColor(.white)
+
+                            ForEach(testResults, id: \.pid) { result in
+                                PIDResultRow(result: result)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6).opacity(0.3))
+                        .cornerRadius(16)
+                    }
+
+                    // Comando personalizado
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Comando Personalizado")
+                            .font(.headline)
+                            .foregroundColor(.white)
+
+                        TextField("Ej: 221200, 0105, AT RV", text: $customCommand)
+                            .textFieldStyle(.roundedBorder)
+                            .autocapitalization(.allCharacters)
+
+                        Button(action: { Task { await sendCustomCommand() } }) {
+                            HStack {
+                                Image(systemName: "paperplane.fill")
+                                Text("Enviar")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange.opacity(0.3))
+                            .foregroundColor(.orange)
+                            .cornerRadius(12)
+                        }
+                        .disabled(customCommand.isEmpty)
+
+                        if !customResponse.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Respuesta:")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Text(customResponse)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.green)
+                                    .padding(8)
+                                    .background(Color.black.opacity(0.5))
+                                    .cornerRadius(8)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemGray6).opacity(0.3))
+                    .cornerRadius(16)
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Test PIDs Mazda")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func runAllTests() async {
+        isRunning = true
+        testResults = []
+
+        // Lista de PIDs a probar
+        let pidsToTest: [(name: String, command: String, formula: String)] = [
+            ("Temp Aceite (1200)", "221200", "(A×256+B)/10-40 °C"),
+            ("Temp Aceite (1310)", "221310", "(A×256+B)/10-40 °C"),
+            ("Temp Aceite (115C)", "22115C", "(A×256+B)/10-40 °C"),
+            ("Temp Aceite OBD (5C)", "015C", "A-40 °C"),
+            ("Presión Aceite (1201)", "221201", "A×10 kPa"),
+            ("SSV Position (2000)", "222000", "A %"),
+            ("OMP Duty (2100)", "222100", "A duty%"),
+            ("Target AFR (1300)", "221300", "(A×256+B)/1000"),
+            ("Knock Retard (1746)", "221746", "(A×256+B)/64 deg"),
+            ("Coolant Temp", "0105", "A-40 °C"),
+            ("RPM", "010C", "(A×256+B)/4 rpm"),
+            ("MAF", "0110", "(A×256+B)/100 g/s"),
+        ]
+
+        // Configurar header para Mode 22
+        _ = try? await connectionManager.sendCommand("AT SH 7E0", timeout: 2.0)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        for (name, command, formula) in pidsToTest {
+            do {
+                let response = try await connectionManager.sendCommand(command, timeout: 3.0)
+
+                let success = !response.contains("NO DATA") &&
+                              !response.contains("ERROR") &&
+                              !response.contains("?")
+
+                // Parsear valor si es exitoso
+                var parsedValue: String? = nil
+                if success {
+                    parsedValue = parseResponse(response, command: command)
+                }
+
+                testResults.append(PIDTestResult(
+                    pid: name,
+                    command: command,
+                    response: response.trimmingCharacters(in: .whitespacesAndNewlines),
+                    success: success,
+                    formula: formula,
+                    parsedValue: parsedValue
+                ))
+            } catch {
+                testResults.append(PIDTestResult(
+                    pid: name,
+                    command: command,
+                    response: "Error: \(error.localizedDescription)",
+                    success: false,
+                    formula: formula,
+                    parsedValue: nil
+                ))
+            }
+
+            // Pequeña pausa entre comandos
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        isRunning = false
+    }
+
+    private func parseResponse(_ response: String, command: String) -> String? {
+        let bytes = connectionManager.parseHexResponse(response)
+        guard !bytes.isEmpty else { return nil }
+
+        // Para temp aceite Mode 22 (2 bytes)
+        if command.starts(with: "22") && bytes.count >= 2 {
+            let raw = Double(bytes[0]) * 256.0 + Double(bytes[1])
+            let temp = raw / 10.0 - 40.0
+            return String(format: "%.1f°C (raw: %d)", temp, Int(raw))
+        }
+
+        // Para temp OBD Mode 01 (1 byte)
+        if command == "015C" && bytes.count >= 1 {
+            let temp = Int(bytes[0]) - 40
+            return "\(temp)°C"
+        }
+
+        // Para coolant temp
+        if command == "0105" && bytes.count >= 1 {
+            let temp = Int(bytes[0]) - 40
+            return "\(temp)°C"
+        }
+
+        // Para RPM
+        if command == "010C" && bytes.count >= 2 {
+            let rpm = (Int(bytes[0]) * 256 + Int(bytes[1])) / 4
+            return "\(rpm) rpm"
+        }
+
+        // Genérico: mostrar bytes
+        return bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+    }
+
+    @MainActor
+    private func sendCustomCommand() async {
+        customResponse = "Enviando..."
+
+        do {
+            let response = try await connectionManager.sendCommand(customCommand, timeout: 5.0)
+            customResponse = response
+        } catch {
+            customResponse = "Error: \(error.localizedDescription)"
+        }
+    }
+}
+
+struct PIDTestResult {
+    let pid: String
+    let command: String
+    let response: String
+    let success: Bool
+    let formula: String
+    let parsedValue: String?
+}
+
+struct PIDResultRow: View {
+    let result: PIDTestResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Circle()
+                    .fill(result.success ? Color.green : Color.red)
+                    .frame(width: 8, height: 8)
+                Text(result.pid)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                Spacer()
+                Text(result.command)
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundColor(.gray)
+            }
+
+            if result.success {
+                if let parsed = result.parsedValue {
+                    Text("Valor: \(parsed)")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+                Text(result.response.prefix(50))
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+            } else {
+                Text(result.response.prefix(40))
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundColor(.orange)
+            }
+
+            Text(result.formula)
+                .font(.caption2)
+                .foregroundColor(.cyan)
+        }
+        .padding(8)
+        .background(result.success ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+        .cornerRadius(8)
     }
 }
 
