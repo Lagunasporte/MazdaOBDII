@@ -710,3 +710,31 @@
 // P0113 - IAT Sensor
 "dtc.p0113.name" = "IAT Signal High";
 "dtc.p0113.description" = "Intake air temperature sensor reporting high signal (open circuit)";
+
+// MARK: - CarPlay
+"carplay.dashboard.title" = "RX-8 Dashboard";
+"carplay.rpm" = "RPM";
+"carplay.speed" = "Speed";
+"carplay.coolant" = "Coolant";
+"carplay.oil_temp" = "Oil Temp";
+"carplay.consumption" = "Consumption";
+"carplay.range" = "Range";
+"carplay.voltage" = "Voltage";
+"carplay.gauges" = "Gauges";
+"carplay.alerts" = "Alerts";
+"carplay.dtc" = "Error Codes";
+"carplay.instruments" = "Instruments";
+"carplay.no_alerts" = "No Active Alerts";
+"carplay.all_systems_ok" = "All systems OK";
+"carplay.no_dtc" = "No Error Codes";
+"carplay.engine_ok" = "Engine OK";
+
+// CarPlay Alerts
+"carplay.alert.coolant_high" = "CRITICAL: Coolant %d°C!";
+"carplay.alert.coolant_warning" = "Warning: Coolant %d°C";
+"carplay.alert.oil_high" = "CRITICAL: Oil %d°C!";
+"carplay.alert.oil_warning" = "Warning: Oil %d°C";
+"carplay.alert.battery_low" = "CRITICAL: Battery %.1fV!";
+"carplay.alert.battery_warning" = "Warning: Battery %.1fV";
+"carplay.alert.rpm_high" = "Warning: High RPM %d!";
+"carplay.alert.oil_pressure_low" = "CRITICAL: Oil Pressure %.1f bar!";

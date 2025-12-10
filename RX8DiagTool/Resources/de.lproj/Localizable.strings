@@ -708,3 +708,31 @@
 // P0113 - IAT-Sensor
 "dtc.p0113.name" = "IAT-Signal hoch";
 "dtc.p0113.description" = "Ansauglufttemperatursensor meldet hohes Signal (offener Stromkreis)";
+
+// MARK: - CarPlay
+"carplay.dashboard.title" = "RX-8 Armaturenbrett";
+"carplay.rpm" = "Drehzahl";
+"carplay.speed" = "Geschw.";
+"carplay.coolant" = "Kühlmittel";
+"carplay.oil_temp" = "Öltemp.";
+"carplay.consumption" = "Verbrauch";
+"carplay.range" = "Reichweite";
+"carplay.voltage" = "Spannung";
+"carplay.gauges" = "Anzeigen";
+"carplay.alerts" = "Warnungen";
+"carplay.dtc" = "Fehlercodes";
+"carplay.instruments" = "Instrumente";
+"carplay.no_alerts" = "Keine aktiven Warnungen";
+"carplay.all_systems_ok" = "Alle Systeme OK";
+"carplay.no_dtc" = "Keine Fehlercodes";
+"carplay.engine_ok" = "Motor OK";
+
+// CarPlay Alerts
+"carplay.alert.coolant_high" = "KRITISCH: Kühlmittel %d°C!";
+"carplay.alert.coolant_warning" = "Warnung: Kühlmittel %d°C";
+"carplay.alert.oil_high" = "KRITISCH: Öl %d°C!";
+"carplay.alert.oil_warning" = "Warnung: Öl %d°C";
+"carplay.alert.battery_low" = "KRITISCH: Batterie %.1fV!";
+"carplay.alert.battery_warning" = "Warnung: Batterie %.1fV";
+"carplay.alert.rpm_high" = "Warnung: Hohe Drehzahl %d!";
+"carplay.alert.oil_pressure_low" = "KRITISCH: Öldruck %.1f bar!";

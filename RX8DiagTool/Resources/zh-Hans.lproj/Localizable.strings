@@ -708,3 +708,31 @@
 // P0113 - IAT传感器
 "dtc.p0113.name" = "IAT信号高";
 "dtc.p0113.description" = "进气温度传感器报告高信号（开路）";
+
+// MARK: - CarPlay
+"carplay.dashboard.title" = "RX-8 仪表盘";
+"carplay.rpm" = "转速";
+"carplay.speed" = "速度";
+"carplay.coolant" = "冷却液";
+"carplay.oil_temp" = "油温";
+"carplay.consumption" = "油耗";
+"carplay.range" = "续航";
+"carplay.voltage" = "电压";
+"carplay.gauges" = "仪表";
+"carplay.alerts" = "警报";
+"carplay.dtc" = "故障码";
+"carplay.instruments" = "仪器";
+"carplay.no_alerts" = "无警报";
+"carplay.all_systems_ok" = "所有系统正常";
+"carplay.no_dtc" = "无故障码";
+"carplay.engine_ok" = "发动机正常";
+
+// CarPlay Alerts
+"carplay.alert.coolant_high" = "危险: 冷却液 %d°C!";
+"carplay.alert.coolant_warning" = "警告: 冷却液 %d°C";
+"carplay.alert.oil_high" = "危险: 油温 %d°C!";
+"carplay.alert.oil_warning" = "警告: 油温 %d°C";
+"carplay.alert.battery_low" = "危险: 电池 %.1fV!";
+"carplay.alert.battery_warning" = "警告: 电池 %.1fV";
+"carplay.alert.rpm_high" = "警告: 转速过高 %d!";
+"carplay.alert.oil_pressure_low" = "危险: 油压 %.1f bar!";

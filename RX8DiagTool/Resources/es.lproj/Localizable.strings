@@ -710,3 +710,31 @@
 // P0113 - Sensor IAT
 "dtc.p0113.name" = "IAT Señal Alta";
 "dtc.p0113.description" = "Sensor de temperatura de admisión reporta señal alta (circuito abierto)";
+
+// MARK: - CarPlay
+"carplay.dashboard.title" = "Tablero RX-8";
+"carplay.rpm" = "RPM";
+"carplay.speed" = "Velocidad";
+"carplay.coolant" = "Refrigerante";
+"carplay.oil_temp" = "Temp Aceite";
+"carplay.consumption" = "Consumo";
+"carplay.range" = "Autonomía";
+"carplay.voltage" = "Voltaje";
+"carplay.gauges" = "Relojes";
+"carplay.alerts" = "Alertas";
+"carplay.dtc" = "Códigos Error";
+"carplay.instruments" = "Instrumentos";
+"carplay.no_alerts" = "Sin Alertas Activas";
+"carplay.all_systems_ok" = "Todos los sistemas OK";
+"carplay.no_dtc" = "Sin Códigos de Error";
+"carplay.engine_ok" = "Motor OK";
+
+// CarPlay Alerts
+"carplay.alert.coolant_high" = "¡CRÍTICO: Refrigerante %d°C!";
+"carplay.alert.coolant_warning" = "Advertencia: Refrigerante %d°C";
+"carplay.alert.oil_high" = "¡CRÍTICO: Aceite %d°C!";
+"carplay.alert.oil_warning" = "Advertencia: Aceite %d°C";
+"carplay.alert.battery_low" = "¡CRÍTICO: Batería %.1fV!";
+"carplay.alert.battery_warning" = "Advertencia: Batería %.1fV";
+"carplay.alert.rpm_high" = "¡Advertencia: RPM Alto %d!";
+"carplay.alert.oil_pressure_low" = "¡CRÍTICO: Presión Aceite %.1f bar!";

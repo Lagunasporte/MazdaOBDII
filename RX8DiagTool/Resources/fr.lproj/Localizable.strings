@@ -708,3 +708,31 @@
 // P0113 - Capteur IAT
 "dtc.p0113.name" = "Signal IAT élevé";
 "dtc.p0113.description" = "Capteur température air admission signale un signal élevé (circuit ouvert)";
+
+// MARK: - CarPlay
+"carplay.dashboard.title" = "Tableau de bord RX-8";
+"carplay.rpm" = "Régime";
+"carplay.speed" = "Vitesse";
+"carplay.coolant" = "Liquide ref.";
+"carplay.oil_temp" = "Temp huile";
+"carplay.consumption" = "Conso.";
+"carplay.range" = "Autonomie";
+"carplay.voltage" = "Tension";
+"carplay.gauges" = "Jauges";
+"carplay.alerts" = "Alertes";
+"carplay.dtc" = "Codes erreur";
+"carplay.instruments" = "Instruments";
+"carplay.no_alerts" = "Aucune alerte active";
+"carplay.all_systems_ok" = "Tous les systèmes OK";
+"carplay.no_dtc" = "Aucun code erreur";
+"carplay.engine_ok" = "Moteur OK";
+
+// CarPlay Alerts
+"carplay.alert.coolant_high" = "CRITIQUE: Liquide ref. %d°C!";
+"carplay.alert.coolant_warning" = "Attention: Liquide ref. %d°C";
+"carplay.alert.oil_high" = "CRITIQUE: Huile %d°C!";
+"carplay.alert.oil_warning" = "Attention: Huile %d°C";
+"carplay.alert.battery_low" = "CRITIQUE: Batterie %.1fV!";
+"carplay.alert.battery_warning" = "Attention: Batterie %.1fV";
+"carplay.alert.rpm_high" = "Attention: Régime élevé %d!";
+"carplay.alert.oil_pressure_low" = "CRITIQUE: Pression huile %.1f bar!";

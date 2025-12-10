@@ -708,3 +708,31 @@
 // P0113 - Sensore IAT
 "dtc.p0113.name" = "Segnale IAT alto";
 "dtc.p0113.description" = "Sensore temperatura aria aspirazione segnala segnale alto (circuito aperto)";
+
+// MARK: - CarPlay
+"carplay.dashboard.title" = "Cruscotto RX-8";
+"carplay.rpm" = "Giri";
+"carplay.speed" = "Velocità";
+"carplay.coolant" = "Liquido raf.";
+"carplay.oil_temp" = "Temp olio";
+"carplay.consumption" = "Consumo";
+"carplay.range" = "Autonomia";
+"carplay.voltage" = "Tensione";
+"carplay.gauges" = "Indicatori";
+"carplay.alerts" = "Avvisi";
+"carplay.dtc" = "Codici errore";
+"carplay.instruments" = "Strumenti";
+"carplay.no_alerts" = "Nessun avviso attivo";
+"carplay.all_systems_ok" = "Tutti i sistemi OK";
+"carplay.no_dtc" = "Nessun codice errore";
+"carplay.engine_ok" = "Motore OK";
+
+// CarPlay Alerts
+"carplay.alert.coolant_high" = "CRITICO: Liquido raf. %d°C!";
+"carplay.alert.coolant_warning" = "Attenzione: Liquido raf. %d°C";
+"carplay.alert.oil_high" = "CRITICO: Olio %d°C!";
+"carplay.alert.oil_warning" = "Attenzione: Olio %d°C";
+"carplay.alert.battery_low" = "CRITICO: Batteria %.1fV!";
+"carplay.alert.battery_warning" = "Attenzione: Batteria %.1fV";
+"carplay.alert.rpm_high" = "Attenzione: Giri alti %d!";
+"carplay.alert.oil_pressure_low" = "CRITICO: Pressione olio %.1f bar!";

@@ -708,3 +708,31 @@
 // P0113 - Sensor IAT
 "dtc.p0113.name" = "Sinal IAT alto";
 "dtc.p0113.description" = "Sensor de temperatura do ar de admissão reportando sinal alto (circuito aberto)";
+
+// MARK: - CarPlay
+"carplay.dashboard.title" = "Painel RX-8";
+"carplay.rpm" = "RPM";
+"carplay.speed" = "Velocidade";
+"carplay.coolant" = "Líq. arref.";
+"carplay.oil_temp" = "Temp óleo";
+"carplay.consumption" = "Consumo";
+"carplay.range" = "Autonomia";
+"carplay.voltage" = "Tensão";
+"carplay.gauges" = "Medidores";
+"carplay.alerts" = "Alertas";
+"carplay.dtc" = "Códigos erro";
+"carplay.instruments" = "Instrumentos";
+"carplay.no_alerts" = "Sem alertas ativos";
+"carplay.all_systems_ok" = "Todos os sistemas OK";
+"carplay.no_dtc" = "Sem códigos de erro";
+"carplay.engine_ok" = "Motor OK";
+
+// CarPlay Alerts
+"carplay.alert.coolant_high" = "CRÍTICO: Líq. arref. %d°C!";
+"carplay.alert.coolant_warning" = "Aviso: Líq. arref. %d°C";
+"carplay.alert.oil_high" = "CRÍTICO: Óleo %d°C!";
+"carplay.alert.oil_warning" = "Aviso: Óleo %d°C";
+"carplay.alert.battery_low" = "CRÍTICO: Bateria %.1fV!";
+"carplay.alert.battery_warning" = "Aviso: Bateria %.1fV";
+"carplay.alert.rpm_high" = "Aviso: RPM alto %d!";
+"carplay.alert.oil_pressure_low" = "CRÍTICO: Pressão óleo %.1f bar!";
