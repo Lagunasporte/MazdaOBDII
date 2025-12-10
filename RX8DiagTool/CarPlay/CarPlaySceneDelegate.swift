@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 
 // MARK: - CarPlay Scene Delegate
-// UI estética orientada a relojes e información de conducción
+// Dashboard for Mazda RX-8 rotary engine monitoring
 
 class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
@@ -16,14 +16,21 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didConnect interfaceController: CPInterfaceController) {
+        print("CarPlay: Connected")
         self.interfaceController = interfaceController
 
         // Subscribe to shared data provider updates
         setupDataSubscription()
 
-        // Create main template
-        let rootTemplate = createDashboardTemplate()
-        interfaceController.setRootTemplate(rootTemplate, animated: true, completion: nil)
+        // Create and set root template
+        let rootTemplate = createRootTemplate()
+        interfaceController.setRootTemplate(rootTemplate, animated: true) { success, error in
+            if let error = error {
+                print("CarPlay: Error setting root template: \(error)")
+            } else {
+                print("CarPlay: Root template set successfully")
+            }
+        }
 
         // Start updates
         startUpdates()
@@ -31,6 +38,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didDisconnectInterfaceController interfaceController: CPInterfaceController) {
+        print("CarPlay: Disconnected")
         self.interfaceController = nil
         stopUpdates()
         cancellables.removeAll()
@@ -39,7 +47,6 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     // MARK: - Data Subscription
 
     private func setupDataSubscription() {
-        // Subscribe to shared CarPlay data provider
         CarPlayDataProvider.shared.$engineState
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
@@ -55,160 +62,101 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
             .store(in: &cancellables)
     }
 
-    // MARK: - Templates
+    // MARK: - Root Template (Tab Bar)
 
-    private func createDashboardTemplate() -> CPTemplate {
-        let template = CPInformationTemplate(
-            title: NSLocalizedString("carplay.dashboard.title", comment: ""),
-            layout: .twoColumn,
-            items: createDashboardItems(),
-            actions: createDashboardActions()
-        )
+    private func createRootTemplate() -> CPTemplate {
+        // Create a tab bar with main sections
+        let dashboardTab = createDashboardTab()
+        let alertsTab = createAlertsTab()
+
+        let tabBar = CPTabBarTemplate(templates: [dashboardTab, alertsTab])
+        return tabBar
+    }
+
+    // MARK: - Dashboard Tab
+
+    private func createDashboardTab() -> CPListTemplate {
+        let items = createDashboardItems()
+        let section = CPListSection(items: items, header: "Engine Data", sectionIndexTitle: nil)
+
+        let template = CPListTemplate(title: "RX-8 Dashboard", sections: [section])
+        template.tabTitle = "Dashboard"
+        template.tabImage = UIImage(systemName: "gauge.with.dots.needle.bottom.50percent")
 
         return template
     }
 
-    private func createDashboardItems() -> [CPInformationItem] {
+    private func createDashboardItems() -> [CPListItem] {
         return [
-            CPInformationItem(title: NSLocalizedString("carplay.rpm", comment: ""), detail: "\(carPlayDashboard.rpm)"),
-            CPInformationItem(title: NSLocalizedString("carplay.speed", comment: ""), detail: String(format: "%.0f km/h", carPlayDashboard.speed)),
-            CPInformationItem(title: NSLocalizedString("carplay.coolant", comment: ""), detail: String(format: "%.0f °C", carPlayDashboard.coolantTemp)),
-            CPInformationItem(title: NSLocalizedString("carplay.oil_temp", comment: ""), detail: String(format: "%.0f °C", carPlayDashboard.oilTemp)),
-            CPInformationItem(title: NSLocalizedString("carplay.consumption", comment: ""), detail: String(format: "%.1f L/100", carPlayDashboard.consumption)),
-            CPInformationItem(title: NSLocalizedString("carplay.range", comment: ""), detail: String(format: "%.0f km", carPlayDashboard.range))
-        ]
-    }
-
-    private func createDashboardActions() -> [CPTextButton] {
-        return [
-            CPTextButton(title: NSLocalizedString("carplay.gauges", comment: ""), textStyle: .normal) { [weak self] _ in
-                self?.showGaugesTemplate()
-            },
-            CPTextButton(title: NSLocalizedString("carplay.alerts", comment: ""), textStyle: .normal) { [weak self] _ in
-                self?.showAlertsTemplate()
-            },
-            CPTextButton(title: NSLocalizedString("carplay.dtc", comment: ""), textStyle: .normal) { [weak self] _ in
-                self?.showDTCTemplate()
-            }
-        ]
-    }
-
-    // MARK: - Gauge Template (Instruments)
-
-    private func showGaugesTemplate() {
-        let gridButtons = [
-            createGaugeButton(
-                title: NSLocalizedString("carplay.rpm", comment: ""),
+            createListItem(
+                title: "RPM",
                 value: "\(carPlayDashboard.rpm)",
                 icon: "gauge.with.dots.needle.bottom.50percent"
             ),
-            createGaugeButton(
-                title: NSLocalizedString("carplay.speed", comment: ""),
-                value: String(format: "%.0f", carPlayDashboard.speed),
+            createListItem(
+                title: "Speed",
+                value: String(format: "%.0f km/h", carPlayDashboard.speed),
                 icon: "speedometer"
             ),
-            createGaugeButton(
-                title: NSLocalizedString("carplay.coolant", comment: ""),
-                value: String(format: "%.0f°C", carPlayDashboard.coolantTemp),
+            createListItem(
+                title: "Coolant",
+                value: String(format: "%.0f °C", carPlayDashboard.coolantTemp),
                 icon: "thermometer"
             ),
-            createGaugeButton(
-                title: NSLocalizedString("carplay.oil_temp", comment: ""),
-                value: String(format: "%.0f°C", carPlayDashboard.oilTemp),
+            createListItem(
+                title: "Oil Temp",
+                value: String(format: "%.0f °C", carPlayDashboard.oilTemp),
                 icon: "drop.fill"
             ),
-            createGaugeButton(
-                title: NSLocalizedString("carplay.consumption", comment: ""),
-                value: String(format: "%.1f", carPlayDashboard.consumption),
+            createListItem(
+                title: "Consumption",
+                value: String(format: "%.1f L/100km", carPlayDashboard.consumption),
                 icon: "fuelpump"
             ),
-            createGaugeButton(
-                title: NSLocalizedString("carplay.voltage", comment: ""),
-                value: String(format: "%.1fV", carPlayDashboard.batteryVoltage),
+            createListItem(
+                title: "Battery",
+                value: String(format: "%.1f V", carPlayDashboard.batteryVoltage),
                 icon: "bolt.fill"
             )
         ]
-
-        let gridTemplate = CPGridTemplate(title: NSLocalizedString("carplay.instruments", comment: ""), gridButtons: gridButtons)
-        interfaceController?.pushTemplate(gridTemplate, animated: true, completion: nil)
     }
 
-    private func createGaugeButton(title: String, value: String, icon: String) -> CPGridButton {
-        let image = UIImage(systemName: icon) ?? UIImage()
-
-        return CPGridButton(titleVariants: ["\(title)\n\(value)"], image: image) { _ in
-            // Action when tapping the button
-        }
+    private func createListItem(title: String, value: String, icon: String) -> CPListItem {
+        let item = CPListItem(text: title, detailText: value)
+        item.setImage(UIImage(systemName: icon))
+        return item
     }
 
-    // MARK: - Alerts Template
+    // MARK: - Alerts Tab
 
-    private func showAlertsTemplate() {
+    private func createAlertsTab() -> CPListTemplate {
         var items: [CPListItem] = []
 
         if carPlayDashboard.alerts.isEmpty {
-            items.append(CPListItem(
-                text: NSLocalizedString("carplay.no_alerts", comment: ""),
-                detailText: NSLocalizedString("carplay.all_systems_ok", comment: "")
-            ))
+            let item = CPListItem(text: "No Active Alerts", detailText: "All systems OK")
+            item.setImage(UIImage(systemName: "checkmark.circle.fill"))
+            items.append(item)
         } else {
             for alert in carPlayDashboard.alerts {
-                let item = CPListItem(
-                    text: alert.message,
-                    detailText: formatAlertTime(alert.timestamp)
-                )
+                let item = CPListItem(text: alert.message, detailText: formatAlertTime(alert.timestamp))
                 item.setImage(UIImage(systemName: alert.type.icon))
                 items.append(item)
             }
         }
 
-        let section = CPListSection(items: items)
-        let listTemplate = CPListTemplate(title: NSLocalizedString("carplay.alerts", comment: ""), sections: [section])
-        interfaceController?.pushTemplate(listTemplate, animated: true, completion: nil)
-    }
+        let section = CPListSection(items: items, header: "Alerts", sectionIndexTitle: nil)
+        let template = CPListTemplate(title: "Alerts", sections: [section])
+        template.tabTitle = "Alerts"
+        template.tabImage = UIImage(systemName: "exclamationmark.triangle")
 
-    // MARK: - DTC Template
-
-    private func showDTCTemplate() {
-        var items: [CPListItem] = []
-
-        let activeDTCs = carPlayDashboard.activeDTCs
-        if activeDTCs.isEmpty {
-            items.append(CPListItem(
-                text: NSLocalizedString("carplay.no_dtc", comment: ""),
-                detailText: NSLocalizedString("carplay.engine_ok", comment: "")
-            ))
-        } else {
-            for dtc in activeDTCs {
-                let item = CPListItem(
-                    text: dtc.code,
-                    detailText: dtc.localizedName
-                )
-                // Set severity color indicator
-                switch dtc.severity {
-                case .critical:
-                    item.setImage(UIImage(systemName: "exclamationmark.octagon.fill"))
-                case .high:
-                    item.setImage(UIImage(systemName: "exclamationmark.triangle.fill"))
-                case .medium:
-                    item.setImage(UIImage(systemName: "exclamationmark.circle.fill"))
-                case .low:
-                    item.setImage(UIImage(systemName: "info.circle.fill"))
-                }
-                items.append(item)
-            }
-        }
-
-        let section = CPListSection(items: items)
-        let listTemplate = CPListTemplate(title: NSLocalizedString("carplay.dtc", comment: ""), sections: [section])
-        interfaceController?.pushTemplate(listTemplate, animated: true, completion: nil)
+        return template
     }
 
     // MARK: - Updates
 
     private func startUpdates() {
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            self?.updateDashboard()
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.refreshDashboard()
         }
     }
 
@@ -217,20 +165,15 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         updateTimer = nil
     }
 
-    private func updateDashboard() {
-        // Update the root template with fresh data
-        guard let interfaceController = interfaceController else { return }
+    private func refreshDashboard() {
+        guard let interfaceController = interfaceController,
+              let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate else { return }
 
-        // Create updated template
-        let updatedTemplate = CPInformationTemplate(
-            title: NSLocalizedString("carplay.dashboard.title", comment: ""),
-            layout: .twoColumn,
-            items: createDashboardItems(),
-            actions: createDashboardActions()
-        )
+        // Update dashboard tab
+        let newDashboardTab = createDashboardTab()
+        let newAlertsTab = createAlertsTab()
 
-        // Update root template
-        interfaceController.setRootTemplate(updatedTemplate, animated: false, completion: nil)
+        tabBar.updateTemplates([newDashboardTab, newAlertsTab])
     }
 
     // MARK: - Helpers
@@ -243,7 +186,6 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 }
 
 // MARK: - CarPlay Data Provider (Singleton)
-// This class bridges the main app data to CarPlay
 
 public class CarPlayDataProvider: ObservableObject {
     public static let shared = CarPlayDataProvider()
@@ -358,13 +300,13 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.coolantTemperature > 105 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: NSLocalizedString("carplay.alert.coolant_high", comment: ""), Int(state.coolantTemperature)),
+                message: "CRITICAL: Coolant \(Int(state.coolantTemperature))°C!",
                 timestamp: Date()
             ))
         } else if state.coolantTemperature > 100 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: NSLocalizedString("carplay.alert.coolant_warning", comment: ""), Int(state.coolantTemperature)),
+                message: "Warning: Coolant \(Int(state.coolantTemperature))°C",
                 timestamp: Date()
             ))
         }
@@ -373,13 +315,13 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.oilTemperature > 130 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: NSLocalizedString("carplay.alert.oil_high", comment: ""), Int(state.oilTemperature)),
+                message: "CRITICAL: Oil \(Int(state.oilTemperature))°C!",
                 timestamp: Date()
             ))
         } else if state.oilTemperature > 120 {
             newAlerts.append(CarPlayAlert(
                 type: .temperature,
-                message: String(format: NSLocalizedString("carplay.alert.oil_warning", comment: ""), Int(state.oilTemperature)),
+                message: "Warning: Oil \(Int(state.oilTemperature))°C",
                 timestamp: Date()
             ))
         }
@@ -388,13 +330,13 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.batteryVoltage < 11.5 && state.batteryVoltage > 0 {
             newAlerts.append(CarPlayAlert(
                 type: .system,
-                message: String(format: NSLocalizedString("carplay.alert.battery_low", comment: ""), state.batteryVoltage),
+                message: "CRITICAL: Battery \(String(format: "%.1f", state.batteryVoltage))V!",
                 timestamp: Date()
             ))
         } else if state.batteryVoltage < 12.0 && state.batteryVoltage > 0 {
             newAlerts.append(CarPlayAlert(
                 type: .system,
-                message: String(format: NSLocalizedString("carplay.alert.battery_warning", comment: ""), state.batteryVoltage),
+                message: "Warning: Battery \(String(format: "%.1f", state.batteryVoltage))V",
                 timestamp: Date()
             ))
         }
@@ -403,7 +345,7 @@ class RX8CarPlayDashboard: ObservableObject {
         if state.rpm > 8500 {
             newAlerts.append(CarPlayAlert(
                 type: .system,
-                message: String(format: NSLocalizedString("carplay.alert.rpm_high", comment: ""), state.rpm),
+                message: "Warning: High RPM \(state.rpm)!",
                 timestamp: Date()
             ))
         }
