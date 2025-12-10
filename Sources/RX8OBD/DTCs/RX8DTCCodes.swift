@@ -1734,6 +1734,1758 @@ public struct RX8DTCDatabase {
         affectsApexSeals: false
     )
 
+    // MARK: - Códigos de Sensores O2 Adicionales y Calentadores
+
+    public static let p0030 = DTCCode(
+        code: "P0030",
+        name: "Calentador Sonda O2 B1S1 Circuito",
+        description: "Problema en el circuito del calentador de la sonda de oxígeno primaria (antes del catalizador)",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Fusible del calentador quemado",
+            "Elemento calentador quemado en la sonda",
+            "Cableado dañado o cortocircuito",
+            "Mala conexión en el conector de la sonda",
+            "Problema en el relé de control"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Mayor consumo de combustible al arrancar",
+            "Emisiones elevadas durante calentamiento",
+            "Sonda tarda más en alcanzar temperatura operativa"
+        ],
+        solutions: [
+            "Verificar fusibles del sistema de calentadores O2",
+            "Medir resistencia del calentador (típico 10-20 ohms)",
+            "Inspeccionar cableado y conectores",
+            "Reemplazar sonda O2 B1S1 si el calentador está dañado"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0031 = DTCCode(
+        code: "P0031",
+        name: "Calentador Sonda O2 B1S1 Circuito Bajo",
+        description: "Voltaje bajo en el circuito del calentador de la sonda O2 primaria",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Cortocircuito a tierra en el cableado",
+            "Elemento calentador en cortocircuito",
+            "Problema en PCM",
+            "Conector corroído"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Mayor tiempo de calentamiento del motor"
+        ],
+        solutions: [
+            "Verificar cableado por cortocircuito a tierra",
+            "Medir resistencia del calentador",
+            "Reemplazar sonda O2 si defectuosa"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0032 = DTCCode(
+        code: "P0032",
+        name: "Calentador Sonda O2 B1S1 Circuito Alto",
+        description: "Voltaje alto en el circuito del calentador de la sonda O2 primaria",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Circuito abierto en tierra del calentador",
+            "Cortocircuito a voltaje positivo",
+            "Relé de calentador pegado"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Sonda puede sobrecalentarse"
+        ],
+        solutions: [
+            "Verificar conexión a tierra del calentador",
+            "Inspeccionar cableado por cortocircuito",
+            "Verificar relé de control"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0036 = DTCCode(
+        code: "P0036",
+        name: "Calentador Sonda O2 B1S2 Circuito",
+        description: "Problema en el circuito del calentador de la sonda O2 posterior (después del catalizador)",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Fusible quemado",
+            "Calentador de sonda defectuoso",
+            "Cableado dañado"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Emisiones elevadas al arrancar"
+        ],
+        solutions: [
+            "Verificar fusibles",
+            "Medir resistencia del calentador",
+            "Reemplazar sonda O2 B1S2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0037 = DTCCode(
+        code: "P0037",
+        name: "Calentador Sonda O2 B1S2 Circuito Bajo",
+        description: "Voltaje bajo en el circuito del calentador de la sonda O2 posterior",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Cortocircuito a tierra",
+            "Calentador dañado",
+            "Conector corroído"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Monitor de eficiencia del catalizador puede fallar"
+        ],
+        solutions: [
+            "Verificar cableado",
+            "Reemplazar sonda O2 B1S2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0038 = DTCCode(
+        code: "P0038",
+        name: "Calentador Sonda O2 B1S2 Circuito Alto",
+        description: "Voltaje alto en el circuito del calentador de la sonda O2 posterior",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Circuito abierto en tierra",
+            "Cortocircuito a positivo",
+            "Problema de conexión"
+        ],
+        symptoms: [
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar conexión a tierra",
+            "Inspeccionar cableado",
+            "Reemplazar sonda si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0131 = DTCCode(
+        code: "P0131",
+        name: "Sonda O2 B1S1 Voltaje Bajo",
+        description: "La sonda O2 primaria reporta voltaje constantemente bajo (mezcla pobre)",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Fuga de vacío",
+            "Sonda O2 contaminada o defectuosa",
+            "Fuga en el escape antes de la sonda",
+            "Sistema de combustible con mezcla pobre"
+        ],
+        symptoms: [
+            "Mayor consumo de combustible",
+            "Motor puede correr caliente",
+            "Pérdida de rendimiento"
+        ],
+        solutions: [
+            "Buscar fugas de vacío",
+            "Verificar sistema de combustible",
+            "Reemplazar sonda O2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: true
+    )
+
+    public static let p0132 = DTCCode(
+        code: "P0132",
+        name: "Sonda O2 B1S1 Voltaje Alto",
+        description: "La sonda O2 primaria reporta voltaje constantemente alto (mezcla rica)",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Inyectores con fugas",
+            "Regulador de presión defectuoso",
+            "Sonda O2 contaminada con silicona o combustible",
+            "Problema de MAF"
+        ],
+        symptoms: [
+            "Humo negro del escape",
+            "Olor a combustible",
+            "Mayor consumo"
+        ],
+        solutions: [
+            "Verificar inyectores",
+            "Verificar presión de combustible",
+            "Reemplazar sonda O2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0135 = DTCCode(
+        code: "P0135",
+        name: "Calentador Sonda O2 B1S1 Mal Funcionamiento",
+        description: "El calentador de la sonda O2 primaria no funciona correctamente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Elemento calentador quemado",
+            "Fusible quemado",
+            "Cableado dañado",
+            "Mala conexión"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Emisiones altas al arrancar",
+            "Consumo elevado hasta que el motor calienta"
+        ],
+        solutions: [
+            "Verificar fusibles",
+            "Medir resistencia del calentador (10-20 ohms típico)",
+            "Reemplazar sonda O2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0136 = DTCCode(
+        code: "P0136",
+        name: "Sonda O2 B1S2 Mal Funcionamiento",
+        description: "La sonda O2 posterior al catalizador no responde correctamente",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Sonda O2 defectuosa",
+            "Cableado dañado",
+            "Conector corroído",
+            "Catalizador dañado afectando lectura"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Código P0420 puede aparecer también"
+        ],
+        solutions: [
+            "Reemplazar sonda O2 B1S2",
+            "Verificar estado del catalizador"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0137 = DTCCode(
+        code: "P0137",
+        name: "Sonda O2 B1S2 Voltaje Bajo",
+        description: "La sonda O2 posterior reporta voltaje constantemente bajo",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Sonda O2 defectuosa",
+            "Fuga de escape después del catalizador",
+            "Catalizador muy eficiente (no es problema)"
+        ],
+        symptoms: [
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar no hay fugas de escape",
+            "Reemplazar sonda O2 B1S2 si defectuosa"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0138 = DTCCode(
+        code: "P0138",
+        name: "Sonda O2 B1S2 Voltaje Alto",
+        description: "La sonda O2 posterior reporta voltaje constantemente alto",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sonda O2 defectuosa",
+            "Catalizador dañado",
+            "Fuga de escape permitiendo aire"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Posible P0420 también presente"
+        ],
+        solutions: [
+            "Reemplazar sonda O2 B1S2",
+            "Verificar estado del catalizador"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0139 = DTCCode(
+        code: "P0139",
+        name: "Sonda O2 B1S2 Respuesta Lenta",
+        description: "La sonda O2 posterior tarda demasiado en responder a cambios",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Sonda O2 envejecida",
+            "Contaminación de la sonda",
+            "Calentador no funcionando bien"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Posible fallo en test de emisiones"
+        ],
+        solutions: [
+            "Reemplazar sonda O2 B1S2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos MAF Adicionales
+
+    public static let p0100 = DTCCode(
+        code: "P0100",
+        name: "MAF Circuito",
+        description: "Problema general en el circuito del sensor de flujo de aire masivo",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor MAF defectuoso",
+            "Cableado dañado",
+            "Conector desconectado o corroído",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Motor no arranca o arranca difícil",
+            "Ralentí irregular",
+            "Pérdida de potencia"
+        ],
+        solutions: [
+            "Verificar conexión del sensor MAF",
+            "Inspeccionar cableado",
+            "Limpiar o reemplazar MAF"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0102 = DTCCode(
+        code: "P0102",
+        name: "MAF Señal Baja",
+        description: "El sensor MAF reporta flujo de aire más bajo del esperado",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor MAF sucio o defectuoso",
+            "Fuga de aire después del MAF",
+            "Filtro de aire muy obstruido",
+            "Cableado con resistencia alta"
+        ],
+        symptoms: [
+            "Motor se ahoga",
+            "Pérdida de potencia",
+            "Consumo elevado"
+        ],
+        solutions: [
+            "Limpiar sensor MAF con spray específico",
+            "Verificar filtro de aire",
+            "Buscar fugas de aire en ductos de admisión"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0103 = DTCCode(
+        code: "P0103",
+        name: "MAF Señal Alta",
+        description: "El sensor MAF reporta flujo de aire más alto del esperado",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor MAF defectuoso",
+            "Cortocircuito en cableado",
+            "Interferencia eléctrica",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Mezcla rica",
+            "Humo negro",
+            "Consumo excesivo"
+        ],
+        solutions: [
+            "Verificar cableado del MAF",
+            "Reemplazar sensor MAF"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0104 = DTCCode(
+        code: "P0104",
+        name: "MAF Señal Intermitente",
+        description: "La señal del sensor MAF es intermitente o errática",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Conexión suelta o intermitente",
+            "Cableado dañado",
+            "Sensor MAF fallando",
+            "Vibración causando mala conexión"
+        ],
+        symptoms: [
+            "Motor titubea al acelerar",
+            "Tirones aleatorios",
+            "CEL intermitente"
+        ],
+        solutions: [
+            "Inspeccionar conectores del MAF",
+            "Verificar cableado por daños",
+            "Asegurar sensor correctamente montado"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Temperatura Adicionales
+
+    public static let p0115 = DTCCode(
+        code: "P0115",
+        name: "ECT Circuito",
+        description: "Problema general en el circuito del sensor de temperatura del refrigerante",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor ECT defectuoso",
+            "Cableado dañado",
+            "Conector corroído"
+        ],
+        symptoms: [
+            "Indicador de temperatura no funciona",
+            "Ventilador puede no activarse",
+            "Consumo elevado"
+        ],
+        solutions: [
+            "Verificar conexión del sensor ECT",
+            "Medir resistencia del sensor",
+            "Reemplazar sensor ECT"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0116 = DTCCode(
+        code: "P0116",
+        name: "ECT Rango/Rendimiento",
+        description: "El sensor ECT reporta valores fuera del rango esperado para las condiciones",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Termostato atascado",
+            "Sensor ECT defectuoso",
+            "Bajo nivel de refrigerante",
+            "Problema de circulación de refrigerante"
+        ],
+        symptoms: [
+            "Motor no alcanza temperatura o se sobrecalienta",
+            "Consumo irregular"
+        ],
+        solutions: [
+            "Verificar termostato",
+            "Verificar nivel de refrigerante",
+            "Reemplazar sensor ECT si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0118 = DTCCode(
+        code: "P0118",
+        name: "ECT Señal Alta",
+        description: "El sensor ECT reporta señal alta (circuito abierto o valor extremadamente frío)",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor ECT desconectado",
+            "Circuito abierto en cableado",
+            "Sensor ECT defectuoso"
+        ],
+        symptoms: [
+            "Ventilador siempre encendido",
+            "Motor corre rico",
+            "Difícil arranque en frío"
+        ],
+        solutions: [
+            "Verificar conexión del sensor",
+            "Inspeccionar cableado",
+            "Reemplazar sensor ECT"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0119 = DTCCode(
+        code: "P0119",
+        name: "ECT Señal Intermitente",
+        description: "La señal del sensor ECT es intermitente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Conexión suelta",
+            "Cableado dañado",
+            "Sensor ECT fallando"
+        ],
+        symptoms: [
+            "Indicador de temperatura fluctúa",
+            "Ventilador se activa y desactiva erráticamente"
+        ],
+        solutions: [
+            "Verificar conectores",
+            "Inspeccionar cableado",
+            "Reemplazar sensor ECT"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0111 = DTCCode(
+        code: "P0111",
+        name: "IAT Rango/Rendimiento",
+        description: "El sensor de temperatura de admisión reporta valores fuera de rango",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Sensor IAT defectuoso",
+            "Sensor en ubicación incorrecta",
+            "Problema de flujo de aire"
+        ],
+        symptoms: [
+            "Mezcla incorrecta",
+            "Consumo irregular"
+        ],
+        solutions: [
+            "Verificar ubicación del sensor",
+            "Reemplazar sensor IAT"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0112 = DTCCode(
+        code: "P0112",
+        name: "IAT Señal Baja",
+        description: "El sensor IAT reporta señal baja (cortocircuito o valor extremadamente caliente)",
+        category: .powertrain,
+        severity: .low,
+        causes: [
+            "Cortocircuito a tierra",
+            "Sensor IAT defectuoso",
+            "Cableado dañado"
+        ],
+        symptoms: [
+            "ECU asume aire muy caliente",
+            "Mezcla incorrecta"
+        ],
+        solutions: [
+            "Verificar cableado por cortocircuito",
+            "Reemplazar sensor IAT"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Inyectores
+
+    public static let p0200 = DTCCode(
+        code: "P0200",
+        name: "Circuito Inyector",
+        description: "Problema general en el circuito de los inyectores de combustible",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Inyector defectuoso",
+            "Cableado dañado",
+            "Fusible quemado",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Motor no arranca",
+            "Funcionamiento irregular",
+            "Pérdida de potencia"
+        ],
+        solutions: [
+            "Verificar fusibles de inyectores",
+            "Medir resistencia de inyectores",
+            "Inspeccionar cableado"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0201 = DTCCode(
+        code: "P0201",
+        name: "Inyector 1 Circuito",
+        description: "Problema en el circuito del inyector primario (rotor delantero en RX-8)",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Inyector primario defectuoso",
+            "Cableado del inyector dañado",
+            "Conector corroído",
+            "Problema en driver del PCM"
+        ],
+        symptoms: [
+            "Misfire en rotor delantero",
+            "Pérdida de potencia",
+            "Ralentí irregular"
+        ],
+        solutions: [
+            "Medir resistencia del inyector (típico 10-15 ohms)",
+            "Verificar señal de pulso con osciloscopio",
+            "Reemplazar inyector si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    public static let p0202 = DTCCode(
+        code: "P0202",
+        name: "Inyector 2 Circuito",
+        description: "Problema en el circuito del inyector secundario (rotor trasero en RX-8)",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Inyector secundario defectuoso",
+            "Cableado del inyector dañado",
+            "Conector corroído"
+        ],
+        symptoms: [
+            "Misfire en rotor trasero",
+            "Pérdida de potencia",
+            "Humo del escape"
+        ],
+        solutions: [
+            "Medir resistencia del inyector",
+            "Verificar cableado y conector",
+            "Reemplazar inyector si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    public static let p0203 = DTCCode(
+        code: "P0203",
+        name: "Inyector 3 Circuito",
+        description: "Problema en el circuito del inyector auxiliar delantero",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Inyector auxiliar defectuoso",
+            "Cableado dañado",
+            "Problema de conexión"
+        ],
+        symptoms: [
+            "Pérdida de potencia a altas RPM",
+            "Mezcla pobre a alta carga"
+        ],
+        solutions: [
+            "Verificar inyector auxiliar delantero",
+            "Inspeccionar cableado"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p0204 = DTCCode(
+        code: "P0204",
+        name: "Inyector 4 Circuito",
+        description: "Problema en el circuito del inyector auxiliar trasero",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Inyector auxiliar trasero defectuoso",
+            "Cableado dañado",
+            "Conector con problemas"
+        ],
+        symptoms: [
+            "Pérdida de potencia a altas RPM",
+            "Mezcla pobre a alta carga"
+        ],
+        solutions: [
+            "Verificar inyector auxiliar trasero",
+            "Inspeccionar cableado y conector"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Sistema de Combustible Adicionales
+
+    public static let p0170 = DTCCode(
+        code: "P0170",
+        name: "Fuel Trim Mal Funcionamiento",
+        description: "El sistema de ajuste de combustible no funciona correctamente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor MAF defectuoso",
+            "Sonda O2 defectuosa",
+            "Fuga de vacío",
+            "Problema de presión de combustible"
+        ],
+        symptoms: [
+            "Consumo irregular",
+            "Rendimiento inconsistente"
+        ],
+        solutions: [
+            "Verificar sensores MAF y O2",
+            "Buscar fugas de vacío",
+            "Verificar sistema de combustible"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0173 = DTCCode(
+        code: "P0173",
+        name: "Fuel Trim Bank 2 Mal Funcionamiento",
+        description: "El ajuste de combustible del banco 2 (rotor trasero) está fuera de límites",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Inyector trasero con fugas o obstruido",
+            "Fuga de vacío en admisión trasera",
+            "Problema con sensor O2 del banco 2"
+        ],
+        symptoms: [
+            "Ralentí irregular",
+            "Pérdida de potencia",
+            "Consumo elevado"
+        ],
+        solutions: [
+            "Verificar inyectores del rotor trasero",
+            "Buscar fugas de vacío",
+            "Verificar sensor O2 del banco 2"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p0174 = DTCCode(
+        code: "P0174",
+        name: "Sistema Demasiado Pobre Bank 2",
+        description: "La mezcla en el banco 2 (rotor trasero) es demasiado pobre",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Fuga de vacío en el lado del rotor trasero",
+            "Inyector trasero obstruido",
+            "Sensor MAF sucio",
+            "Problema de presión de combustible"
+        ],
+        symptoms: [
+            "Detonación",
+            "Pérdida de potencia",
+            "Motor caliente"
+        ],
+        solutions: [
+            "Buscar fugas de vacío exhaustivamente",
+            "Limpiar inyectores",
+            "Verificar presión de combustible"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    public static let p0175 = DTCCode(
+        code: "P0175",
+        name: "Sistema Demasiado Rico Bank 2",
+        description: "La mezcla en el banco 2 (rotor trasero) es demasiado rica",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Inyector trasero con fugas",
+            "Regulador de presión defectuoso",
+            "Sensor O2 banco 2 defectuoso"
+        ],
+        symptoms: [
+            "Humo negro del escape",
+            "Consumo excesivo",
+            "Olor a combustible"
+        ],
+        solutions: [
+            "Verificar inyectores",
+            "Verificar presión de combustible",
+            "Reemplazar sensor O2 si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p0190 = DTCCode(
+        code: "P0190",
+        name: "Sensor Presión Riel Combustible Circuito",
+        description: "Problema en el circuito del sensor de presión del riel de combustible",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sensor de presión defectuoso",
+            "Cableado dañado",
+            "Conector corroído"
+        ],
+        symptoms: [
+            "Motor no arranca o arranca difícil",
+            "Pérdida de potencia",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar conexión del sensor",
+            "Medir señal del sensor",
+            "Reemplazar sensor de presión"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0191 = DTCCode(
+        code: "P0191",
+        name: "Sensor Presión Riel Rango/Rendimiento",
+        description: "El sensor de presión del riel reporta valores fuera de rango",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Bomba de combustible débil",
+            "Filtro de combustible obstruido",
+            "Regulador de presión defectuoso",
+            "Sensor defectuoso"
+        ],
+        symptoms: [
+            "Pérdida de potencia bajo carga",
+            "Tirones al acelerar",
+            "Motor se apaga"
+        ],
+        solutions: [
+            "Medir presión de combustible",
+            "Reemplazar filtro de combustible",
+            "Verificar bomba de combustible"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos VDI/SSV Adicionales
+
+    public static let p0076 = DTCCode(
+        code: "P0076",
+        name: "VDI Solenoide Circuito Bajo",
+        description: "Voltaje bajo en el circuito del solenoide de admisión variable (VDI)",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Cortocircuito a tierra en cableado",
+            "Solenoide VDI defectuoso",
+            "Problema en PCM"
+        ],
+        symptoms: [
+            "Pérdida de potencia en rango medio RPM",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar cableado del solenoide VDI",
+            "Medir resistencia del solenoide",
+            "Reemplazar solenoide si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    public static let p0077 = DTCCode(
+        code: "P0077",
+        name: "VDI Solenoide Circuito Alto",
+        description: "Voltaje alto en el circuito del solenoide de admisión variable (VDI)",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Circuito abierto en solenoide",
+            "Cableado dañado",
+            "Conector desconectado"
+        ],
+        symptoms: [
+            "VDI no opera",
+            "Pérdida de potencia en rango medio",
+            "CEL encendido"
+        ],
+        solutions: [
+            "Verificar conexiones del solenoide",
+            "Inspeccionar cableado",
+            "Reemplazar solenoide VDI"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Mezcla Aire/Combustible Adicionales
+
+    public static let p2096 = DTCCode(
+        code: "P2096",
+        name: "Catalizador Posterior - Sistema Muy Pobre",
+        description: "El sistema de retroalimentación de aire/combustible detecta mezcla muy pobre después del catalizador",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Fuga de escape después del catalizador",
+            "Sonda O2 posterior defectuosa",
+            "Sistema de combustible pobre",
+            "Fuga de vacío"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Posible pérdida de rendimiento",
+            "Mayor consumo"
+        ],
+        solutions: [
+            "Buscar fugas en el sistema de escape",
+            "Verificar sonda O2 posterior",
+            "Verificar sistema de combustible"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p2097 = DTCCode(
+        code: "P2097",
+        name: "Catalizador Posterior - Sistema Muy Rico",
+        description: "El sistema detecta mezcla muy rica después del catalizador",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Catalizador dañado",
+            "Sistema de combustible rico",
+            "Sonda O2 posterior defectuosa",
+            "Misfires causando combustible sin quemar"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Olor a combustible",
+            "Humo del escape"
+        ],
+        solutions: [
+            "Verificar funcionamiento del catalizador",
+            "Verificar sonda O2",
+            "Corregir cualquier misfire primero"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos Mazda Específicos Adicionales (P1xxx)
+
+    public static let p1100 = DTCCode(
+        code: "P1100",
+        name: "MAF Señal Intermitente",
+        description: "Código específico Mazda: señal intermitente del sensor MAF",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Conexión suelta del MAF",
+            "Cableado dañado",
+            "Sensor MAF fallando"
+        ],
+        symptoms: [
+            "Motor titubea",
+            "Potencia irregular"
+        ],
+        solutions: [
+            "Verificar conectores del MAF",
+            "Inspeccionar cableado",
+            "Reemplazar MAF si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p1101 = DTCCode(
+        code: "P1101",
+        name: "MAF Fuera de Rango Self-Test",
+        description: "Código Mazda: MAF fuera de rango durante autodiagnóstico",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "MAF sucio o defectuoso",
+            "Fuga de aire en admisión",
+            "Filtro de aire obstruido"
+        ],
+        symptoms: [
+            "Rendimiento reducido",
+            "Consumo elevado"
+        ],
+        solutions: [
+            "Limpiar MAF",
+            "Verificar admisión por fugas",
+            "Reemplazar filtro de aire"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p1260 = DTCCode(
+        code: "P1260",
+        name: "Sistema Antirrobo - Motor Deshabilitado",
+        description: "El sistema antirrobo PATS ha deshabilitado el arranque del motor",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Llave no reconocida por el sistema",
+            "Transpondedor de llave defectuoso",
+            "Problema en módulo PATS",
+            "Problema de comunicación entre módulos"
+        ],
+        symptoms: [
+            "Motor no arranca",
+            "Luz de seguridad parpadea",
+            "Motor arranca y se apaga inmediatamente"
+        ],
+        solutions: [
+            "Usar llave original programada",
+            "Reprogramar llave con escáner Mazda",
+            "Verificar módulo PATS",
+            "Verificar comunicación CAN"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p1132 = DTCCode(
+        code: "P1132",
+        name: "O2 B1S1 Señal Alta (Mezcla Rica)",
+        description: "Código Mazda: la sonda O2 primaria indica mezcla rica constante",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Inyectores con fugas",
+            "Regulador de presión defectuoso",
+            "Sensor O2 contaminado"
+        ],
+        symptoms: [
+            "Consumo excesivo",
+            "Humo negro"
+        ],
+        solutions: [
+            "Verificar inyectores",
+            "Verificar presión de combustible",
+            "Reemplazar sonda O2"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p1501 = DTCCode(
+        code: "P1501",
+        name: "VSS Señal Intermitente",
+        description: "Señal intermitente del sensor de velocidad del vehículo",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor VSS defectuoso",
+            "Cableado dañado",
+            "Conexión suelta"
+        ],
+        symptoms: [
+            "Velocímetro errático",
+            "Transmisión puede cambiar incorrectamente",
+            "Control de crucero no funciona"
+        ],
+        solutions: [
+            "Verificar sensor VSS",
+            "Inspeccionar cableado",
+            "Reemplazar sensor si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p1506 = DTCCode(
+        code: "P1506",
+        name: "IAC Sobre-Velocidad",
+        description: "El sistema de control de ralentí detecta RPM más altas de lo comandado",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Fuga de vacío",
+            "IAC atascado abierto",
+            "Cuerpo de aceleración sucio"
+        ],
+        symptoms: [
+            "Ralentí alto",
+            "Motor revoluciona solo"
+        ],
+        solutions: [
+            "Buscar fugas de vacío",
+            "Limpiar cuerpo de aceleración e IAC",
+            "Reemplazar IAC si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p1507 = DTCCode(
+        code: "P1507",
+        name: "IAC Sub-Velocidad",
+        description: "El sistema de control de ralentí detecta RPM más bajas de lo comandado",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "IAC obstruido",
+            "Cuerpo de aceleración muy sucio",
+            "Problema de combustible"
+        ],
+        symptoms: [
+            "Ralentí bajo",
+            "Motor se apaga"
+        ],
+        solutions: [
+            "Limpiar cuerpo de aceleración",
+            "Limpiar o reemplazar IAC"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p1521 = DTCCode(
+        code: "P1521",
+        name: "OMP Señal Fuera de Rango",
+        description: "La señal del sensor de posición OMP está fuera del rango esperado",
+        category: .powertrain,
+        severity: .critical,
+        causes: [
+            "Sensor OMP desajustado",
+            "Sensor OMP defectuoso",
+            "Bomba OMP con problemas"
+        ],
+        symptoms: [
+            "Limitación de RPM",
+            "Motor en modo emergencia",
+            "Posible lubricación insuficiente"
+        ],
+        solutions: [
+            "Recalibrar posición del sensor OMP",
+            "Verificar funcionamiento de la bomba",
+            "Reemplazar sensor si defectuoso"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    public static let p1522 = DTCCode(
+        code: "P1522",
+        name: "OMP Circuito Bajo",
+        description: "Voltaje bajo en el circuito del sistema OMP",
+        category: .powertrain,
+        severity: .critical,
+        causes: [
+            "Cortocircuito en cableado",
+            "Sensor OMP en cortocircuito",
+            "Problema de conexión"
+        ],
+        symptoms: [
+            "Modo emergencia activado",
+            "Lubricación puede verse afectada"
+        ],
+        solutions: [
+            "Verificar cableado del sistema OMP",
+            "Reemplazar componentes defectuosos urgentemente"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    public static let p1523 = DTCCode(
+        code: "P1523",
+        name: "OMP Circuito Alto",
+        description: "Voltaje alto en el circuito del sistema OMP",
+        category: .powertrain,
+        severity: .critical,
+        causes: [
+            "Circuito abierto",
+            "Conexión desconectada",
+            "Sensor defectuoso"
+        ],
+        symptoms: [
+            "Modo emergencia",
+            "Limitación de rendimiento"
+        ],
+        solutions: [
+            "Verificar conexiones",
+            "Inspeccionar cableado",
+            "Reemplazar sensor OMP"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: true
+    )
+
+    // MARK: - Códigos de Catalizador Adicionales
+
+    public static let p0421 = DTCCode(
+        code: "P0421",
+        name: "Calentamiento Catalizador Eficiencia Baja",
+        description: "El catalizador no alcanza temperatura operativa eficientemente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Catalizador envejecido",
+            "Misfires dañando el catalizador",
+            "Sonda O2 posterior defectuosa"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Emisiones elevadas"
+        ],
+        solutions: [
+            "Verificar y corregir misfires primero",
+            "Reemplazar catalizador si necesario",
+            "Verificar sonda O2 posterior"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0430 = DTCCode(
+        code: "P0430",
+        name: "Eficiencia Catalizador Baja Bank 2",
+        description: "El catalizador del banco 2 no está funcionando eficientemente",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Catalizador dañado por misfires",
+            "Catalizador envejecido",
+            "Sonda O2 B2S2 defectuosa"
+        ],
+        symptoms: [
+            "CEL encendido",
+            "Olor a huevos podridos",
+            "Posible pérdida de potencia"
+        ],
+        solutions: [
+            "Corregir cualquier misfire primero",
+            "Verificar sonda O2 B2S2",
+            "Reemplazar catalizador si dañado"
+        ],
+        rotarySpecific: true,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Comunicación Adicionales
+
+    public static let u0001 = DTCCode(
+        code: "U0001",
+        name: "Bus CAN High Circuito Abierto",
+        description: "Línea CAN-H del bus de comunicaciones está abierta",
+        category: .network,
+        severity: .high,
+        causes: [
+            "Cable CAN-H cortado",
+            "Conector dañado",
+            "Módulo con puerto CAN dañado"
+        ],
+        symptoms: [
+            "Múltiples módulos sin comunicación",
+            "Varias luces de advertencia",
+            "Funciones del vehículo fallan"
+        ],
+        solutions: [
+            "Inspeccionar cableado CAN-H",
+            "Verificar conectores",
+            "Medir resistencia del bus (debe ser ~60 ohms)"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let u0002 = DTCCode(
+        code: "U0002",
+        name: "Bus CAN High Rendimiento",
+        description: "Problemas de rendimiento en la línea CAN-H",
+        category: .network,
+        severity: .high,
+        causes: [
+            "Interferencia en el bus CAN",
+            "Resistencia de terminación incorrecta",
+            "Módulo defectuoso"
+        ],
+        symptoms: [
+            "Comunicación intermitente",
+            "Funciones erráticas"
+        ],
+        solutions: [
+            "Verificar resistencia de terminación",
+            "Buscar fuentes de interferencia",
+            "Desconectar módulos uno por uno para aislar problema"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let u0003 = DTCCode(
+        code: "U0003",
+        name: "Bus CAN Low Circuito Abierto",
+        description: "Línea CAN-L del bus de comunicaciones está abierta",
+        category: .network,
+        severity: .high,
+        causes: [
+            "Cable CAN-L cortado",
+            "Conector dañado",
+            "Puerto CAN de módulo dañado"
+        ],
+        symptoms: [
+            "Fallo de comunicación generalizado",
+            "Múltiples códigos U presentes"
+        ],
+        solutions: [
+            "Inspeccionar cableado CAN-L",
+            "Verificar conectores",
+            "Probar resistencia del bus"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let u0101 = DTCCode(
+        code: "U0101",
+        name: "Sin Comunicación con TCM",
+        description: "Pérdida de comunicación con el módulo de control de transmisión",
+        category: .network,
+        severity: .high,
+        causes: [
+            "TCM sin alimentación",
+            "Fusible de TCM quemado",
+            "Problema en bus CAN",
+            "TCM defectuoso"
+        ],
+        symptoms: [
+            "Transmisión en modo emergencia",
+            "No cambia de marcha",
+            "CEL y luz de transmisión encendidas"
+        ],
+        solutions: [
+            "Verificar fusibles del TCM",
+            "Inspeccionar conexiones",
+            "Verificar bus CAN"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let u0155 = DTCCode(
+        code: "U0155",
+        name: "Sin Comunicación con Cluster",
+        description: "Pérdida de comunicación con el panel de instrumentos",
+        category: .network,
+        severity: .medium,
+        causes: [
+            "Cluster sin alimentación",
+            "Fusible quemado",
+            "Problema de CAN",
+            "Cluster defectuoso"
+        ],
+        symptoms: [
+            "Instrumentos no funcionan",
+            "Sin indicadores",
+            "Otros módulos pueden mostrar errores"
+        ],
+        solutions: [
+            "Verificar fusibles del cluster",
+            "Inspeccionar conexiones",
+            "Verificar bus CAN"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de TPMS
+
+    public static let c1705 = DTCCode(
+        code: "C1705",
+        name: "TPMS Sensor Delantero Izquierdo",
+        description: "Problema con el sensor de presión del neumático delantero izquierdo",
+        category: .chassis,
+        severity: .low,
+        causes: [
+            "Batería del sensor agotada",
+            "Sensor TPMS defectuoso",
+            "Sensor no sincronizado",
+            "Interferencia de señal"
+        ],
+        symptoms: [
+            "Luz TPMS encendida",
+            "Sin lectura de presión de esa rueda"
+        ],
+        solutions: [
+            "Verificar presión del neumático manualmente",
+            "Reprogramar sensores TPMS",
+            "Reemplazar sensor si batería agotada"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1706 = DTCCode(
+        code: "C1706",
+        name: "TPMS Sensor Delantero Derecho",
+        description: "Problema con el sensor de presión del neumático delantero derecho",
+        category: .chassis,
+        severity: .low,
+        causes: [
+            "Batería del sensor agotada",
+            "Sensor defectuoso",
+            "Sensor no sincronizado"
+        ],
+        symptoms: [
+            "Luz TPMS encendida",
+            "Sin lectura de esa rueda"
+        ],
+        solutions: [
+            "Verificar presión manualmente",
+            "Reprogramar sensores",
+            "Reemplazar sensor si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1707 = DTCCode(
+        code: "C1707",
+        name: "TPMS Sensor Trasero Izquierdo",
+        description: "Problema con el sensor TPMS trasero izquierdo",
+        category: .chassis,
+        severity: .low,
+        causes: [
+            "Sensor defectuoso o batería agotada",
+            "Sensor no programado"
+        ],
+        symptoms: [
+            "Luz TPMS encendida"
+        ],
+        solutions: [
+            "Verificar y reprogramar sensor",
+            "Reemplazar si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1708 = DTCCode(
+        code: "C1708",
+        name: "TPMS Sensor Trasero Derecho",
+        description: "Problema con el sensor TPMS trasero derecho",
+        category: .chassis,
+        severity: .low,
+        causes: [
+            "Sensor defectuoso o batería agotada",
+            "Sensor no sincronizado"
+        ],
+        symptoms: [
+            "Luz TPMS encendida"
+        ],
+        solutions: [
+            "Verificar y reprogramar sensor",
+            "Reemplazar si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let c1709 = DTCCode(
+        code: "C1709",
+        name: "TPMS Módulo",
+        description: "Problema con el módulo receptor TPMS",
+        category: .chassis,
+        severity: .low,
+        causes: [
+            "Módulo TPMS defectuoso",
+            "Problema de alimentación",
+            "Antena dañada"
+        ],
+        symptoms: [
+            "Todos los sensores TPMS sin comunicación",
+            "Luz TPMS siempre encendida"
+        ],
+        solutions: [
+            "Verificar alimentación del módulo",
+            "Reemplazar módulo TPMS si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Transmisión (Para modelos automáticos)
+
+    public static let p0700 = DTCCode(
+        code: "P0700",
+        name: "Sistema de Control de Transmisión",
+        description: "El módulo de transmisión ha detectado un fallo y almacenado códigos",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Problema interno en la transmisión",
+            "Sensor de transmisión defectuoso",
+            "Solenoide defectuoso",
+            "Bajo nivel de fluido ATF"
+        ],
+        symptoms: [
+            "Luz de transmisión encendida",
+            "Cambios bruscos o tardíos",
+            "Transmisión en modo emergencia"
+        ],
+        solutions: [
+            "Escanear módulo TCM específicamente",
+            "Verificar nivel de fluido ATF",
+            "Diagnosticar código específico de transmisión"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0705 = DTCCode(
+        code: "P0705",
+        name: "Sensor Rango Transmisión Circuito",
+        description: "Problema en el circuito del sensor de posición de la palanca selectora",
+        category: .powertrain,
+        severity: .medium,
+        causes: [
+            "Sensor de rango defectuoso",
+            "Cableado dañado",
+            "Ajuste incorrecto del sensor"
+        ],
+        symptoms: [
+            "Indicador de marcha incorrecto",
+            "Transmisión no reconoce posición",
+            "Arranque solo en Neutral"
+        ],
+        solutions: [
+            "Ajustar sensor de rango",
+            "Verificar cableado",
+            "Reemplazar sensor si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0715 = DTCCode(
+        code: "P0715",
+        name: "Sensor Velocidad Entrada Transmisión",
+        description: "Problema con el sensor de velocidad de entrada de la transmisión",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sensor de velocidad defectuoso",
+            "Cableado dañado",
+            "Problema interno de transmisión"
+        ],
+        symptoms: [
+            "Cambios erráticos",
+            "Transmisión en emergencia",
+            "Tacómetro puede fallar"
+        ],
+        solutions: [
+            "Verificar sensor de entrada",
+            "Inspeccionar cableado",
+            "Reemplazar sensor"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0720 = DTCCode(
+        code: "P0720",
+        name: "Sensor Velocidad Salida Transmisión",
+        description: "Problema con el sensor de velocidad de salida de la transmisión",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Sensor de salida defectuoso",
+            "Cableado dañado",
+            "Rueda fónica dañada"
+        ],
+        symptoms: [
+            "Velocímetro no funciona",
+            "Cambios incorrectos",
+            "Transmisión en emergencia"
+        ],
+        solutions: [
+            "Verificar sensor de salida",
+            "Inspeccionar cableado",
+            "Reemplazar sensor"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0730 = DTCCode(
+        code: "P0730",
+        name: "Relación de Marchas Incorrecta",
+        description: "La ECU detecta que la relación de marchas no corresponde con lo esperado",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Embrague de transmisión patinando",
+            "Banda de transmisión desgastada",
+            "Bajo nivel de ATF",
+            "Solenoide de cambio defectuoso"
+        ],
+        symptoms: [
+            "Transmisión patina",
+            "RPM sube sin acelerar",
+            "Cambios no se completan"
+        ],
+        solutions: [
+            "Verificar nivel de ATF",
+            "Inspeccionar transmisión internamente",
+            "Puede requerir reconstrucción"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0750 = DTCCode(
+        code: "P0750",
+        name: "Solenoide Cambio A",
+        description: "Problema con el solenoide de cambio A de la transmisión",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Solenoide defectuoso",
+            "Cableado dañado",
+            "ATF sucio obstruyendo solenoide"
+        ],
+        symptoms: [
+            "No cambia a ciertas marchas",
+            "Cambios bruscos",
+            "Transmisión en emergencia"
+        ],
+        solutions: [
+            "Cambiar fluido ATF y filtro",
+            "Verificar solenoide",
+            "Reemplazar solenoide si defectuoso"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let p0755 = DTCCode(
+        code: "P0755",
+        name: "Solenoide Cambio B",
+        description: "Problema con el solenoide de cambio B de la transmisión",
+        category: .powertrain,
+        severity: .high,
+        causes: [
+            "Solenoide defectuoso",
+            "Cableado dañado",
+            "ATF contaminado"
+        ],
+        symptoms: [
+            "Cambios anormales",
+            "Falta de marchas específicas",
+            "Modo emergencia"
+        ],
+        solutions: [
+            "Cambiar ATF y filtro",
+            "Verificar solenoide B",
+            "Reemplazar si necesario"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    // MARK: - Códigos de Carrocería Adicionales
+
+    public static let b1318 = DTCCode(
+        code: "B1318",
+        name: "Voltaje Batería Bajo",
+        description: "El módulo de carrocería detecta voltaje de batería bajo",
+        category: .body,
+        severity: .medium,
+        causes: [
+            "Batería descargada",
+            "Alternador defectuoso",
+            "Conexiones de batería corroídas",
+            "Consumo parásito"
+        ],
+        symptoms: [
+            "Funciones eléctricas fallan",
+            "Arranque lento",
+            "Múltiples códigos almacenados"
+        ],
+        solutions: [
+            "Cargar o reemplazar batería",
+            "Verificar alternador",
+            "Limpiar conexiones de batería",
+            "Buscar consumos parásitos"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let b1600 = DTCCode(
+        code: "B1600",
+        name: "PATS - Llave No Programada",
+        description: "El sistema antirrobo no reconoce la llave utilizada",
+        category: .body,
+        severity: .high,
+        causes: [
+            "Llave no programada en el vehículo",
+            "Transpondedor de llave dañado",
+            "Problema en el módulo PATS",
+            "Antena de llave defectuosa"
+        ],
+        symptoms: [
+            "Motor no arranca",
+            "Luz de seguridad parpadea",
+            "Motor corta después de arrancar"
+        ],
+        solutions: [
+            "Programar llave con escáner Mazda",
+            "Usar llave de repuesto programada",
+            "Verificar antena del cilindro de encendido"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
+    public static let b2477 = DTCCode(
+        code: "B2477",
+        name: "Módulo Sensor de Ocupante",
+        description: "Problema con el sensor de ocupante del asiento del pasajero",
+        category: .body,
+        severity: .medium,
+        causes: [
+            "Sensor de ocupante defectuoso",
+            "Cableado bajo el asiento dañado",
+            "Módulo de airbag defectuoso"
+        ],
+        symptoms: [
+            "Luz de airbag encendida",
+            "Airbag pasajero puede no funcionar correctamente"
+        ],
+        solutions: [
+            "Verificar cableado bajo asiento del pasajero",
+            "Verificar sensor de ocupante",
+            "Puede requerir servicio especializado"
+        ],
+        rotarySpecific: false,
+        affectsApexSeals: false
+    )
+
     // MARK: - Más códigos genéricos comunes
 
     public static let p0133 = DTCCode(
@@ -1870,44 +3622,91 @@ public struct RX8DTCDatabase {
     public static let allCodes: [DTCCode] = [
         // Misfire
         p0300, p0301, p0302,
+
+        // MAF (Mass Air Flow)
+        p0100, p0101, p0102, p0103, p0104,
+
         // MAP/BARO
-        p0105, p0106,
-        // Sensores
-        p0101, p0107, p0113,
-        // O2/Catalizador
-        p0130, p0133, p0134, p0141, p0420,
-        // OMP
-        p1520, p0661, p0662,
-        // Combustible
-        p0171, p0172,
+        p0105, p0106, p0107,
+
+        // Temperatura (IAT)
+        p0111, p0112, p0113,
+
+        // Temperatura (ECT)
+        p0115, p0116, p0117, p0118, p0119, p0125,
+
+        // Mariposa/Throttle
+        p0120, p0121, p0122, p0123,
+
+        // Sondas O2 - Calentadores
+        p0030, p0031, p0032, p0036, p0037, p0038, p0135,
+
+        // Sondas O2 - Señales
+        p0130, p0131, p0132, p0133, p0134, p0136, p0137, p0138, p0139, p0141,
+
+        // Fuel Trim y Sistema de Combustible
+        p0170, p0171, p0172, p0173, p0174, p0175,
+
+        // Presión de Combustible
+        p0190, p0191,
+
+        // Inyectores
+        p0200, p0201, p0202, p0203, p0204,
+
         // Sensores de Posición (CKP/CMP)
         p0335, p0336, p0340, p0341,
-        // Bobinas
+
+        // Bobinas de Encendido
         p0351, p0352, p0353, p0354,
-        // Temperatura
-        p0117, p0125,
-        // Mazda específicos
-        p1000, p1131,
-        // Mariposa/Throttle
-        p0120, p0121, p0122, p0123, p2101, p2102, p2103,
-        // SSV (Secondary Shutter Valve)
-        p2006, p2007, p2008,
-        // VDI (Variable Dynamic Intake)
-        p1530, p1531,
+
         // EGR
         p0400, p0401, p0402, p0403,
-        // IAC (Idle Air Control)
-        p0505, p0506, p0507,
-        // Presión de aceite
-        p0520, p0524,
+
+        // Catalizador
+        p0420, p0421, p0430,
+
         // EVAP
         p0455, p0456,
+
+        // IAC (Idle Air Control)
+        p0505, p0506, p0507,
+
+        // Presión de Aceite
+        p0520, p0524,
+
+        // OMP (Oil Metering Pump)
+        p0661, p0662, p1520, p1521, p1522, p1523,
+
+        // VDI (Variable Dynamic Intake)
+        p0076, p0077, p1530, p1531,
+
+        // Transmisión
+        p0700, p0705, p0715, p0720, p0730, p0750, p0755,
+
+        // Mazda Específicos (P1xxx)
+        p1000, p1100, p1101, p1131, p1132, p1260,
+        p1501, p1506, p1507,
+
+        // Throttle Electrónico
+        p2101, p2102, p2103,
+
+        // SSV (Secondary Shutter Valve)
+        p2006, p2007, p2008,
+
+        // Mezcla Post-Catalizador
+        p2096, p2097,
+
         // Chasis (ABS/DSC)
         c0300, c0700, c1095, c1096, c1097, c1098, c1145, c1288,
+
+        // TPMS
+        c1705, c1706, c1707, c1708, c1709,
+
         // Carrocería (Airbag/SRS)
-        b1342, b1884,
-        // Red (Comunicación)
-        u0100, u0121, u0140
+        b1318, b1342, b1600, b1884, b2477,
+
+        // Red (Comunicación CAN)
+        u0001, u0002, u0003, u0100, u0101, u0121, u0140, u0155
     ]
 
     /// Buscar código por string

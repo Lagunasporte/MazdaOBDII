@@ -677,7 +677,14 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     public func readSpeed() async throws -> Int {
         let bytes = try await readStandardPID(mode: 0x01, pid: 0x0D)
         guard bytes.count >= 1 else { throw OBDError.invalidResponse }
-        return Int(bytes[0])
+        let speed = Int(bytes[0])
+
+        // Validar rango razonable (0-260 km/h para RX-8)
+        guard speed >= 0 && speed <= 260 else {
+            throw OBDError.invalidResponse
+        }
+
+        return speed
     }
 
     public func readCoolantTemp() async throws -> Int {
@@ -813,8 +820,27 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
     public func readVoltage() async throws -> Double {
         let response = try await sendCommand("ATRV", timeout: 2.0)
+
+        // Verificar respuesta válida
+        if response.isEmpty || response.contains("NO DATA") || response.contains("ERROR") {
+            throw OBDError.noData
+        }
+
+        // Filtrar solo números y punto decimal
         let digits = response.filter { $0.isNumber || $0 == "." }
-        return Double(digits) ?? 0.0
+
+        // Parsear el voltaje - lanzar error si no se puede parsear o es 0.0
+        guard let voltage = Double(digits), voltage > 0 else {
+            throw OBDError.invalidResponse
+        }
+
+        // Validar rango razonable de voltaje (8V - 16V)
+        // Fuera de este rango, probablemente es un error de lectura
+        guard voltage >= 8.0 && voltage <= 16.0 else {
+            throw OBDError.invalidResponse
+        }
+
+        return voltage
     }
 
     /// Lee sensor O2 Bank 1 Sensor 1 (PID 0x14)

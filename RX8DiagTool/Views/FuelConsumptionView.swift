@@ -1019,8 +1019,14 @@ struct FuelCostCardV2: View {
 struct FuelSenderConfigView: View {
     @EnvironmentObject var fuelTracker: FuelConsumptionTracker
     @EnvironmentObject var engineMonitor: EngineMonitor
+    @EnvironmentObject var connectionManager: OBDConnectionManager
     @Environment(\.dismiss) var dismiss
     @AppStorage("fuelSenderMode") private var senderMode: String = "both"
+    @State private var isRefreshing = false
+    @State private var leftSenderValue: Double? = nil
+    @State private var rightSenderValue: Double? = nil
+    @State private var standardValue: Double? = nil
+    @State private var lastRefreshTime: Date? = nil
 
     var body: some View {
         NavigationStack {
@@ -1031,27 +1037,52 @@ struct FuelSenderConfigView: View {
                         .foregroundColor(.gray)
                 }
 
-                Section("Lecturas Actuales") {
+                Section {
+                    HStack {
+                        Text("Lecturas Actuales")
+                            .font(.headline)
+                        Spacer()
+                        if isRefreshing {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Button(action: refreshSenders) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.clockwise")
+                                    Text("Actualizar")
+                                }
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            }
+                        }
+                    }
+
                     SenderRowV2(
                         icon: "l.circle.fill",
                         color: .blue,
                         name: "Sonda Izquierda",
-                        value: engineMonitor.currentState.fuelLevelLeftSender
+                        value: leftSenderValue ?? engineMonitor.currentState.fuelLevelLeftSender
                     )
 
                     SenderRowV2(
                         icon: "r.circle.fill",
                         color: .purple,
                         name: "Sonda Derecha",
-                        value: engineMonitor.currentState.fuelLevelRightSender
+                        value: rightSenderValue ?? engineMonitor.currentState.fuelLevelRightSender
                     )
 
                     SenderRowV2(
                         icon: "car.fill",
                         color: .green,
                         name: "OBD Estándar",
-                        value: fuelTracker.fuelLevel > 0 ? fuelTracker.fuelLevel : nil
+                        value: standardValue ?? (fuelTracker.fuelLevel > 0 ? fuelTracker.fuelLevel : nil)
                     )
+
+                    if let time = lastRefreshTime {
+                        Text("Última actualización: \(time, formatter: timeFormatter)")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
                 }
 
                 Section("Sonda a Utilizar") {
@@ -1111,13 +1142,55 @@ struct FuelSenderConfigView: View {
             .onChange(of: senderMode) { _, _ in
                 applyConfiguration()
             }
+            .onAppear {
+                // Cargar valores actuales al aparecer
+                leftSenderValue = engineMonitor.currentState.fuelLevelLeftSender
+                rightSenderValue = engineMonitor.currentState.fuelLevelRightSender
+                standardValue = fuelTracker.fuelLevel > 0 ? fuelTracker.fuelLevel : nil
+            }
+        }
+    }
+
+    private var timeFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .medium
+        return formatter
+    }
+
+    private func refreshSenders() {
+        guard connectionManager.connectionState == .connectedToVehicle else { return }
+        isRefreshing = true
+
+        Task {
+            // Leer directamente las sondas
+            do {
+                let dualReading = try await connectionManager.readDualFuelLevel()
+                await MainActor.run {
+                    leftSenderValue = dualReading.leftSender
+                    rightSenderValue = dualReading.rightSender
+                    standardValue = dualReading.standardReading
+                    lastRefreshTime = Date()
+                    isRefreshing = false
+                }
+            } catch {
+                // Intentar leer al menos el estándar
+                if let standard = try? await connectionManager.readFuelLevel() {
+                    await MainActor.run {
+                        standardValue = standard
+                        lastRefreshTime = Date()
+                    }
+                }
+                await MainActor.run {
+                    isRefreshing = false
+                }
+            }
         }
     }
 
     var calculatedLevel: Double {
-        let left = engineMonitor.currentState.fuelLevelLeftSender
-        let right = engineMonitor.currentState.fuelLevelRightSender
-        let standard = fuelTracker.fuelLevel
+        let left = leftSenderValue ?? engineMonitor.currentState.fuelLevelLeftSender
+        let right = rightSenderValue ?? engineMonitor.currentState.fuelLevelRightSender
+        let standard = standardValue ?? fuelTracker.fuelLevel
 
         switch senderMode {
         case "left":

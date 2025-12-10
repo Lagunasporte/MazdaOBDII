@@ -1170,8 +1170,16 @@ public class EngineMonitor: ObservableObject {
 
             // Actualizar estado
             currentState.rpm = rpm
-            currentState.vehicleSpeed = Double(speed)
             currentState.coolantTemperature = Double(coolant)
+
+            // Validar velocidad: si el motor está apagado o en ralentí bajo,
+            // la velocidad no puede ser alta (evita lecturas corruptas)
+            if rpm < 500 && speed > 5 {
+                // Motor apagado o casi apagado con velocidad reportada alta = error
+                currentState.vehicleSpeed = 0
+            } else {
+                currentState.vehicleSpeed = Double(speed)
+            }
 
             // PIDs secundarios - leer en ciclos rotatorios para maximizar velocidad
             // Expandido a 6 ciclos para incluir PIDs de diagnóstico forense
