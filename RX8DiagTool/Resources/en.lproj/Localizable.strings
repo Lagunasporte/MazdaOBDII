@@ -716,10 +716,12 @@
 "carplay.rpm" = "RPM";
 "carplay.speed" = "Speed";
 "carplay.coolant" = "Coolant";
+"carplay.oil" = "Oil";
 "carplay.oil_temp" = "Oil Temp";
 "carplay.consumption" = "Consumption";
 "carplay.range" = "Range";
 "carplay.voltage" = "Voltage";
+"carplay.fuel" = "Fuel";
 "carplay.gauges" = "Gauges";
 "carplay.alerts" = "Alerts";
 "carplay.dtc" = "Error Codes";
@@ -729,12 +731,50 @@
 "carplay.no_dtc" = "No Error Codes";
 "carplay.engine_ok" = "Engine OK";
 
+// CarPlay Tabs
+"carplay.tab.engine" = "Engine";
+"carplay.tab.fuel" = "Fuel";
+"carplay.tab.alerts" = "Alerts";
+
+// CarPlay Sections
+"carplay.section.temperatures" = "🌡️ Temperatures";
+"carplay.section.performance" = "⚡ Performance";
+"carplay.section.fuel_system" = "⛽ Fuel System";
+"carplay.section.trip" = "🛣️ Current Trip";
+"carplay.section.tank" = "⛽ Fuel Tank";
+"carplay.section.active_alerts" = "Active Alerts";
+"carplay.section.system_status" = "✓ System Status";
+
+// CarPlay Detail Labels
+"carplay.coolant_temp" = "Coolant Temp";
+"carplay.intake_temp" = "Intake Temp";
+"carplay.throttle" = "Throttle";
+"carplay.engine_load" = "Engine Load";
+"carplay.engine_title" = "Engine";
+"carplay.instant_consumption" = "Instant Consumption";
+"carplay.average_consumption" = "Average Consumption";
+"carplay.estimated_range" = "Estimated Range";
+"carplay.fuel_level" = "Fuel Level";
+"carplay.fuel_remaining" = "Fuel Remaining";
+"carplay.fuel_title" = "Fuel";
+"carplay.alerts_title" = "Alerts";
+"carplay.no_active_alerts" = "No active alerts";
+
+// CarPlay Status
+"carplay.status.engine" = "Engine";
+"carplay.status.electrical" = "Electrical System";
+"carplay.status.fuel_system" = "Fuel System";
+"carplay.status.check" = "Check";
+
 // CarPlay Alerts
-"carplay.alert.coolant_high" = "CRITICAL: Coolant %d°C!";
-"carplay.alert.coolant_warning" = "Warning: Coolant %d°C";
-"carplay.alert.oil_high" = "CRITICAL: Oil %d°C!";
-"carplay.alert.oil_warning" = "Warning: Oil %d°C";
-"carplay.alert.battery_low" = "CRITICAL: Battery %.1fV!";
-"carplay.alert.battery_warning" = "Warning: Battery %.1fV";
-"carplay.alert.rpm_high" = "Warning: High RPM %d!";
+"carplay.alert.coolant_critical" = "Coolant CRITICAL: %d°C!";
+"carplay.alert.coolant_high" = "Coolant high: %d°C";
+"carplay.alert.oil_critical" = "Oil CRITICAL: %d°C!";
+"carplay.alert.oil_high" = "Oil hot: %d°C";
+"carplay.alert.voltage_critical" = "Battery CRITICAL: %.1fV!";
+"carplay.alert.voltage_low" = "Battery low: %.1fV";
+"carplay.alert.high_rpm" = "High RPM: %d!";
+"carplay.alert.stft_high" = "STFT abnormal: %+.1f%%";
+"carplay.alert.ltft_high" = "LTFT abnormal: %+.1f%%";
+"carplay.alert.fuel_low" = "Low fuel!";
 "carplay.alert.oil_pressure_low" = "CRITICAL: Oil Pressure %.1f bar!";

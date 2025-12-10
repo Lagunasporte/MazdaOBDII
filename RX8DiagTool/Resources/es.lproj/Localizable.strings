@@ -715,11 +715,13 @@
 "carplay.dashboard.title" = "Tablero RX-8";
 "carplay.rpm" = "RPM";
 "carplay.speed" = "Velocidad";
-"carplay.coolant" = "Refrigerante";
+"carplay.coolant" = "Refrig.";
+"carplay.oil" = "Aceite";
 "carplay.oil_temp" = "Temp Aceite";
 "carplay.consumption" = "Consumo";
 "carplay.range" = "Autonomía";
 "carplay.voltage" = "Voltaje";
+"carplay.fuel" = "Comb.";
 "carplay.gauges" = "Relojes";
 "carplay.alerts" = "Alertas";
 "carplay.dtc" = "Códigos Error";
@@ -729,12 +731,50 @@
 "carplay.no_dtc" = "Sin Códigos de Error";
 "carplay.engine_ok" = "Motor OK";
 
+// CarPlay Tabs
+"carplay.tab.engine" = "Motor";
+"carplay.tab.fuel" = "Consumo";
+"carplay.tab.alerts" = "Alertas";
+
+// CarPlay Sections
+"carplay.section.temperatures" = "🌡️ Temperaturas";
+"carplay.section.performance" = "⚡ Rendimiento";
+"carplay.section.fuel_system" = "⛽ Sistema de Combustible";
+"carplay.section.trip" = "🛣️ Viaje Actual";
+"carplay.section.tank" = "⛽ Depósito";
+"carplay.section.active_alerts" = "Alertas Activas";
+"carplay.section.system_status" = "✓ Estado del Sistema";
+
+// CarPlay Detail Labels
+"carplay.coolant_temp" = "Refrigerante";
+"carplay.intake_temp" = "Temp. Admisión";
+"carplay.throttle" = "Acelerador";
+"carplay.engine_load" = "Carga Motor";
+"carplay.engine_title" = "Motor";
+"carplay.instant_consumption" = "Consumo Instantáneo";
+"carplay.average_consumption" = "Consumo Medio";
+"carplay.estimated_range" = "Autonomía Estimada";
+"carplay.fuel_level" = "Nivel Combustible";
+"carplay.fuel_remaining" = "Combustible Restante";
+"carplay.fuel_title" = "Consumo";
+"carplay.alerts_title" = "Alertas";
+"carplay.no_active_alerts" = "No hay alertas activas";
+
+// CarPlay Status
+"carplay.status.engine" = "Motor";
+"carplay.status.electrical" = "Sistema Eléctrico";
+"carplay.status.fuel_system" = "Sistema Combustible";
+"carplay.status.check" = "Verificar";
+
 // CarPlay Alerts
-"carplay.alert.coolant_high" = "¡CRÍTICO: Refrigerante %d°C!";
-"carplay.alert.coolant_warning" = "Advertencia: Refrigerante %d°C";
-"carplay.alert.oil_high" = "¡CRÍTICO: Aceite %d°C!";
-"carplay.alert.oil_warning" = "Advertencia: Aceite %d°C";
-"carplay.alert.battery_low" = "¡CRÍTICO: Batería %.1fV!";
-"carplay.alert.battery_warning" = "Advertencia: Batería %.1fV";
-"carplay.alert.rpm_high" = "¡Advertencia: RPM Alto %d!";
+"carplay.alert.coolant_critical" = "Refrigerante CRÍTICO: %d°C!";
+"carplay.alert.coolant_high" = "Refrigerante alto: %d°C";
+"carplay.alert.oil_critical" = "Aceite CRÍTICO: %d°C!";
+"carplay.alert.oil_high" = "Aceite caliente: %d°C";
+"carplay.alert.voltage_critical" = "Batería CRÍTICA: %.1fV!";
+"carplay.alert.voltage_low" = "Batería baja: %.1fV";
+"carplay.alert.high_rpm" = "RPM alto: %d!";
+"carplay.alert.stft_high" = "STFT anormal: %+.1f%%";
+"carplay.alert.ltft_high" = "LTFT anormal: %+.1f%%";
+"carplay.alert.fuel_low" = "Combustible bajo!";
 "carplay.alert.oil_pressure_low" = "¡CRÍTICO: Presión Aceite %.1f bar!";

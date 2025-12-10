@@ -714,10 +714,12 @@
 "carplay.rpm" = "转速";
 "carplay.speed" = "速度";
 "carplay.coolant" = "冷却液";
+"carplay.oil" = "油温";
 "carplay.oil_temp" = "油温";
 "carplay.consumption" = "油耗";
 "carplay.range" = "续航";
 "carplay.voltage" = "电压";
+"carplay.fuel" = "燃油";
 "carplay.gauges" = "仪表";
 "carplay.alerts" = "警报";
 "carplay.dtc" = "故障码";
@@ -727,12 +729,50 @@
 "carplay.no_dtc" = "无故障码";
 "carplay.engine_ok" = "发动机正常";
 
+// CarPlay Tabs
+"carplay.tab.engine" = "发动机";
+"carplay.tab.fuel" = "油耗";
+"carplay.tab.alerts" = "警报";
+
+// CarPlay Sections
+"carplay.section.temperatures" = "🌡️ 温度";
+"carplay.section.performance" = "⚡ 性能";
+"carplay.section.fuel_system" = "⛽ 燃油系统";
+"carplay.section.trip" = "🛣️ 当前行程";
+"carplay.section.tank" = "⛽ 油箱";
+"carplay.section.active_alerts" = "当前警报";
+"carplay.section.system_status" = "✓ 系统状态";
+
+// CarPlay Detail Labels
+"carplay.coolant_temp" = "冷却液温度";
+"carplay.intake_temp" = "进气温度";
+"carplay.throttle" = "油门";
+"carplay.engine_load" = "发动机负荷";
+"carplay.engine_title" = "发动机";
+"carplay.instant_consumption" = "瞬时油耗";
+"carplay.average_consumption" = "平均油耗";
+"carplay.estimated_range" = "预计续航";
+"carplay.fuel_level" = "燃油量";
+"carplay.fuel_remaining" = "剩余燃油";
+"carplay.fuel_title" = "油耗";
+"carplay.alerts_title" = "警报";
+"carplay.no_active_alerts" = "无警报";
+
+// CarPlay Status
+"carplay.status.engine" = "发动机";
+"carplay.status.electrical" = "电气系统";
+"carplay.status.fuel_system" = "燃油系统";
+"carplay.status.check" = "需检查";
+
 // CarPlay Alerts
-"carplay.alert.coolant_high" = "危险: 冷却液 %d°C!";
-"carplay.alert.coolant_warning" = "警告: 冷却液 %d°C";
-"carplay.alert.oil_high" = "危险: 油温 %d°C!";
-"carplay.alert.oil_warning" = "警告: 油温 %d°C";
-"carplay.alert.battery_low" = "危险: 电池 %.1fV!";
-"carplay.alert.battery_warning" = "警告: 电池 %.1fV";
-"carplay.alert.rpm_high" = "警告: 转速过高 %d!";
+"carplay.alert.coolant_critical" = "冷却液 危险: %d°C!";
+"carplay.alert.coolant_high" = "冷却液 过高: %d°C";
+"carplay.alert.oil_critical" = "油温 危险: %d°C!";
+"carplay.alert.oil_high" = "油温 过高: %d°C";
+"carplay.alert.voltage_critical" = "电池 危险: %.1fV!";
+"carplay.alert.voltage_low" = "电池 低: %.1fV";
+"carplay.alert.high_rpm" = "转速过高: %d!";
+"carplay.alert.stft_high" = "STFT 异常: %+.1f%%";
+"carplay.alert.ltft_high" = "LTFT 异常: %+.1f%%";
+"carplay.alert.fuel_low" = "燃油不足!";
 "carplay.alert.oil_pressure_low" = "危险: 油压 %.1f bar!";

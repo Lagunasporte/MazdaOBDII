@@ -713,11 +713,13 @@
 "carplay.dashboard.title" = "RX-8 Armaturenbrett";
 "carplay.rpm" = "Drehzahl";
 "carplay.speed" = "Geschw.";
-"carplay.coolant" = "Kühlmittel";
+"carplay.coolant" = "Kühlm.";
+"carplay.oil" = "Öl";
 "carplay.oil_temp" = "Öltemp.";
 "carplay.consumption" = "Verbrauch";
 "carplay.range" = "Reichweite";
 "carplay.voltage" = "Spannung";
+"carplay.fuel" = "Kraftst.";
 "carplay.gauges" = "Anzeigen";
 "carplay.alerts" = "Warnungen";
 "carplay.dtc" = "Fehlercodes";
@@ -727,12 +729,50 @@
 "carplay.no_dtc" = "Keine Fehlercodes";
 "carplay.engine_ok" = "Motor OK";
 
+// CarPlay Tabs
+"carplay.tab.engine" = "Motor";
+"carplay.tab.fuel" = "Kraftstoff";
+"carplay.tab.alerts" = "Warnungen";
+
+// CarPlay Sections
+"carplay.section.temperatures" = "🌡️ Temperaturen";
+"carplay.section.performance" = "⚡ Leistung";
+"carplay.section.fuel_system" = "⛽ Kraftstoffsystem";
+"carplay.section.trip" = "🛣️ Aktuelle Fahrt";
+"carplay.section.tank" = "⛽ Kraftstofftank";
+"carplay.section.active_alerts" = "Aktive Warnungen";
+"carplay.section.system_status" = "✓ Systemstatus";
+
+// CarPlay Detail Labels
+"carplay.coolant_temp" = "Kühlmitteltemp.";
+"carplay.intake_temp" = "Ansauglufttemp.";
+"carplay.throttle" = "Drosselklappe";
+"carplay.engine_load" = "Motorlast";
+"carplay.engine_title" = "Motor";
+"carplay.instant_consumption" = "Momentanverbrauch";
+"carplay.average_consumption" = "Durchschnittsverbrauch";
+"carplay.estimated_range" = "Geschätzte Reichweite";
+"carplay.fuel_level" = "Kraftstoffstand";
+"carplay.fuel_remaining" = "Restlicher Kraftstoff";
+"carplay.fuel_title" = "Kraftstoff";
+"carplay.alerts_title" = "Warnungen";
+"carplay.no_active_alerts" = "Keine aktiven Warnungen";
+
+// CarPlay Status
+"carplay.status.engine" = "Motor";
+"carplay.status.electrical" = "Elektrisches System";
+"carplay.status.fuel_system" = "Kraftstoffsystem";
+"carplay.status.check" = "Prüfen";
+
 // CarPlay Alerts
-"carplay.alert.coolant_high" = "KRITISCH: Kühlmittel %d°C!";
-"carplay.alert.coolant_warning" = "Warnung: Kühlmittel %d°C";
-"carplay.alert.oil_high" = "KRITISCH: Öl %d°C!";
-"carplay.alert.oil_warning" = "Warnung: Öl %d°C";
-"carplay.alert.battery_low" = "KRITISCH: Batterie %.1fV!";
-"carplay.alert.battery_warning" = "Warnung: Batterie %.1fV";
-"carplay.alert.rpm_high" = "Warnung: Hohe Drehzahl %d!";
+"carplay.alert.coolant_critical" = "Kühlmittel KRITISCH: %d°C!";
+"carplay.alert.coolant_high" = "Kühlmittel hoch: %d°C";
+"carplay.alert.oil_critical" = "Öl KRITISCH: %d°C!";
+"carplay.alert.oil_high" = "Öl heiß: %d°C";
+"carplay.alert.voltage_critical" = "Batterie KRITISCH: %.1fV!";
+"carplay.alert.voltage_low" = "Batterie niedrig: %.1fV";
+"carplay.alert.high_rpm" = "Hohe Drehzahl: %d!";
+"carplay.alert.stft_high" = "STFT abnormal: %+.1f%%";
+"carplay.alert.ltft_high" = "LTFT abnormal: %+.1f%%";
+"carplay.alert.fuel_low" = "Kraftstoff niedrig!";
 "carplay.alert.oil_pressure_low" = "KRITISCH: Öldruck %.1f bar!";

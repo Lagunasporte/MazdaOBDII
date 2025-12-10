@@ -714,10 +714,12 @@
 "carplay.rpm" = "回転数";
 "carplay.speed" = "速度";
 "carplay.coolant" = "冷却水";
+"carplay.oil" = "油温";
 "carplay.oil_temp" = "油温";
 "carplay.consumption" = "燃費";
 "carplay.range" = "航続距離";
 "carplay.voltage" = "電圧";
+"carplay.fuel" = "燃料";
 "carplay.gauges" = "メーター";
 "carplay.alerts" = "警告";
 "carplay.dtc" = "エラーコード";
@@ -727,12 +729,50 @@
 "carplay.no_dtc" = "エラーコードなし";
 "carplay.engine_ok" = "エンジン正常";
 
+// CarPlay Tabs
+"carplay.tab.engine" = "エンジン";
+"carplay.tab.fuel" = "燃費";
+"carplay.tab.alerts" = "警告";
+
+// CarPlay Sections
+"carplay.section.temperatures" = "🌡️ 温度";
+"carplay.section.performance" = "⚡ パフォーマンス";
+"carplay.section.fuel_system" = "⛽ 燃料系統";
+"carplay.section.trip" = "🛣️ 現在の走行";
+"carplay.section.tank" = "⛽ 燃料タンク";
+"carplay.section.active_alerts" = "警告中";
+"carplay.section.system_status" = "✓ システム状態";
+
+// CarPlay Detail Labels
+"carplay.coolant_temp" = "冷却水温度";
+"carplay.intake_temp" = "吸気温度";
+"carplay.throttle" = "スロットル";
+"carplay.engine_load" = "エンジン負荷";
+"carplay.engine_title" = "エンジン";
+"carplay.instant_consumption" = "瞬間燃費";
+"carplay.average_consumption" = "平均燃費";
+"carplay.estimated_range" = "予想航続距離";
+"carplay.fuel_level" = "燃料残量";
+"carplay.fuel_remaining" = "残燃料";
+"carplay.fuel_title" = "燃費";
+"carplay.alerts_title" = "警告";
+"carplay.no_active_alerts" = "警告なし";
+
+// CarPlay Status
+"carplay.status.engine" = "エンジン";
+"carplay.status.electrical" = "電気系統";
+"carplay.status.fuel_system" = "燃料系統";
+"carplay.status.check" = "確認要";
+
 // CarPlay Alerts
-"carplay.alert.coolant_high" = "危険: 冷却水 %d°C!";
-"carplay.alert.coolant_warning" = "警告: 冷却水 %d°C";
-"carplay.alert.oil_high" = "危険: 油温 %d°C!";
-"carplay.alert.oil_warning" = "警告: 油温 %d°C";
-"carplay.alert.battery_low" = "危険: バッテリー %.1fV!";
-"carplay.alert.battery_warning" = "警告: バッテリー %.1fV";
-"carplay.alert.rpm_high" = "警告: 高回転 %d!";
+"carplay.alert.coolant_critical" = "冷却水 危険: %d°C!";
+"carplay.alert.coolant_high" = "冷却水 高温: %d°C";
+"carplay.alert.oil_critical" = "油温 危険: %d°C!";
+"carplay.alert.oil_high" = "油温 高温: %d°C";
+"carplay.alert.voltage_critical" = "バッテリー 危険: %.1fV!";
+"carplay.alert.voltage_low" = "バッテリー 低下: %.1fV";
+"carplay.alert.high_rpm" = "高回転: %d!";
+"carplay.alert.stft_high" = "STFT 異常: %+.1f%%";
+"carplay.alert.ltft_high" = "LTFT 異常: %+.1f%%";
+"carplay.alert.fuel_low" = "燃料不足!";
 "carplay.alert.oil_pressure_low" = "危険: 油圧 %.1f bar!";

@@ -714,10 +714,12 @@
 "carplay.rpm" = "RPM";
 "carplay.speed" = "Velocidade";
 "carplay.coolant" = "Líq. arref.";
+"carplay.oil" = "Óleo";
 "carplay.oil_temp" = "Temp óleo";
 "carplay.consumption" = "Consumo";
 "carplay.range" = "Autonomia";
 "carplay.voltage" = "Tensão";
+"carplay.fuel" = "Comb.";
 "carplay.gauges" = "Medidores";
 "carplay.alerts" = "Alertas";
 "carplay.dtc" = "Códigos erro";
@@ -727,12 +729,50 @@
 "carplay.no_dtc" = "Sem códigos de erro";
 "carplay.engine_ok" = "Motor OK";
 
+// CarPlay Tabs
+"carplay.tab.engine" = "Motor";
+"carplay.tab.fuel" = "Combustível";
+"carplay.tab.alerts" = "Alertas";
+
+// CarPlay Sections
+"carplay.section.temperatures" = "🌡️ Temperaturas";
+"carplay.section.performance" = "⚡ Desempenho";
+"carplay.section.fuel_system" = "⛽ Sistema de combustível";
+"carplay.section.trip" = "🛣️ Viagem atual";
+"carplay.section.tank" = "⛽ Tanque";
+"carplay.section.active_alerts" = "Alertas ativos";
+"carplay.section.system_status" = "✓ Estado do sistema";
+
+// CarPlay Detail Labels
+"carplay.coolant_temp" = "Temp. líq. arref.";
+"carplay.intake_temp" = "Temp. admissão";
+"carplay.throttle" = "Acelerador";
+"carplay.engine_load" = "Carga do motor";
+"carplay.engine_title" = "Motor";
+"carplay.instant_consumption" = "Consumo instantâneo";
+"carplay.average_consumption" = "Consumo médio";
+"carplay.estimated_range" = "Autonomia estimada";
+"carplay.fuel_level" = "Nível combustível";
+"carplay.fuel_remaining" = "Combustível restante";
+"carplay.fuel_title" = "Combustível";
+"carplay.alerts_title" = "Alertas";
+"carplay.no_active_alerts" = "Sem alertas ativos";
+
+// CarPlay Status
+"carplay.status.engine" = "Motor";
+"carplay.status.electrical" = "Sistema elétrico";
+"carplay.status.fuel_system" = "Sistema combustível";
+"carplay.status.check" = "Verificar";
+
 // CarPlay Alerts
-"carplay.alert.coolant_high" = "CRÍTICO: Líq. arref. %d°C!";
-"carplay.alert.coolant_warning" = "Aviso: Líq. arref. %d°C";
-"carplay.alert.oil_high" = "CRÍTICO: Óleo %d°C!";
-"carplay.alert.oil_warning" = "Aviso: Óleo %d°C";
-"carplay.alert.battery_low" = "CRÍTICO: Bateria %.1fV!";
-"carplay.alert.battery_warning" = "Aviso: Bateria %.1fV";
-"carplay.alert.rpm_high" = "Aviso: RPM alto %d!";
+"carplay.alert.coolant_critical" = "Líq. arref. CRÍTICO: %d°C!";
+"carplay.alert.coolant_high" = "Líq. arref. alto: %d°C";
+"carplay.alert.oil_critical" = "Óleo CRÍTICO: %d°C!";
+"carplay.alert.oil_high" = "Óleo quente: %d°C";
+"carplay.alert.voltage_critical" = "Bateria CRÍTICO: %.1fV!";
+"carplay.alert.voltage_low" = "Bateria baixa: %.1fV";
+"carplay.alert.high_rpm" = "RPM alto: %d!";
+"carplay.alert.stft_high" = "STFT anormal: %+.1f%%";
+"carplay.alert.ltft_high" = "LTFT anormal: %+.1f%%";
+"carplay.alert.fuel_low" = "Combustível baixo!";
 "carplay.alert.oil_pressure_low" = "CRÍTICO: Pressão óleo %.1f bar!";
