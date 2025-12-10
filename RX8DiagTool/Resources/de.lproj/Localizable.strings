@@ -1,0 +1,72 @@
+/*
+  Localizable.strings (German)
+  Renesis Monitor RX8
+
+  Deutsche Lokalisierung
+*/
+
+// MARK: - Common
+"common.ok" = "OK";
+"common.cancel" = "Abbrechen";
+"common.save" = "Speichern";
+"common.delete" = "Löschen";
+"common.close" = "Schließen";
+"common.done" = "Fertig";
+"common.error" = "Fehler";
+"common.warning" = "Warnung";
+"common.success" = "Erfolg";
+"common.loading" = "Laden...";
+"common.retry" = "Wiederholen";
+"common.settings" = "Einstellungen";
+"common.back" = "Zurück";
+"common.next" = "Weiter";
+"common.yes" = "Ja";
+"common.no" = "Nein";
+
+// MARK: - Tabs
+"tabs.dashboard" = "Dashboard";
+"tabs.diagnostics" = "Diagnose";
+"tabs.dtcs" = "Fehlercodes";
+"tabs.consumption" = "Verbrauch";
+"tabs.settings" = "Einstellungen";
+"tabs.radar" = "Radar";
+"tabs.blackbox" = "Blackbox";
+
+// MARK: - Dashboard
+"dashboard.rpm" = "U/min";
+"dashboard.speed" = "Geschwindigkeit";
+"dashboard.coolant_temp" = "Kühlmittel";
+"dashboard.oil_temp" = "Öltemperatur";
+"dashboard.oil_pressure" = "Öldruck";
+"dashboard.battery_voltage" = "Batterie";
+"dashboard.intake_temp" = "Ansaugluft";
+"dashboard.throttle" = "Drosselklappe";
+"dashboard.load" = "Last";
+"dashboard.maf" = "LMM";
+"dashboard.fuel_level" = "Kraftstoff";
+"dashboard.afr" = "Lambda";
+"dashboard.not_connected" = "Nicht verbunden";
+"dashboard.connecting" = "Verbinden...";
+"dashboard.connected" = "Verbunden";
+"dashboard.active_alerts" = "Aktive Warnungen";
+"dashboard.no_alerts" = "Keine aktiven Warnungen";
+"dashboard.connect_adapter" = "Verbinden Sie einen OBD2-Adapter per Bluetooth";
+
+// MARK: - Settings
+"settings.title" = "Einstellungen";
+"settings.language" = "Sprache";
+"settings.units" = "Einheiten";
+"settings.unit_metric" = "Metrisch (km/h, °C)";
+"settings.unit_imperial" = "Imperial (mph, °F)";
+
+// MARK: - Language
+"language.restart_title" = "App neu starten";
+"language.restart_message" = "Bitte starten Sie die App neu, um die Sprachänderung anzuwenden.";
+"language.restart_note" = "Einige Änderungen erfordern einen Neustart der App.";
+
+// MARK: - Subscription
+"subscription.premium" = "Premium";
+"subscription.trial_days_remaining" = "%d Tage verbleibend";
+"subscription.trial_expired" = "Testversion abgelaufen";
+
+// Note: This is a placeholder. Full translation needed.

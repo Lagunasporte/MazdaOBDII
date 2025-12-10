@@ -1,0 +1,277 @@
+/*
+  Localizable.strings (Spanish)
+  Renesis Monitor RX8
+
+  Localización en Español
+*/
+
+// MARK: - Common
+"common.ok" = "Aceptar";
+"common.cancel" = "Cancelar";
+"common.save" = "Guardar";
+"common.delete" = "Eliminar";
+"common.close" = "Cerrar";
+"common.done" = "Hecho";
+"common.error" = "Error";
+"common.warning" = "Advertencia";
+"common.success" = "Éxito";
+"common.loading" = "Cargando...";
+"common.retry" = "Reintentar";
+"common.settings" = "Ajustes";
+"common.back" = "Atrás";
+"common.next" = "Siguiente";
+"common.yes" = "Sí";
+"common.no" = "No";
+
+// MARK: - Tabs
+"tabs.dashboard" = "Dashboard";
+"tabs.diagnostics" = "Diagnóstico";
+"tabs.dtcs" = "DTCs";
+"tabs.consumption" = "Consumo";
+"tabs.settings" = "Ajustes";
+"tabs.radar" = "Radares";
+"tabs.blackbox" = "Caja Negra";
+
+// MARK: - Dashboard
+"dashboard.rpm" = "RPM";
+"dashboard.speed" = "Velocidad";
+"dashboard.coolant_temp" = "Refrigerante";
+"dashboard.oil_temp" = "Temp Aceite";
+"dashboard.oil_pressure" = "Presión Aceite";
+"dashboard.battery_voltage" = "Batería";
+"dashboard.intake_temp" = "Admisión";
+"dashboard.throttle" = "Acelerador";
+"dashboard.load" = "Carga";
+"dashboard.maf" = "MAF";
+"dashboard.fuel_level" = "Combustible";
+"dashboard.afr" = "AFR";
+"dashboard.not_connected" = "No Conectado";
+"dashboard.connecting" = "Conectando...";
+"dashboard.connected" = "Conectado";
+"dashboard.active_alerts" = "Alertas Activas";
+"dashboard.no_alerts" = "Sin alertas activas";
+"dashboard.connect_adapter" = "Conecta un adaptador OBD2 por Bluetooth para comenzar";
+
+// MARK: - Connection
+"connection.scanning_adapters" = "Buscando adaptadores...";
+"connection.connect_adapter" = "Conectar Adaptador";
+"connection.disconnect" = "Desconectar";
+"connection.reconnect" = "Reconectar";
+"connection.adapter_found" = "Adaptador encontrado";
+"connection.no_adapter_found" = "No se encontró adaptador";
+"connection.failed" = "Conexión fallida";
+"connection.lost" = "Conexión perdida";
+"connection.auto_connecting" = "Conectando automáticamente...";
+"connection.bluetooth_required" = "Se requiere Bluetooth";
+"connection.enable_bluetooth" = "Por favor activa Bluetooth en Ajustes";
+
+// MARK: - Diagnostics
+"diagnostics.scan_dtcs" = "Escanear DTCs";
+"diagnostics.clear_dtcs" = "Borrar DTCs";
+"diagnostics.current_dtcs" = "DTCs Actuales";
+"diagnostics.pending_dtcs" = "DTCs Pendientes";
+"diagnostics.no_dtcs_found" = "No se encontraron códigos de error";
+"diagnostics.dtc_cleared" = "Códigos de error borrados";
+"diagnostics.freeze_frame" = "Freeze Frame";
+"diagnostics.realtime_monitor" = "Monitor Tiempo Real";
+"diagnostics.o2_test" = "Test Sensor O2";
+"diagnostics.vehicle_info" = "Info Vehículo";
+"diagnostics.rotary_diagnostics" = "Diagnósticos Motor Rotativo";
+"diagnostics.actuator_tools" = "Herramientas Actuadores";
+"diagnostics.pid_tester" = "Test de PIDs";
+"diagnostics.confirm_clear" = "¿Estás seguro de que quieres borrar todos los códigos de error?";
+"diagnostics.clear_warning" = "Esto apagará la luz Check Engine. Asegúrate de que todos los problemas estén resueltos.";
+
+// MARK: - Rotary Specific
+"rotary.coil_status" = "Estado Bobinas";
+"rotary.fuel_trim_analysis" = "Análisis Fuel Trim";
+"rotary.catalyst_status" = "Estado Catalizador";
+"rotary.omp_system" = "Sistema OMP";
+"rotary.ssv_position" = "Posición SSV";
+"rotary.apv_position" = "Posición APV";
+"rotary.compression_info" = "El motor Renesis requiere compresión adecuada para su fiabilidad";
+"rotary.coil_warning" = "Las bobinas trailing fallan silenciosamente y dañan el catalizador";
+"rotary.coil_advice" = "Reemplazar siempre las 4 bobinas juntas";
+
+// MARK: - Actuator Tools
+"actuator.title" = "Herramientas Actuadores";
+"actuator.throttle_body" = "Cuerpo Mariposa";
+"actuator.ssv" = "SSV (Mariposa Secundaria)";
+"actuator.cooling_fan" = "Ventilador Motor";
+"actuator.ac_fan" = "Ventilador A/C";
+"actuator.fuel_pump" = "Bomba Combustible";
+"actuator.purge_valve" = "Válvula Purga EVAP";
+"actuator.engine_must_be_off" = "El motor debe estar APAGADO";
+"actuator.battery_low" = "Batería muy baja";
+"actuator.confirm_test" = "¿Ejecutar test de %@? Asegúrate de que el área esté despejada.";
+"actuator.adapter_limitation" = "Los adaptadores ELM327 genéricos no soportan control completo de actuadores. Para funcionalidad completa se requiere herramienta OEM (Mazda IDS) o adaptadores avanzados (OBDLink MX+).";
+
+// MARK: - Alerts
+"alerts.coolant_high" = "¡Temperatura de refrigerante alta!";
+"alerts.coolant_critical" = "¡CRÍTICO: Refrigerante sobrecalentado!";
+"alerts.oil_temp_high" = "¡Temperatura de aceite alta!";
+"alerts.oil_temp_critical" = "¡CRÍTICO: Aceite sobrecalentado!";
+"alerts.oil_pressure_low" = "¡Presión de aceite baja!";
+"alerts.battery_low" = "Voltaje de batería bajo";
+"alerts.rpm_high" = "Advertencia de RPM alto";
+"alerts.check_engine" = "Luz Check Engine ENCENDIDA";
+"alerts.stop_engine" = "¡Detener el motor inmediatamente!";
+"alerts.check_cooling" = "Revisar sistema de refrigeración";
+
+// MARK: - Settings
+"settings.title" = "Ajustes";
+"settings.language" = "Idioma";
+"settings.units" = "Unidades";
+"settings.unit_metric" = "Métrico (km/h, °C)";
+"settings.unit_imperial" = "Imperial (mph, °F)";
+"settings.temperature" = "Temperatura";
+"settings.temp_celsius" = "Celsius (°C)";
+"settings.temp_fahrenheit" = "Fahrenheit (°F)";
+"settings.alert_settings" = "Ajustes de Alertas";
+"settings.polling_interval" = "Intervalo de Lectura";
+"settings.polling_fast" = "Rápido (más datos, más batería)";
+"settings.polling_normal" = "Normal";
+"settings.polling_slow" = "Lento (menos datos, ahorra batería)";
+"settings.data_mode" = "Modo de Datos";
+"settings.data_mode_essential" = "Esencial";
+"settings.data_mode_normal" = "Normal";
+"settings.data_mode_full" = "Completo";
+"settings.auto_connect" = "Conexión Automática";
+"settings.keep_screen_on" = "Mantener Pantalla Encendida";
+"settings.haptic_feedback" = "Vibración";
+"settings.data_logging" = "Registro de Datos";
+"settings.export_data" = "Exportar Datos";
+"settings.adapter_test" = "Test Velocidad Adaptador";
+"settings.about" = "Acerca de";
+"settings.thresholds" = "Umbrales de Alerta";
+"settings.coolant_warning" = "Advertencia Refrigerante";
+"settings.coolant_critical" = "Crítico Refrigerante";
+"settings.oil_warning" = "Advertencia Aceite";
+"settings.oil_critical" = "Crítico Aceite";
+"settings.battery_warning" = "Batería Baja";
+"settings.rpm_warning" = "Advertencia RPM";
+
+// MARK: - Vehicle Info
+"vehicle.vin" = "VIN";
+"vehicle.odometer" = "Odómetro";
+"vehicle.ecu_info" = "Info ECU";
+"vehicle.calibration_id" = "ID Calibración";
+"vehicle.monitor_status" = "Estado Monitores";
+"vehicle.dtc_count" = "Cantidad DTCs";
+"vehicle.mil_status" = "Estado MIL";
+"vehicle.distance_since_clear" = "Distancia desde borrado DTC";
+"vehicle.time_since_clear" = "Tiempo desde borrado DTC";
+
+// MARK: - Fuel Consumption
+"consumption.title" = "Consumo de Combustible";
+"consumption.current" = "Actual";
+"consumption.average" = "Promedio";
+"consumption.trip" = "Viaje";
+"consumption.total" = "Total";
+"consumption.reset_trip" = "Reiniciar Viaje";
+"consumption.history" = "Historial";
+
+// MARK: - Black Box
+"blackbox.title" = "Caja Negra";
+"blackbox.recording" = "Grabando";
+"blackbox.start_recording" = "Iniciar Grabación";
+"blackbox.stop_recording" = "Detener Grabación";
+"blackbox.export" = "Exportar Datos";
+"blackbox.ai_analysis" = "Análisis IA";
+"blackbox.analyze_with_claude" = "Analizar con Claude AI";
+
+// MARK: - Radar
+"radar.title" = "Radares de Velocidad";
+"radar.alerts_enabled" = "Alertas Activadas";
+"radar.alert_distance" = "Distancia de Alerta";
+"radar.sound" = "Sonido";
+"radar.vibration" = "Vibración";
+
+// MARK: - Subscription
+"subscription.premium" = "Premium";
+"subscription.trial_title" = "Prueba Gratuita";
+"subscription.trial_days_remaining" = "%d días restantes";
+"subscription.trial_expired" = "Prueba Expirada";
+"subscription.active" = "Activa";
+"subscription.active_until" = "Activa hasta %@";
+"subscription.lifetime_active" = "Acceso de por vida";
+"subscription.not_subscribed" = "No Suscrito";
+"subscription.status.unknown" = "Verificando estado...";
+"subscription.per_month" = "/mes";
+"subscription.per_year" = "/año";
+"subscription.per_week" = "/semana";
+"subscription.per_day" = "/día";
+"subscription.months" = "meses";
+"subscription.years" = "años";
+
+// MARK: - Paywall
+"paywall.title" = "Desbloquea Acceso Completo";
+"paywall.subtitle" = "Obtén acceso ilimitado a todas las funciones";
+"paywall.trial_remaining" = "%d días restantes de tu prueba gratuita";
+"paywall.trial_expired_message" = "Tu prueba gratuita ha terminado. Suscríbete para continuar usando todas las funciones.";
+"paywall.features_title" = "Funciones Premium";
+"paywall.products_unavailable" = "Productos no disponibles. Por favor intenta más tarde.";
+"paywall.subscribe_button" = "Suscribirse";
+"paywall.restore_purchases" = "Restaurar Compras";
+"paywall.best_value" = "MEJOR VALOR";
+"paywall.monthly_title" = "Mensual";
+"paywall.yearly_title" = "Anual";
+"paywall.lifetime_title" = "De por vida";
+"paywall.billed_monthly" = "Facturado mensualmente";
+"paywall.billed_yearly" = "Facturado anualmente";
+"paywall.one_time_purchase" = "Compra única";
+"paywall.save_percent" = "Ahorra 50%";
+"paywall.legal_text" = "La suscripción se renueva automáticamente a menos que se cancele al menos 24 horas antes del final del período actual. Puedes gestionar tu suscripción en los ajustes de tu cuenta de App Store.";
+"paywall.privacy_policy" = "Política de Privacidad";
+"paywall.terms" = "Términos de Servicio";
+
+// MARK: - Premium Features
+"premium.feature.unlimited_diagnostics" = "Diagnósticos Ilimitados";
+"premium.feature.ai_analysis" = "Análisis con IA";
+"premium.feature.data_export" = "Exportación de Datos (CSV/JSON)";
+"premium.feature.blackbox" = "Grabación Extendida Caja Negra";
+"premium.feature.advanced_alerts" = "Sistema de Alertas Avanzado";
+"premium.feature.no_ads" = "Sin Publicidad";
+"premium.feature.priority_support" = "Soporte Prioritario";
+
+// MARK: - Store Errors
+"store.error.verification_failed" = "Verificación de compra fallida";
+"store.error.purchase_failed" = "Compra fallida";
+"store.error.product_not_found" = "Producto no encontrado";
+
+// MARK: - Units
+"units.kmh" = "km/h";
+"units.mph" = "mph";
+"units.celsius" = "°C";
+"units.fahrenheit" = "°F";
+"units.kpa" = "kPa";
+"units.psi" = "psi";
+"units.liters" = "L";
+"units.gallons" = "gal";
+"units.km" = "km";
+"units.miles" = "mi";
+"units.lper100km" = "L/100km";
+"units.mpg" = "mpg";
+
+// MARK: - About
+"about.title" = "Acerca de";
+"about.version" = "Versión";
+"about.developer" = "Desarrollador";
+"about.support" = "Soporte";
+"about.rate_app" = "Calificar esta App";
+"about.share_app" = "Compartir App";
+"about.acknowledgements" = "Agradecimientos";
+"about.disclaimer" = "Esta app no está afiliada con Mazda Motor Corporation. Úsala bajo tu propia responsabilidad.";
+
+// MARK: - Errors
+"error.connection_failed" = "Error al conectar con el adaptador";
+"error.no_data" = "No se recibieron datos";
+"error.timeout" = "Tiempo de conexión agotado";
+"error.bluetooth_off" = "Bluetooth está desactivado";
+"error.adapter_not_supported" = "Adaptador no soportado";
+"error.vehicle_not_responding" = "El vehículo no responde";
+
+// MARK: - Language
+"language.restart_title" = "Reinicio Necesario";
+"language.restart_message" = "Por favor reinicia la app para aplicar el cambio de idioma.";
+"language.restart_note" = "Algunos cambios requieren reiniciar la app para tener efecto.";
