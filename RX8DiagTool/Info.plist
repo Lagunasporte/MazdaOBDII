@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>RX-8 Diag</string>
+    <string>Renesis Monitor</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -58,9 +58,9 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>RX-8 Diag necesita Bluetooth para conectarse al adaptador OBD2 y leer datos del vehículo.</string>
+    <string>Renesis Monitor necesita Bluetooth para conectarse al adaptador OBD2 y leer datos del vehículo.</string>
     <key>NSBluetoothPeripheralUsageDescription</key>
-    <string>RX-8 Diag necesita acceso a Bluetooth para comunicarse con el adaptador OBD2.</string>
+    <string>Renesis Monitor necesita acceso a Bluetooth para comunicarse con el adaptador OBD2.</string>
     <key>UIUserInterfaceStyle</key>
     <string>Dark</string>
 </dict>

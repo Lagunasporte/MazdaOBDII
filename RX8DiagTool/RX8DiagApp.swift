@@ -1,7 +1,8 @@
 import SwiftUI
 import UIKit
+import AudioToolbox
 
-// MARK: - App Principal RX-8 Diagnostic Tool
+// MARK: - App Principal - Renesis Monitor RX8
 
 @main
 struct RX8DiagApp: App {
@@ -48,10 +49,12 @@ struct RX8DiagApp: App {
 
 struct MainTabView: View {
     @EnvironmentObject var connectionManager: OBDConnectionManager
+    @EnvironmentObject var engineMonitor: EngineMonitor
     @State private var selectedTab = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        ZStack(alignment: .top) {
+            TabView(selection: $selectedTab) {
             // Tab 1: Dashboard
             DashboardView()
                 .tabItem {
@@ -93,8 +96,123 @@ struct MainTabView: View {
                     Label("Ajustes", systemImage: "gearshape")
                 }
                 .tag(5)
+            }
+            .tint(.orange) // Color RX-8
+
+            // Banner de alerta superpuesto
+            if engineMonitor.showAlertBanner, let message = engineMonitor.alertBannerMessage {
+                AlertBannerView(
+                    message: message,
+                    severity: engineMonitor.alertBannerSeverity,
+                    onDismiss: { engineMonitor.dismissAlertBanner() }
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(100)
+            }
         }
-        .tint(.orange) // Color RX-8
+    }
+}
+
+// MARK: - Banner de Alerta Visual
+
+struct AlertBannerView: View {
+    let message: String
+    let severity: AlertSeverity
+    let onDismiss: () -> Void
+
+    @State private var timeRemaining: Int = 15
+
+    var backgroundColor: Color {
+        switch severity {
+        case .critical: return .red
+        case .warning: return .orange
+        case .info: return .blue
+        }
+    }
+
+    var icon: String {
+        switch severity {
+        case .critical: return "exclamationmark.triangle.fill"
+        case .warning: return "exclamationmark.circle.fill"
+        case .info: return "info.circle.fill"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // Icono animado
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .symbolEffect(.pulse, options: .repeating)
+
+                // Mensaje
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(severity == .critical ? "¡ALERTA CRÍTICA!" : "ALERTA")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white.opacity(0.9))
+
+                    Text(message)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                }
+
+                Spacer()
+
+                // Contador y botón cerrar
+                VStack(spacing: 4) {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+
+                    Text("\(timeRemaining)s")
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [backgroundColor, backgroundColor.opacity(0.8)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+
+            // Barra de progreso
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(Color.white.opacity(0.5))
+                    .frame(width: geo.size.width * CGFloat(timeRemaining) / 15.0, height: 3)
+                    .animation(.linear(duration: 1), value: timeRemaining)
+            }
+            .frame(height: 3)
+            .background(Color.black.opacity(0.3))
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: backgroundColor.opacity(0.5), radius: 10, y: 5)
+        .padding(.horizontal, 12)
+        .padding(.top, 50) // Para no tapar la barra de estado
+        .onAppear {
+            startCountdown()
+        }
+    }
+
+    private func startCountdown() {
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            if timeRemaining > 0 {
+                timeRemaining -= 1
+            } else {
+                timer.invalidate()
+            }
+        }
     }
 }
 
@@ -363,7 +481,7 @@ struct MobileDashboardView: View {
                 .padding()
             }
             .background(Color.black)
-            .navigationTitle("RX-8 Diag")
+            .navigationTitle("Renesis Monitor")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -945,6 +1063,11 @@ public class EngineMonitor: ObservableObject {
     @Published public var updateRate: Double = 0 // Hz
     @Published public var lastUpdateTime: Date?
 
+    // Sistema de notificación de alertas
+    @Published public var alertBannerMessage: String?
+    @Published public var alertBannerSeverity: AlertSeverity = .warning
+    @Published public var showAlertBanner: Bool = false
+
     private var monitoringTask: Task<Void, Never>?
     private var connectionManager: OBDConnectionManager?
     private var fuelTracker: FuelConsumptionTracker?
@@ -953,6 +1076,10 @@ public class EngineMonitor: ObservableObject {
     private var updateInterval: UInt64 = 100_000_000 // 100ms = 10 Hz - Muy rápido
     private var lastUpdateTimestamp: Date = Date()
     private var updateCount: Int = 0
+
+    // Para evitar repetir sonidos de la misma alerta
+    private var previousAlertKeys: Set<String> = []
+    private var bannerDismissTask: Task<Void, Never>?
 
     public init() {}
 
@@ -1306,6 +1433,94 @@ public class EngineMonitor: ObservableObject {
             ))
         }
 
+        // Detectar alertas nuevas y mostrar banner con sonido
+        let newAlertKeys = Set(newAlerts.map { $0.alertKey })
+        let brandNewAlerts = newAlerts.filter { !previousAlertKeys.contains($0.alertKey) }
+
+        if !brandNewAlerts.isEmpty {
+            // Encontrar la alerta más crítica
+            let mostCritical = brandNewAlerts.max { a, b in
+                a.severity.rawValue < b.severity.rawValue
+            }
+
+            if let alert = mostCritical {
+                // Reproducir sonido de alerta
+                playAlertSound(severity: alert.severity)
+
+                // Mostrar banner
+                showAlertBanner(message: alert.message, severity: alert.severity)
+            }
+        }
+
+        previousAlertKeys = newAlertKeys
         activeAlerts = newAlerts
+    }
+
+    // MARK: - Sistema de Alertas Visuales y Sonoras
+
+    private func playAlertSound(severity: AlertSeverity) {
+        DispatchQueue.main.async {
+            switch severity {
+            case .critical:
+                // Sonido de alerta crítica (3 beeps)
+                AudioServicesPlaySystemSound(1521) // Notificación de alerta
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    AudioServicesPlaySystemSound(1521)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    AudioServicesPlaySystemSound(1521)
+                }
+            case .warning:
+                // Sonido de advertencia (1 beep)
+                AudioServicesPlaySystemSound(1519) // Notificación estándar
+            case .info:
+                // Sonido suave
+                AudioServicesPlaySystemSound(1057) // Tono suave
+            }
+
+            // Vibración en alertas críticas
+            if severity == .critical {
+                AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+            }
+        }
+    }
+
+    private func showAlertBanner(message: String, severity: AlertSeverity) {
+        // Cancelar tarea de dismiss anterior si existe
+        bannerDismissTask?.cancel()
+
+        DispatchQueue.main.async {
+            self.alertBannerMessage = message
+            self.alertBannerSeverity = severity
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                self.showAlertBanner = true
+            }
+        }
+
+        // Auto-dismiss después de 15 segundos
+        bannerDismissTask = Task {
+            try? await Task.sleep(nanoseconds: 15_000_000_000) // 15 segundos
+            if !Task.isCancelled {
+                await MainActor.run {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        self.showAlertBanner = false
+                    }
+                }
+            }
+        }
+    }
+
+    public func dismissAlertBanner() {
+        bannerDismissTask?.cancel()
+        withAnimation(.easeOut(duration: 0.3)) {
+            showAlertBanner = false
+        }
+    }
+}
+
+// Extensión para generar clave única de alerta
+extension EngineAlert {
+    var alertKey: String {
+        "\(type.rawValue)-\(parameter)-\(severity.rawValue)"
     }
 }
