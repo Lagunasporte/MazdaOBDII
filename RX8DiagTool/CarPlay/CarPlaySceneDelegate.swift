@@ -3,8 +3,8 @@ import SwiftUI
 import Combine
 
 // MARK: - CarPlay Scene Delegate
-// Beautiful dashboard for Mazda RX-8 rotary engine monitoring
-// Designed to match the iOS app aesthetic with orange RX-8 branding
+// Dashboard diseñado para ser lo más parecido posible a la app iOS
+// Usa colores naranja RX-8, iconos dinámicos y emojis para máximo impacto visual
 
 class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
@@ -13,6 +13,9 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var updateTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
+    // Color naranja RX-8
+    private let rx8Orange = UIColor(red: 1.0, green: 0.6, blue: 0.0, alpha: 1.0)
+
     // MARK: - Scene Lifecycle
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
@@ -20,10 +23,8 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         print("CarPlay: Connected to Renesis Monitor RX8")
         self.interfaceController = interfaceController
 
-        // Subscribe to shared data provider updates
         setupDataSubscription()
 
-        // Create and set root template
         let rootTemplate = createRootTemplate()
         interfaceController.setRootTemplate(rootTemplate, animated: true) { success, error in
             if let error = error {
@@ -33,7 +34,6 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
             }
         }
 
-        // Start updates at 1Hz (CarPlay refresh rate)
         startUpdates()
     }
 
@@ -63,429 +63,547 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
             .store(in: &cancellables)
     }
 
-    // MARK: - Root Template (Tab Bar with 4 tabs)
+    // MARK: - Root Template (Tab Bar - 4 tabs como iOS)
 
     private func createRootTemplate() -> CPTemplate {
-        let gaugesTab = createGaugesTab()
+        let dashboardTab = createDashboardTab()
         let engineTab = createEngineTab()
         let fuelTab = createFuelTab()
         let alertsTab = createAlertsTab()
 
-        let tabBar = CPTabBarTemplate(templates: [gaugesTab, engineTab, fuelTab, alertsTab])
+        let tabBar = CPTabBarTemplate(templates: [dashboardTab, engineTab, fuelTab, alertsTab])
         return tabBar
     }
 
-    // MARK: - Tab 1: Main Gauges (Grid Layout)
+    // MARK: - Tab 1: Dashboard Principal (Grid como gauges de iOS)
 
-    private func createGaugesTab() -> CPGridTemplate {
+    private func createDashboardTab() -> CPGridTemplate {
         let gridButtons = [
-            // RPM Gauge
-            createGaugeButton(
-                title: "RPM",
+            // RPM - Principal como en iOS
+            createGaugeGridButton(
+                emoji: rpmEmoji,
                 value: "\(carPlayDashboard.rpm)",
-                icon: rpmIcon,
-                isHighlighted: carPlayDashboard.rpm > 7000
+                label: "RPM",
+                color: rpmColor
             ),
-            // Speed
-            createGaugeButton(
-                title: NSLocalizedString("carplay.speed", comment: ""),
+            // Velocidad
+            createGaugeGridButton(
+                emoji: "🏎️",
                 value: String(format: "%.0f", carPlayDashboard.speed),
-                icon: "speedometer",
-                isHighlighted: false
+                label: "km/h",
+                color: .systemBlue
             ),
-            // Coolant Temperature
-            createGaugeButton(
-                title: NSLocalizedString("carplay.coolant", comment: ""),
+            // Refrigerante
+            createGaugeGridButton(
+                emoji: coolantEmoji,
                 value: String(format: "%.0f°", carPlayDashboard.coolantTemp),
-                icon: coolantIcon,
-                isHighlighted: carPlayDashboard.coolantTemp > 100
+                label: "Refrig.",
+                color: coolantColor
             ),
-            // Oil Temperature
-            createGaugeButton(
-                title: NSLocalizedString("carplay.oil", comment: ""),
+            // Aceite
+            createGaugeGridButton(
+                emoji: oilEmoji,
                 value: carPlayDashboard.oilTemp > 50 ? String(format: "%.0f°", carPlayDashboard.oilTemp) : "--",
-                icon: oilIcon,
-                isHighlighted: carPlayDashboard.oilTemp > 120
+                label: "Aceite",
+                color: oilColor
             ),
-            // Battery Voltage
-            createGaugeButton(
-                title: NSLocalizedString("carplay.voltage", comment: ""),
-                value: String(format: "%.1fV", carPlayDashboard.batteryVoltage),
-                icon: voltageIcon,
-                isHighlighted: carPlayDashboard.batteryVoltage < 12.0 && carPlayDashboard.batteryVoltage > 0
+            // Voltaje
+            createGaugeGridButton(
+                emoji: voltageEmoji,
+                value: String(format: "%.1f", carPlayDashboard.batteryVoltage),
+                label: "Voltios",
+                color: voltageColor
             ),
-            // Fuel Level
-            createGaugeButton(
-                title: NSLocalizedString("carplay.fuel", comment: ""),
+            // Combustible
+            createGaugeGridButton(
+                emoji: fuelEmoji,
                 value: String(format: "%.0f%%", carPlayDashboard.fuelLevel),
-                icon: fuelIcon,
-                isHighlighted: carPlayDashboard.fuelLevel < 15
+                label: "Comb.",
+                color: fuelColor
             )
         ]
 
-        let template = CPGridTemplate(title: "Renesis Monitor", gridButtons: gridButtons)
-        template.tabTitle = "Gauges"
+        let template = CPGridTemplate(title: "🔶 Renesis Monitor RX-8", gridButtons: gridButtons)
+        template.tabTitle = "Dashboard"
         template.tabImage = UIImage(systemName: "gauge.with.dots.needle.bottom.50percent")
 
         return template
     }
 
-    private func createGaugeButton(title: String, value: String, icon: String, isHighlighted: Bool) -> CPGridButton {
-        // Create SF Symbol image with appropriate rendering
-        var image = UIImage(systemName: icon) ?? UIImage(systemName: "questionmark.circle")!
+    private func createGaugeGridButton(emoji: String, value: String, label: String, color: UIColor) -> CPGridButton {
+        // Crear icono con el símbolo apropiado
+        let config = UIImage.SymbolConfiguration(pointSize: 40, weight: .bold)
+        var image = UIImage(systemName: "circle.fill", withConfiguration: config) ?? UIImage()
+        image = image.withTintColor(color, renderingMode: .alwaysOriginal)
 
-        // Use orange tint for highlighted/warning states
-        if isHighlighted {
-            image = image.withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
-        }
+        // Formato: emoji + valor grande + etiqueta
+        let title = "\(emoji) \(value)\n\(label)"
 
-        // Title variants: first is preferred, second is fallback for smaller displays
-        let fullTitle = "\(value)\n\(title)"
-        let shortTitle = value
-
-        return CPGridButton(titleVariants: [fullTitle, shortTitle], image: image) { [weak self] _ in
-            // Show detail view when tapped
-            self?.showGaugeDetail(for: title)
+        return CPGridButton(titleVariants: [title, "\(emoji)\(value)"], image: image) { [weak self] _ in
+            self?.showDetailForGauge(label)
         }
     }
 
-    // MARK: - Tab 2: Engine Details (List Layout)
+    // MARK: - Tab 2: Motor (Lista detallada como iOS)
 
     private func createEngineTab() -> CPListTemplate {
-        // Section 1: Temperatures
-        let tempItems = [
-            createDetailItem(
-                title: NSLocalizedString("carplay.coolant_temp", comment: ""),
-                value: String(format: "%.1f °C", carPlayDashboard.coolantTemp),
-                icon: coolantIcon,
-                status: coolantStatus
-            ),
-            createDetailItem(
-                title: NSLocalizedString("carplay.oil_temp", comment: ""),
-                value: carPlayDashboard.oilTemp > 50 ? String(format: "%.1f °C", carPlayDashboard.oilTemp) : "-- °C",
-                icon: oilIcon,
-                status: oilStatus
-            ),
-            createDetailItem(
-                title: NSLocalizedString("carplay.intake_temp", comment: ""),
-                value: String(format: "%.1f °C", carPlayDashboard.intakeTemp),
-                icon: "wind",
-                status: .normal
-            )
-        ]
+        // Sección: Temperaturas (como las tarjetas de iOS)
         let tempSection = CPListSection(
-            items: tempItems,
-            header: NSLocalizedString("carplay.section.temperatures", comment: ""),
+            items: [
+                createColoredListItem(
+                    emoji: coolantEmoji,
+                    title: "🌡️ Refrigerante",
+                    value: String(format: "%.1f °C", carPlayDashboard.coolantTemp),
+                    status: coolantStatusText,
+                    color: coolantColor
+                ),
+                createColoredListItem(
+                    emoji: oilEmoji,
+                    title: "🛢️ Temperatura Aceite",
+                    value: carPlayDashboard.oilTemp > 50 ? String(format: "%.1f °C", carPlayDashboard.oilTemp) : "-- °C",
+                    status: oilStatusText,
+                    color: oilColor
+                ),
+                createColoredListItem(
+                    emoji: "🌬️",
+                    title: "💨 Temp. Admisión",
+                    value: String(format: "%.1f °C", carPlayDashboard.intakeTemp),
+                    status: "Normal",
+                    color: .systemCyan
+                )
+            ],
+            header: "🌡️ TEMPERATURAS",
             sectionIndexTitle: nil
         )
 
-        // Section 2: Performance
-        let perfItems = [
-            createDetailItem(
-                title: "RPM",
-                value: "\(carPlayDashboard.rpm)",
-                icon: rpmIcon,
-                status: rpmStatus
-            ),
-            createDetailItem(
-                title: NSLocalizedString("carplay.throttle", comment: ""),
-                value: String(format: "%.0f%%", carPlayDashboard.throttle),
-                icon: "pedal.accelerator",
-                status: .normal
-            ),
-            createDetailItem(
-                title: NSLocalizedString("carplay.engine_load", comment: ""),
-                value: String(format: "%.0f%%", carPlayDashboard.engineLoad),
-                icon: "engine.combustion",
-                status: .normal
-            )
-        ]
+        // Sección: Rendimiento
         let perfSection = CPListSection(
-            items: perfItems,
-            header: NSLocalizedString("carplay.section.performance", comment: ""),
+            items: [
+                createColoredListItem(
+                    emoji: rpmEmoji,
+                    title: "⚡ RPM",
+                    value: "\(carPlayDashboard.rpm)",
+                    status: rpmStatusText,
+                    color: rpmColor
+                ),
+                createColoredListItem(
+                    emoji: "🦶",
+                    title: "🎚️ Acelerador",
+                    value: String(format: "%.0f%%", carPlayDashboard.throttle),
+                    status: "",
+                    color: .systemBlue
+                ),
+                createColoredListItem(
+                    emoji: "⚙️",
+                    title: "📊 Carga Motor",
+                    value: String(format: "%.0f%%", carPlayDashboard.engineLoad),
+                    status: "",
+                    color: .systemPurple
+                )
+            ],
+            header: "⚡ RENDIMIENTO",
             sectionIndexTitle: nil
         )
 
-        // Section 3: Fuel System
-        let fuelItems = [
-            createDetailItem(
-                title: "STFT",
-                value: String(format: "%+.1f%%", carPlayDashboard.stft),
-                icon: fuelTrimIcon(carPlayDashboard.stft),
-                status: fuelTrimStatus(carPlayDashboard.stft)
-            ),
-            createDetailItem(
-                title: "LTFT",
-                value: String(format: "%+.1f%%", carPlayDashboard.ltft),
-                icon: fuelTrimIcon(carPlayDashboard.ltft),
-                status: fuelTrimStatus(carPlayDashboard.ltft)
-            )
-        ]
-        let fuelSection = CPListSection(
-            items: fuelItems,
-            header: NSLocalizedString("carplay.section.fuel_system", comment: ""),
+        // Sección: Fuel Trims (importante para rotativo)
+        let fuelTrimSection = CPListSection(
+            items: [
+                createColoredListItem(
+                    emoji: stftEmoji,
+                    title: "📈 STFT (Corto plazo)",
+                    value: String(format: "%+.1f%%", carPlayDashboard.stft),
+                    status: fuelTrimStatusText(carPlayDashboard.stft),
+                    color: fuelTrimColor(carPlayDashboard.stft)
+                ),
+                createColoredListItem(
+                    emoji: ltftEmoji,
+                    title: "📉 LTFT (Largo plazo)",
+                    value: String(format: "%+.1f%%", carPlayDashboard.ltft),
+                    status: fuelTrimStatusText(carPlayDashboard.ltft),
+                    color: fuelTrimColor(carPlayDashboard.ltft)
+                )
+            ],
+            header: "⛽ FUEL TRIMS",
             sectionIndexTitle: nil
         )
 
-        let template = CPListTemplate(title: NSLocalizedString("carplay.engine_title", comment: ""), sections: [tempSection, perfSection, fuelSection])
-        template.tabTitle = NSLocalizedString("carplay.tab.engine", comment: "")
+        let template = CPListTemplate(title: "🔧 Motor", sections: [tempSection, perfSection, fuelTrimSection])
+        template.tabTitle = "Motor"
         template.tabImage = UIImage(systemName: "engine.combustion")
 
         return template
     }
 
-    // MARK: - Tab 3: Fuel & Consumption
+    // MARK: - Tab 3: Consumo (como vista de consumo iOS)
 
     private func createFuelTab() -> CPListTemplate {
-        // Section 1: Current Trip
-        let tripItems = [
-            createDetailItem(
-                title: NSLocalizedString("carplay.instant_consumption", comment: ""),
-                value: carPlayDashboard.speed > 5
-                    ? String(format: "%.1f L/100km", carPlayDashboard.consumption)
-                    : String(format: "%.1f L/h", carPlayDashboard.consumptionPerHour),
-                icon: "fuelpump.fill",
-                status: .normal
-            ),
-            createDetailItem(
-                title: NSLocalizedString("carplay.average_consumption", comment: ""),
-                value: String(format: "%.1f L/100km", carPlayDashboard.avgConsumption),
-                icon: "chart.line.uptrend.xyaxis",
-                status: .normal
-            ),
-            createDetailItem(
-                title: NSLocalizedString("carplay.estimated_range", comment: ""),
-                value: String(format: "%.0f km", carPlayDashboard.range),
-                icon: "road.lanes",
-                status: rangeStatus
-            )
-        ]
-        let tripSection = CPListSection(
-            items: tripItems,
-            header: NSLocalizedString("carplay.section.trip", comment: ""),
+        // Consumo actual
+        let consumptionSection = CPListSection(
+            items: [
+                createColoredListItem(
+                    emoji: "⛽",
+                    title: "📊 Consumo Instantáneo",
+                    value: carPlayDashboard.speed > 5
+                        ? String(format: "%.1f L/100km", carPlayDashboard.consumption)
+                        : String(format: "%.1f L/h", carPlayDashboard.consumptionPerHour),
+                    status: consumptionStatusText,
+                    color: consumptionColor
+                ),
+                createColoredListItem(
+                    emoji: "📈",
+                    title: "📊 Consumo Medio",
+                    value: String(format: "%.1f L/100km", carPlayDashboard.avgConsumption),
+                    status: "",
+                    color: .systemBlue
+                ),
+                createColoredListItem(
+                    emoji: "🛣️",
+                    title: "🔋 Autonomía Estimada",
+                    value: String(format: "%.0f km", carPlayDashboard.range),
+                    status: rangeStatusText,
+                    color: rangeColor
+                )
+            ],
+            header: "🛣️ VIAJE ACTUAL",
             sectionIndexTitle: nil
         )
 
-        // Section 2: Fuel Tank
-        let tankItems = [
-            createDetailItem(
-                title: NSLocalizedString("carplay.fuel_level", comment: ""),
-                value: String(format: "%.0f%%", carPlayDashboard.fuelLevel),
-                icon: fuelIcon,
-                status: fuelLevelStatus
-            ),
-            createDetailItem(
-                title: NSLocalizedString("carplay.fuel_remaining", comment: ""),
-                value: String(format: "%.1f L", carPlayDashboard.fuelLiters),
-                icon: "drop.fill",
-                status: .normal
-            )
-        ]
+        // Depósito
         let tankSection = CPListSection(
-            items: tankItems,
-            header: NSLocalizedString("carplay.section.tank", comment: ""),
+            items: [
+                createColoredListItem(
+                    emoji: fuelEmoji,
+                    title: "⛽ Nivel Combustible",
+                    value: String(format: "%.0f%%", carPlayDashboard.fuelLevel),
+                    status: fuelLevelStatusText,
+                    color: fuelColor
+                ),
+                createColoredListItem(
+                    emoji: "💧",
+                    title: "🛢️ Litros Restantes",
+                    value: String(format: "%.1f L", carPlayDashboard.fuelLiters),
+                    status: "(Depósito 60L)",
+                    color: .systemTeal
+                )
+            ],
+            header: "⛽ DEPÓSITO",
             sectionIndexTitle: nil
         )
 
-        let template = CPListTemplate(title: NSLocalizedString("carplay.fuel_title", comment: ""), sections: [tripSection, tankSection])
-        template.tabTitle = NSLocalizedString("carplay.tab.fuel", comment: "")
-        template.tabImage = UIImage(systemName: "fuelpump")
+        // Voltaje
+        let electricSection = CPListSection(
+            items: [
+                createColoredListItem(
+                    emoji: voltageEmoji,
+                    title: "🔋 Voltaje Batería",
+                    value: String(format: "%.2f V", carPlayDashboard.batteryVoltage),
+                    status: voltageStatusText,
+                    color: voltageColor
+                )
+            ],
+            header: "🔌 ELÉCTRICO",
+            sectionIndexTitle: nil
+        )
+
+        let template = CPListTemplate(title: "⛽ Consumo", sections: [consumptionSection, tankSection, electricSection])
+        template.tabTitle = "Consumo"
+        template.tabImage = UIImage(systemName: "fuelpump.fill")
 
         return template
     }
 
-    // MARK: - Tab 4: Alerts
+    // MARK: - Tab 4: Alertas (como la vista de alertas iOS)
 
     private func createAlertsTab() -> CPListTemplate {
         var sections: [CPListSection] = []
 
-        // Active Alerts Section
-        if !carPlayDashboard.alerts.isEmpty {
-            let alertItems = carPlayDashboard.alerts.map { alert -> CPListItem in
-                let item = CPListItem(text: alert.message, detailText: formatAlertTime(alert.timestamp))
-                item.setImage(UIImage(systemName: alertIcon(for: alert.severity)))
-                return item
-            }
-            let alertSection = CPListSection(
-                items: alertItems,
-                header: "⚠️ " + NSLocalizedString("carplay.section.active_alerts", comment: ""),
-                sectionIndexTitle: nil
-            )
-            sections.append(alertSection)
-        }
-
-        // System Status Section
+        // Resumen de estado (como iOS)
         let statusItems = [
-            createStatusItem(
-                title: NSLocalizedString("carplay.status.engine", comment: ""),
+            createStatusListItem(
+                title: "🔥 Motor",
                 isOK: carPlayDashboard.coolantTemp < 100 && carPlayDashboard.oilTemp < 120
             ),
-            createStatusItem(
-                title: NSLocalizedString("carplay.status.electrical", comment: ""),
+            createStatusListItem(
+                title: "🔋 Sistema Eléctrico",
                 isOK: carPlayDashboard.batteryVoltage >= 12.0 || carPlayDashboard.batteryVoltage == 0
             ),
-            createStatusItem(
-                title: NSLocalizedString("carplay.status.fuel_system", comment: ""),
+            createStatusListItem(
+                title: "⛽ Sistema Combustible",
                 isOK: abs(carPlayDashboard.stft) < 15 && abs(carPlayDashboard.ltft) < 10
+            ),
+            createStatusListItem(
+                title: "🛢️ Nivel Combustible",
+                isOK: carPlayDashboard.fuelLevel > 15
             )
         ]
+
         let statusSection = CPListSection(
             items: statusItems,
-            header: NSLocalizedString("carplay.section.system_status", comment: ""),
+            header: overallStatusHeader,
             sectionIndexTitle: nil
         )
         sections.append(statusSection)
 
-        // If no alerts, show all clear message
-        if carPlayDashboard.alerts.isEmpty {
-            let okItem = CPListItem(
-                text: NSLocalizedString("carplay.all_systems_ok", comment: ""),
-                detailText: NSLocalizedString("carplay.no_active_alerts", comment: "")
+        // Alertas activas
+        if !carPlayDashboard.alerts.isEmpty {
+            let alertItems = carPlayDashboard.alerts.map { alert -> CPListItem in
+                let emoji = alertSeverityEmoji(alert.severity)
+                let item = CPListItem(
+                    text: "\(emoji) \(alert.message)",
+                    detailText: "⏰ \(formatAlertTime(alert.timestamp))"
+                )
+                let icon = alertSeverityIcon(alert.severity)
+                var image = UIImage(systemName: icon)!
+                image = image.withTintColor(alertSeverityColor(alert.severity), renderingMode: .alwaysOriginal)
+                item.setImage(image)
+                return item
+            }
+
+            let alertSection = CPListSection(
+                items: alertItems,
+                header: "🚨 ALERTAS ACTIVAS (\(carPlayDashboard.alerts.count))",
+                sectionIndexTitle: nil
             )
-            okItem.setImage(UIImage(systemName: "checkmark.shield.fill"))
-            let okSection = CPListSection(items: [okItem], header: nil, sectionIndexTitle: nil)
-            sections.insert(okSection, at: 0)
+            sections.insert(alertSection, at: 0)
         }
 
-        let template = CPListTemplate(title: NSLocalizedString("carplay.alerts_title", comment: ""), sections: sections)
-        template.tabTitle = NSLocalizedString("carplay.tab.alerts", comment: "")
+        let tabIcon: String
+        let tabTitle: String
 
-        // Show warning badge if alerts exist
         if carPlayDashboard.alerts.isEmpty {
-            template.tabImage = UIImage(systemName: "checkmark.circle")
+            tabIcon = "checkmark.circle.fill"
+            tabTitle = "✅ OK"
         } else {
-            template.tabImage = UIImage(systemName: "exclamationmark.triangle.fill")
+            tabIcon = "exclamationmark.triangle.fill"
+            tabTitle = "⚠️ \(carPlayDashboard.alerts.count)"
         }
+
+        let template = CPListTemplate(
+            title: carPlayDashboard.alerts.isEmpty ? "✅ Sistema OK" : "⚠️ Alertas",
+            sections: sections
+        )
+        template.tabTitle = tabTitle
+        template.tabImage = UIImage(systemName: tabIcon)
 
         return template
     }
 
-    // MARK: - Helper: Create Detail Item with Status
+    // MARK: - Helper: Crear item de lista con color
 
-    private enum ItemStatus {
-        case normal
-        case warning
-        case critical
-    }
+    private func createColoredListItem(emoji: String, title: String, value: String, status: String, color: UIColor) -> CPListItem {
+        let displayTitle = title
+        let displayDetail = status.isEmpty ? value : "\(value)  •  \(status)"
 
-    private func createDetailItem(title: String, value: String, icon: String, status: ItemStatus) -> CPListItem {
-        let item = CPListItem(text: title, detailText: value)
+        let item = CPListItem(text: displayTitle, detailText: displayDetail)
 
-        var image = UIImage(systemName: icon) ?? UIImage(systemName: "questionmark.circle")!
-
-        switch status {
-        case .normal:
-            // Default system color
-            break
-        case .warning:
-            image = image.withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
-        case .critical:
-            image = image.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
-        }
-
+        // Usar símbolo con color
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
+        var image = UIImage(systemName: "circle.fill", withConfiguration: config) ?? UIImage()
+        image = image.withTintColor(color, renderingMode: .alwaysOriginal)
         item.setImage(image)
+
         return item
     }
 
-    private func createStatusItem(title: String, isOK: Bool) -> CPListItem {
-        let item = CPListItem(
-            text: title,
-            detailText: isOK ? "OK" : NSLocalizedString("carplay.status.check", comment: "")
-        )
+    private func createStatusListItem(title: String, isOK: Bool) -> CPListItem {
+        let status = isOK ? "✅ OK" : "⚠️ Verificar"
+        let item = CPListItem(text: title, detailText: status)
+
         let icon = isOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+        let color = isOK ? UIColor.systemGreen : UIColor.systemOrange
+
         var image = UIImage(systemName: icon)!
-        image = image.withTintColor(isOK ? .systemGreen : .systemOrange, renderingMode: .alwaysOriginal)
+        image = image.withTintColor(color, renderingMode: .alwaysOriginal)
         item.setImage(image)
+
         return item
     }
 
-    // MARK: - Gauge Detail View
+    // MARK: - Gauge Detail (cuando se toca un gauge)
 
-    private func showGaugeDetail(for gauge: String) {
-        // Could show more detailed information when a gauge is tapped
-        // For now, just a simple action
+    private func showDetailForGauge(_ gauge: String) {
+        // En futuras versiones podría mostrar historial o más detalles
     }
 
-    // MARK: - Status Icons and Colors
+    // MARK: - Emojis dinámicos (simulan colores de iOS)
 
-    private var rpmIcon: String {
-        if carPlayDashboard.rpm > 8000 { return "gauge.with.dots.needle.100percent" }
-        if carPlayDashboard.rpm > 6000 { return "gauge.with.dots.needle.67percent" }
-        if carPlayDashboard.rpm > 3000 { return "gauge.with.dots.needle.50percent" }
-        return "gauge.with.dots.needle.33percent"
+    private var rpmEmoji: String {
+        if carPlayDashboard.rpm > 8000 { return "🔴" }
+        if carPlayDashboard.rpm > 7000 { return "🟠" }
+        if carPlayDashboard.rpm > 5000 { return "🟡" }
+        return "🟢"
     }
 
-    private var rpmStatus: ItemStatus {
-        if carPlayDashboard.rpm > 8500 { return .critical }
-        if carPlayDashboard.rpm > 7500 { return .warning }
-        return .normal
+    private var coolantEmoji: String {
+        if carPlayDashboard.coolantTemp > 105 { return "🔴" }
+        if carPlayDashboard.coolantTemp > 98 { return "🟠" }
+        if carPlayDashboard.coolantTemp < 70 { return "🔵" }
+        return "🟢"
     }
 
-    private var coolantIcon: String {
-        if carPlayDashboard.coolantTemp > 100 { return "thermometer.high" }
-        if carPlayDashboard.coolantTemp < 70 { return "thermometer.low" }
-        return "thermometer.medium"
+    private var oilEmoji: String {
+        if carPlayDashboard.oilTemp > 130 { return "🔴" }
+        if carPlayDashboard.oilTemp > 120 { return "🟠" }
+        if carPlayDashboard.oilTemp < 80 && carPlayDashboard.oilTemp > 50 { return "🔵" }
+        if carPlayDashboard.oilTemp <= 50 { return "⚪" }
+        return "🟢"
     }
 
-    private var coolantStatus: ItemStatus {
-        if carPlayDashboard.coolantTemp > 105 { return .critical }
-        if carPlayDashboard.coolantTemp > 100 { return .warning }
-        return .normal
+    private var voltageEmoji: String {
+        if carPlayDashboard.batteryVoltage < 11.5 && carPlayDashboard.batteryVoltage > 0 { return "🔴" }
+        if carPlayDashboard.batteryVoltage < 12.5 && carPlayDashboard.batteryVoltage > 0 { return "🟠" }
+        if carPlayDashboard.batteryVoltage > 14.8 { return "🟠" }
+        return "🟢"
     }
 
-    private var oilIcon: String {
-        if carPlayDashboard.oilTemp > 120 { return "drop.triangle.fill" }
-        if carPlayDashboard.oilTemp < 80 && carPlayDashboard.oilTemp > 50 { return "drop" }
-        return "drop.fill"
+    private var fuelEmoji: String {
+        if carPlayDashboard.fuelLevel < 10 { return "🔴" }
+        if carPlayDashboard.fuelLevel < 20 { return "🟠" }
+        if carPlayDashboard.fuelLevel < 30 { return "🟡" }
+        return "🟢"
     }
 
-    private var oilStatus: ItemStatus {
-        if carPlayDashboard.oilTemp > 130 { return .critical }
-        if carPlayDashboard.oilTemp > 120 { return .warning }
-        return .normal
+    private var stftEmoji: String {
+        if abs(carPlayDashboard.stft) > 20 { return "🔴" }
+        if abs(carPlayDashboard.stft) > 15 { return "🟠" }
+        return "🟢"
     }
 
-    private var voltageIcon: String {
-        if carPlayDashboard.batteryVoltage < 12.0 && carPlayDashboard.batteryVoltage > 0 {
-            return "battery.25percent"
+    private var ltftEmoji: String {
+        if abs(carPlayDashboard.ltft) > 15 { return "🔴" }
+        if abs(carPlayDashboard.ltft) > 10 { return "🟠" }
+        return "🟢"
+    }
+
+    // MARK: - Colores (UIColor para iconos)
+
+    private var rpmColor: UIColor {
+        if carPlayDashboard.rpm > 8000 { return .systemRed }
+        if carPlayDashboard.rpm > 7000 { return .systemOrange }
+        return .systemGreen
+    }
+
+    private var coolantColor: UIColor {
+        if carPlayDashboard.coolantTemp > 105 { return .systemRed }
+        if carPlayDashboard.coolantTemp > 98 { return .systemOrange }
+        if carPlayDashboard.coolantTemp < 70 { return .systemBlue }
+        return .systemGreen
+    }
+
+    private var oilColor: UIColor {
+        if carPlayDashboard.oilTemp > 130 { return .systemRed }
+        if carPlayDashboard.oilTemp > 120 { return .systemOrange }
+        if carPlayDashboard.oilTemp < 80 && carPlayDashboard.oilTemp > 50 { return .systemBlue }
+        if carPlayDashboard.oilTemp <= 50 { return .systemGray }
+        return .systemGreen
+    }
+
+    private var voltageColor: UIColor {
+        if carPlayDashboard.batteryVoltage < 11.5 && carPlayDashboard.batteryVoltage > 0 { return .systemRed }
+        if carPlayDashboard.batteryVoltage < 12.5 && carPlayDashboard.batteryVoltage > 0 { return .systemOrange }
+        return .systemGreen
+    }
+
+    private var fuelColor: UIColor {
+        if carPlayDashboard.fuelLevel < 10 { return .systemRed }
+        if carPlayDashboard.fuelLevel < 20 { return .systemOrange }
+        return .systemGreen
+    }
+
+    private var rangeColor: UIColor {
+        if carPlayDashboard.range < 30 { return .systemRed }
+        if carPlayDashboard.range < 50 { return .systemOrange }
+        return .systemGreen
+    }
+
+    private var consumptionColor: UIColor {
+        if carPlayDashboard.consumption > 20 { return .systemRed }
+        if carPlayDashboard.consumption > 15 { return .systemOrange }
+        return .systemGreen
+    }
+
+    private func fuelTrimColor(_ value: Double) -> UIColor {
+        if abs(value) > 20 { return .systemRed }
+        if abs(value) > 15 { return .systemOrange }
+        return .systemGreen
+    }
+
+    // MARK: - Textos de estado
+
+    private var rpmStatusText: String {
+        if carPlayDashboard.rpm > 8500 { return "⚠️ Zona roja!" }
+        if carPlayDashboard.rpm > 7500 { return "Alto" }
+        if carPlayDashboard.rpm < 800 && carPlayDashboard.rpm > 0 { return "Ralentí" }
+        return "Normal"
+    }
+
+    private var coolantStatusText: String {
+        if carPlayDashboard.coolantTemp > 105 { return "🔥 CRÍTICO!" }
+        if carPlayDashboard.coolantTemp > 98 { return "⚠️ Alto" }
+        if carPlayDashboard.coolantTemp < 70 { return "❄️ Frío" }
+        return "✅ Óptimo"
+    }
+
+    private var oilStatusText: String {
+        if carPlayDashboard.oilTemp > 130 { return "🔥 CRÍTICO!" }
+        if carPlayDashboard.oilTemp > 120 { return "⚠️ Alto" }
+        if carPlayDashboard.oilTemp < 80 && carPlayDashboard.oilTemp > 50 { return "❄️ Calentando" }
+        if carPlayDashboard.oilTemp <= 50 { return "⏳ Sin datos" }
+        return "✅ Óptimo"
+    }
+
+    private var voltageStatusText: String {
+        if carPlayDashboard.batteryVoltage < 11.5 && carPlayDashboard.batteryVoltage > 0 { return "🔴 CRÍTICO!" }
+        if carPlayDashboard.batteryVoltage < 12.5 && carPlayDashboard.batteryVoltage > 0 { return "⚠️ Bajo" }
+        if carPlayDashboard.batteryVoltage > 14.8 { return "⚡ Cargando alto" }
+        return "✅ Normal"
+    }
+
+    private var fuelLevelStatusText: String {
+        if carPlayDashboard.fuelLevel < 10 { return "🔴 Reserva!" }
+        if carPlayDashboard.fuelLevel < 20 { return "⚠️ Bajo" }
+        return "✅ OK"
+    }
+
+    private var rangeStatusText: String {
+        if carPlayDashboard.range < 30 { return "🔴 Repostar!" }
+        if carPlayDashboard.range < 50 { return "⚠️ Bajo" }
+        return ""
+    }
+
+    private var consumptionStatusText: String {
+        if carPlayDashboard.consumption > 20 { return "📈 Alto" }
+        if carPlayDashboard.consumption > 15 { return "Normal" }
+        if carPlayDashboard.consumption > 0 { return "📉 Económico" }
+        return ""
+    }
+
+    private func fuelTrimStatusText(_ value: Double) -> String {
+        if abs(value) > 20 { return "🔴 Anormal!" }
+        if abs(value) > 15 { return "⚠️ Revisar" }
+        if abs(value) > 10 { return "Aceptable" }
+        return "✅ Normal"
+    }
+
+    private var overallStatusHeader: String {
+        if carPlayDashboard.alerts.isEmpty {
+            return "✅ TODOS LOS SISTEMAS OK"
+        } else {
+            return "⚠️ ESTADO DEL SISTEMA"
         }
-        if carPlayDashboard.batteryVoltage > 14.5 {
-            return "battery.100percent.bolt"
+    }
+
+    // MARK: - Alert Helpers
+
+    private func alertSeverityEmoji(_ severity: RX8CarPlayDashboard.AlertSeverity) -> String {
+        switch severity {
+        case .critical: return "🔴"
+        case .warning: return "🟠"
+        case .info: return "🔵"
         }
-        return "battery.100percent"
     }
 
-    private var fuelIcon: String {
-        if carPlayDashboard.fuelLevel < 15 { return "fuelpump.exclamationmark.fill" }
-        if carPlayDashboard.fuelLevel < 25 { return "fuelpump.fill" }
-        return "fuelpump.fill"
-    }
-
-    private var fuelLevelStatus: ItemStatus {
-        if carPlayDashboard.fuelLevel < 10 { return .critical }
-        if carPlayDashboard.fuelLevel < 20 { return .warning }
-        return .normal
-    }
-
-    private var rangeStatus: ItemStatus {
-        if carPlayDashboard.range < 30 { return .critical }
-        if carPlayDashboard.range < 50 { return .warning }
-        return .normal
-    }
-
-    private func fuelTrimIcon(_ value: Double) -> String {
-        if abs(value) > 15 { return "exclamationmark.triangle" }
-        if abs(value) > 10 { return "arrow.left.arrow.right" }
-        return "equal.circle"
-    }
-
-    private func fuelTrimStatus(_ value: Double) -> ItemStatus {
-        if abs(value) > 20 { return .critical }
-        if abs(value) > 15 { return .warning }
-        return .normal
-    }
-
-    private func alertIcon(for severity: RX8CarPlayDashboard.AlertSeverity) -> String {
+    private func alertSeverityIcon(_ severity: RX8CarPlayDashboard.AlertSeverity) -> String {
         switch severity {
         case .critical: return "exclamationmark.octagon.fill"
         case .warning: return "exclamationmark.triangle.fill"
@@ -493,10 +611,17 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         }
     }
 
+    private func alertSeverityColor(_ severity: RX8CarPlayDashboard.AlertSeverity) -> UIColor {
+        switch severity {
+        case .critical: return .systemRed
+        case .warning: return .systemOrange
+        case .info: return .systemBlue
+        }
+    }
+
     // MARK: - Updates
 
     private func startUpdates() {
-        // Update every second - CarPlay's comfortable refresh rate
         updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.refreshAllTabs()
         }
@@ -511,13 +636,12 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         guard let interfaceController = interfaceController,
               let tabBar = interfaceController.rootTemplate as? CPTabBarTemplate else { return }
 
-        // Recreate all tabs with updated data
-        let gaugesTab = createGaugesTab()
+        let dashboardTab = createDashboardTab()
         let engineTab = createEngineTab()
         let fuelTab = createFuelTab()
         let alertsTab = createAlertsTab()
 
-        tabBar.updateTemplates([gaugesTab, engineTab, fuelTab, alertsTab])
+        tabBar.updateTemplates([dashboardTab, engineTab, fuelTab, alertsTab])
     }
 
     // MARK: - Helpers
@@ -577,8 +701,7 @@ public struct CarPlayFuelData {
         self.instantConsumption = instantConsumption
         self.estimatedRange = estimatedRange
         self.fuelLevel = fuelLevel
-        // Calculate liters from percentage (RX-8 has 60L tank)
-        self.fuelLiters = fuelLevel * 0.6
+        self.fuelLiters = fuelLevel * 0.6  // RX-8 = 60L tank
     }
 }
 
@@ -610,8 +733,6 @@ class RX8CarPlayDashboard: ObservableObject {
     // Alerts
     @Published var alerts: [CarPlayAlert] = []
 
-    // MARK: - Alert Model
-
     struct CarPlayAlert: Identifiable {
         let id = UUID()
         let severity: AlertSeverity
@@ -625,24 +746,18 @@ class RX8CarPlayDashboard: ObservableObject {
         case critical
     }
 
-    // MARK: - Update from Engine State
-
     func update(from engineState: RotaryEngineState) {
-        // Main gauges
         rpm = engineState.rpm
         speed = engineState.vehicleSpeed
         coolantTemp = engineState.coolantTemperature
         oilTemp = engineState.oilTemperature
         batteryVoltage = engineState.batteryVoltage
         intakeTemp = engineState.intakeAirTemperature
-
-        // Engine details
         throttle = engineState.throttlePosition
         engineLoad = engineState.engineLoad
         stft = engineState.shortTermFuelTrim
         ltft = engineState.longTermFuelTrim
 
-        // Check for alerts
         checkAlerts(engineState)
     }
 
@@ -655,88 +770,86 @@ class RX8CarPlayDashboard: ObservableObject {
         consumptionPerHour = data.consumptionPerHour
     }
 
-    // MARK: - Alert Checking
-
     private func checkAlerts(_ state: RotaryEngineState) {
         var newAlerts: [CarPlayAlert] = []
 
-        // Critical: Very high coolant temp
+        // Temperatura refrigerante
         if state.coolantTemperature > 108 {
             newAlerts.append(CarPlayAlert(
                 severity: .critical,
-                message: "🔥 " + String(format: NSLocalizedString("carplay.alert.coolant_critical", comment: ""), Int(state.coolantTemperature)),
+                message: "Refrigerante CRÍTICO: \(Int(state.coolantTemperature))°C",
                 timestamp: Date()
             ))
         } else if state.coolantTemperature > 100 {
             newAlerts.append(CarPlayAlert(
                 severity: .warning,
-                message: "⚠️ " + String(format: NSLocalizedString("carplay.alert.coolant_high", comment: ""), Int(state.coolantTemperature)),
+                message: "Refrigerante alto: \(Int(state.coolantTemperature))°C",
                 timestamp: Date()
             ))
         }
 
-        // Critical: Very high oil temp
+        // Temperatura aceite
         if state.oilTemperature > 135 {
             newAlerts.append(CarPlayAlert(
                 severity: .critical,
-                message: "🔥 " + String(format: NSLocalizedString("carplay.alert.oil_critical", comment: ""), Int(state.oilTemperature)),
+                message: "Aceite CRÍTICO: \(Int(state.oilTemperature))°C",
                 timestamp: Date()
             ))
         } else if state.oilTemperature > 120 {
             newAlerts.append(CarPlayAlert(
                 severity: .warning,
-                message: "⚠️ " + String(format: NSLocalizedString("carplay.alert.oil_high", comment: ""), Int(state.oilTemperature)),
+                message: "Aceite caliente: \(Int(state.oilTemperature))°C",
                 timestamp: Date()
             ))
         }
 
-        // Low battery voltage (only when engine is running)
+        // Voltaje batería
         if state.batteryVoltage > 0 && state.batteryVoltage < 11.5 {
             newAlerts.append(CarPlayAlert(
                 severity: .critical,
-                message: "🔋 " + String(format: NSLocalizedString("carplay.alert.voltage_critical", comment: ""), state.batteryVoltage),
+                message: "Batería CRÍTICA: \(String(format: "%.1f", state.batteryVoltage))V",
                 timestamp: Date()
             ))
         } else if state.batteryVoltage > 0 && state.batteryVoltage < 12.5 && state.rpm > 1000 {
             newAlerts.append(CarPlayAlert(
                 severity: .warning,
-                message: "🔋 " + String(format: NSLocalizedString("carplay.alert.voltage_low", comment: ""), state.batteryVoltage),
+                message: "Batería baja: \(String(format: "%.1f", state.batteryVoltage))V",
                 timestamp: Date()
             ))
         }
 
-        // High RPM warning for rotary engine
+        // RPM alto
         if state.rpm > 8500 {
             newAlerts.append(CarPlayAlert(
                 severity: .warning,
-                message: "🔴 " + String(format: NSLocalizedString("carplay.alert.high_rpm", comment: ""), state.rpm),
+                message: "RPM en zona roja: \(state.rpm)",
                 timestamp: Date()
             ))
         }
 
-        // Fuel trim warnings (engine running)
+        // Fuel trims
         if state.rpm > 800 {
             if abs(state.shortTermFuelTrim) > 25 {
                 newAlerts.append(CarPlayAlert(
                     severity: .warning,
-                    message: "⛽ " + String(format: NSLocalizedString("carplay.alert.stft_high", comment: ""), state.shortTermFuelTrim),
+                    message: "STFT anormal: \(String(format: "%+.1f", state.shortTermFuelTrim))%",
                     timestamp: Date()
                 ))
             }
             if abs(state.longTermFuelTrim) > 15 {
                 newAlerts.append(CarPlayAlert(
                     severity: .warning,
-                    message: "⛽ " + String(format: NSLocalizedString("carplay.alert.ltft_high", comment: ""), state.longTermFuelTrim),
+                    message: "LTFT fuera de rango: \(String(format: "%+.1f", state.longTermFuelTrim))%",
                     timestamp: Date()
                 ))
             }
         }
 
-        // Low fuel warning
+        // Combustible bajo
         if fuelLevel > 0 && fuelLevel < 10 {
             newAlerts.append(CarPlayAlert(
                 severity: .warning,
-                message: "⛽ " + NSLocalizedString("carplay.alert.fuel_low", comment: ""),
+                message: "Combustible en reserva!",
                 timestamp: Date()
             ))
         }
