@@ -528,73 +528,190 @@ enum DataMode: String, CaseIterable {
     }
 }
 
-// MARK: - Vista de Información del Vehículo
+// MARK: - Vista de Información del Vehículo (Mejorada)
 
 struct VehicleInfoView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var connectionManager: OBDConnectionManager
     @State private var vehicleInfo: RX8VehicleInfo?
+    @State private var extendedInfo: ExtendedVehicleInfo = ExtendedVehicleInfo()
     @State private var isLoading = false
+    @State private var loadingStatus = "Iniciando..."
+    @State private var errorMessages: [String] = []
 
     var body: some View {
         NavigationStack {
             List {
-                if let info = vehicleInfo {
-                    Section("Identificación") {
-                        InfoRow(label: "VIN", value: info.vin)
-                        InfoRow(label: "Año", value: "\(info.year)")
+                // Estado de carga
+                if isLoading {
+                    Section {
+                        HStack {
+                            ProgressView()
+                                .padding(.trailing, 8)
+                            VStack(alignment: .leading) {
+                                Text("Leyendo datos del vehículo...")
+                                    .foregroundColor(.white)
+                                Text(loadingStatus)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                }
+
+                // Errores si los hay
+                if !errorMessages.isEmpty && !isLoading {
+                    Section("Datos no disponibles") {
+                        ForEach(errorMessages, id: \.self) { error in
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .foregroundColor(.orange)
+                                    .font(.caption)
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                    }
+                }
+
+                // VIN y datos básicos
+                Section("Identificación") {
+                    if let info = vehicleInfo {
+                        VINRow(vin: info.vin)
+                        InfoRow(label: "Año", value: info.year > 0 ? "\(info.year)" : "N/D")
                         InfoRow(label: "Serie", value: info.series.rawValue)
                         InfoRow(label: "Mercado", value: info.marketRegion.rawValue)
+                    } else if extendedInfo.vin != nil {
+                        VINRow(vin: extendedInfo.vin!)
+                    } else if !isLoading {
+                        InfoRowWithStatus(label: "VIN", value: "No disponible", status: .error)
                     }
 
-                    Section("Motor") {
-                        InfoRow(label: "Código", value: info.engineCode)
-                        InfoRow(label: "Tipo", value: "Rotativo Wankel")
-                        InfoRow(label: "Cilindrada", value: "1.3L (654cc x 2)")
-                        InfoRow(label: "Potencia", value: "231 HP @ 8200 RPM")
-                        InfoRow(label: "Par", value: "211 Nm @ 5500 RPM")
+                    if let calId = extendedInfo.calibrationId {
+                        InfoRowWithSource(label: "Calibración ECU", value: calId, source: "Mode 09")
+                    }
+                }
+
+                // Kilómetros de distintas fuentes
+                Section("Kilometraje") {
+                    if let odometer = extendedInfo.odometerKm {
+                        InfoRowWithSource(
+                            label: "Odómetro",
+                            value: formatKm(odometer),
+                            source: extendedInfo.odometerSource ?? "OBD"
+                        )
+                    } else if !isLoading {
+                        InfoRowWithStatus(label: "Odómetro", value: "No disponible", status: .warning)
                     }
 
-                    Section("Transmisión") {
-                        InfoRow(label: "Tipo", value: info.transmission.rawValue)
-                        InfoRow(label: "Relación final", value: String(format: "%.2f", info.transmission.finalDrive))
+                    if let distDTC = extendedInfo.distanceSinceDTCClear {
+                        InfoRowWithSource(
+                            label: "Desde borrado DTCs",
+                            value: formatKm(distDTC),
+                            source: "PID 0x31"
+                        )
                     }
 
-                    Section("Notas del mercado") {
-                        ForEach(info.marketRegion.specificNotes, id: \.self) { note in
-                            HStack(alignment: .top) {
-                                Image(systemName: "info.circle")
-                                    .foregroundColor(.blue)
-                                    .font(.caption)
-                                Text(note)
-                                    .font(.caption)
+                    if let distMIL = extendedInfo.distanceWithMIL {
+                        InfoRowWithSource(
+                            label: "Con MIL encendido",
+                            value: formatKm(distMIL),
+                            source: "PID 0x21"
+                        )
+                    }
+                }
+
+                // Estado del sistema
+                Section("Estado del Sistema") {
+                    if let milStatus = extendedInfo.milStatus {
+                        HStack {
+                            Text("Check Engine (MIL)")
+                                .foregroundColor(.gray)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(milStatus ? Color.red : Color.green)
+                                    .frame(width: 10, height: 10)
+                                Text(milStatus ? "ENCENDIDO" : "Apagado")
+                                    .foregroundColor(milStatus ? .red : .green)
+                                    .fontWeight(milStatus ? .bold : .regular)
                             }
                         }
                     }
 
-                    Section("Características \(info.series.rawValue)") {
-                        ForEach(info.series.differences, id: \.self) { diff in
-                            HStack(alignment: .top) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.caption)
-                                Text(diff)
-                                    .font(.caption)
+                    if let dtcCount = extendedInfo.dtcCount {
+                        InfoRow(label: "Códigos almacenados", value: "\(dtcCount)")
+                    }
+
+                    if let timeSinceDTC = extendedInfo.timeSinceDTCClear {
+                        InfoRowWithSource(
+                            label: "Tiempo desde borrado",
+                            value: formatMinutes(timeSinceDTC),
+                            source: "PID 0x4E"
+                        )
+                    }
+
+                    if let runtime = extendedInfo.totalRuntime {
+                        InfoRowWithSource(
+                            label: "Runtime total ECU",
+                            value: formatMinutes(runtime),
+                            source: "PID 0x7F"
+                        )
+                    }
+                }
+
+                // Monitores OBD
+                if !extendedInfo.monitorStatus.isEmpty {
+                    Section("Monitores OBD") {
+                        ForEach(Array(extendedInfo.monitorStatus.keys.sorted()), id: \.self) { monitor in
+                            if let status = extendedInfo.monitorStatus[monitor] {
+                                HStack {
+                                    Text(monitor)
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    Spacer()
+                                    Text(status)
+                                        .font(.caption)
+                                        .foregroundColor(status == "Completo" ? .green : (status == "Incompleto" ? .orange : .gray))
+                                }
                             }
                         }
                     }
-                } else {
+                }
+
+                // Info del motor (siempre mostrar para RX-8)
+                Section("Motor 13B-MSP Renesis") {
+                    InfoRow(label: "Tipo", value: "Rotativo Wankel")
+                    InfoRow(label: "Cilindrada", value: "1.3L (654cc x 2)")
+                    InfoRow(label: "Compresión", value: "10.0:1")
+                    InfoRow(label: "Potencia MT", value: "231 HP @ 8200 RPM")
+                    InfoRow(label: "Potencia AT", value: "197 HP @ 7200 RPM")
+                    InfoRow(label: "Par", value: "211 Nm @ 5500 RPM")
+                    InfoRow(label: "Redline", value: "9000 RPM")
+                }
+
+                // Info del adaptador
+                Section("Adaptador OBD") {
+                    if let adapter = connectionManager.adapterInfo {
+                        InfoRow(label: "Chip", value: adapter.chipType)
+                        InfoRow(label: "Versión", value: adapter.version)
+                    }
+                    if let proto = connectionManager.vehicleProtocol {
+                        InfoRow(label: "Protocolo", value: proto.rawValue)
+                    }
+                }
+
+                // Botón de recarga si no está cargando
+                if !isLoading {
                     Section {
-                        if isLoading {
+                        Button(action: { Task { await readAllVehicleInfo() } }) {
                             HStack {
-                                ProgressView()
-                                Text("Leyendo VIN...")
-                            }
-                        } else {
-                            Button("Leer información del vehículo") {
-                                readVehicleInfo()
+                                Image(systemName: "arrow.clockwise")
+                                Text("Actualizar información")
                             }
                         }
+                        .disabled(connectionManager.connectionState != .connectedToVehicle)
                     }
                 }
             }
@@ -605,19 +722,409 @@ struct VehicleInfoView: View {
                     Button("Cerrar") { dismiss() }
                 }
             }
+            .task {
+                if connectionManager.connectionState == .connectedToVehicle {
+                    await readAllVehicleInfo()
+                }
+            }
         }
     }
 
-    func readVehicleInfo() {
+    private func formatKm(_ km: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = "."
+        return (formatter.string(from: NSNumber(value: km)) ?? "\(km)") + " km"
+    }
+
+    private func formatMinutes(_ minutes: Int) -> String {
+        if minutes < 60 {
+            return "\(minutes) min"
+        } else if minutes < 1440 {
+            let hours = minutes / 60
+            let mins = minutes % 60
+            return "\(hours)h \(mins)m"
+        } else {
+            let days = minutes / 1440
+            let hours = (minutes % 1440) / 60
+            return "\(days)d \(hours)h"
+        }
+    }
+
+    @MainActor
+    private func readAllVehicleInfo() async {
         isLoading = true
-        Task {
-            do {
-                let vin = try await connectionManager.readVIN()
+        errorMessages = []
+        extendedInfo = ExtendedVehicleInfo()
+
+        // 1. Leer VIN (múltiples intentos)
+        loadingStatus = "Leyendo VIN..."
+        await readVIN()
+
+        // 2. Leer odómetro
+        loadingStatus = "Leyendo kilometraje..."
+        await readOdometer()
+
+        // 3. Leer estado MIL y monitores
+        loadingStatus = "Leyendo estado del sistema..."
+        await readSystemStatus()
+
+        // 4. Leer distancias y tiempos
+        loadingStatus = "Leyendo datos adicionales..."
+        await readAdditionalData()
+
+        // 5. Leer calibración ECU
+        loadingStatus = "Leyendo calibración ECU..."
+        await readCalibrationId()
+
+        isLoading = false
+        loadingStatus = "Completado"
+    }
+
+    private func readVIN() async {
+        // Intentar Mode 09 PID 02 (VIN estándar)
+        do {
+            let vin = try await connectionManager.readVIN()
+            if vin.count >= 10 {
+                extendedInfo.vin = vin
                 vehicleInfo = RX8VehicleInfo(vin: vin)
-            } catch {
-                // Manejar error
+                return
             }
-            isLoading = false
+        } catch {
+            // Intentar método alternativo
+        }
+
+        // Método alternativo: leer bytes directamente
+        do {
+            let response = try await connectionManager.sendCommand("0902", timeout: 8.0)
+            if !response.contains("NO DATA") && !response.contains("ERROR") {
+                // Parsear respuesta multilínea de VIN
+                let vin = parseVINFromResponse(response)
+                if vin.count >= 10 {
+                    extendedInfo.vin = vin
+                    vehicleInfo = RX8VehicleInfo(vin: vin)
+                    return
+                }
+            }
+        } catch {
+            // Continuar
+        }
+
+        errorMessages.append("VIN no disponible")
+    }
+
+    private func parseVINFromResponse(_ response: String) -> String {
+        // El VIN viene en múltiples líneas, cada una con índice
+        var vinBytes: [UInt8] = []
+        let lines = response.components(separatedBy: "\r")
+
+        for line in lines {
+            let cleaned = line.trimmingCharacters(in: .whitespaces)
+            if cleaned.isEmpty { continue }
+
+            // Extraer bytes hex (saltando el primer byte que es el índice)
+            let hexPairs = cleaned.components(separatedBy: " ").filter { $0.count == 2 }
+            if hexPairs.count > 1 {
+                for (index, hex) in hexPairs.enumerated() {
+                    if index == 0 { continue } // Saltar índice
+                    if let byte = UInt8(hex, radix: 16), byte >= 0x20 && byte <= 0x7E {
+                        vinBytes.append(byte)
+                    }
+                }
+            }
+        }
+
+        if let vin = String(bytes: vinBytes.prefix(17), encoding: .ascii) {
+            return vin.trimmingCharacters(in: .whitespaces)
+        }
+        return ""
+    }
+
+    private func readOdometer() async {
+        // Intentar múltiples fuentes
+
+        // 1. Mode 22 PIDs Mazda
+        let mazdaPIDs: [(UInt16, String)] = [
+            (0x1254, "Mazda ECU"),
+            (0x1255, "Mazda Alt"),
+            (0x1001, "Mazda WDS"),
+        ]
+
+        for (pid, source) in mazdaPIDs {
+            do {
+                let cmd = String(format: "22%04X", pid)
+                let response = try await connectionManager.sendCommand(cmd, timeout: 3.0)
+                if !response.contains("NO DATA") && !response.contains("ERROR") {
+                    if let km = parseOdometerResponse(response) {
+                        extendedInfo.odometerKm = km
+                        extendedInfo.odometerSource = source
+                        return
+                    }
+                }
+            } catch {
+                continue
+            }
+        }
+
+        // 2. PID estándar 0xA6
+        do {
+            let response = try await connectionManager.sendCommand("01A6", timeout: 3.0)
+            if !response.contains("NO DATA") {
+                if let km = parseOdometerResponse(response) {
+                    extendedInfo.odometerKm = km
+                    extendedInfo.odometerSource = "OBD2 0xA6"
+                    return
+                }
+            }
+        } catch {}
+
+        // 3. Usar función del connectionManager
+        do {
+            let km = try await connectionManager.readOdometer()
+            if km > 0 {
+                extendedInfo.odometerKm = km
+                extendedInfo.odometerSource = "OBD"
+                return
+            }
+        } catch {}
+
+        errorMessages.append("Odómetro no disponible")
+    }
+
+    private func parseOdometerResponse(_ response: String) -> Int? {
+        let cleaned = response.replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "\r", with: "")
+            .replacingOccurrences(of: ">", with: "")
+
+        // Buscar bytes de datos después del header
+        var hexData = cleaned
+        if let range = hexData.range(of: "62") { // Respuesta Mode 22
+            hexData = String(hexData[range.upperBound...])
+        } else if let range = hexData.range(of: "41") { // Respuesta Mode 01
+            hexData = String(hexData[range.upperBound...])
+        }
+
+        // Saltar PID (2-4 caracteres)
+        if hexData.count > 4 {
+            hexData = String(hexData.dropFirst(4))
+        }
+
+        // Parsear bytes
+        var km = 0
+        let byteCount = min(hexData.count / 2, 4)
+
+        for i in 0..<byteCount {
+            let start = hexData.index(hexData.startIndex, offsetBy: i * 2)
+            let end = hexData.index(start, offsetBy: 2)
+            if let byte = UInt8(String(hexData[start..<end]), radix: 16) {
+                km = km * 256 + Int(byte)
+            }
+        }
+
+        // Validar rango razonable
+        if km > 0 && km < 1_000_000 {
+            return km
+        } else if km > 1_000_000 && km < 10_000_000 {
+            // Posiblemente en decímetros
+            return km / 10
+        }
+
+        return nil
+    }
+
+    private func readSystemStatus() async {
+        // PID 0x01 - Estado de monitores y MIL
+        do {
+            let response = try await connectionManager.sendCommand("0101", timeout: 3.0)
+            if !response.contains("NO DATA") {
+                parseMonitorStatus(response)
+            }
+        } catch {}
+
+        // Contar DTCs
+        do {
+            let dtcs = try await connectionManager.readDTCs()
+            extendedInfo.dtcCount = dtcs.count
+        } catch {}
+    }
+
+    private func parseMonitorStatus(_ response: String) {
+        let bytes = connectionManager.parseHexResponse(response)
+        guard bytes.count >= 4 else { return }
+
+        // Byte A: MIL status y DTC count
+        let milOn = (bytes[0] & 0x80) != 0
+        extendedInfo.milStatus = milOn
+
+        // Bytes B, C, D: Monitor status
+        let monitors: [(String, UInt8, UInt8)] = [
+            ("Misfire", bytes[1], 0x01),
+            ("Fuel System", bytes[1], 0x02),
+            ("Components", bytes[1], 0x04),
+            ("Catalyst", bytes[2], 0x01),
+            ("Heated Catalyst", bytes[2], 0x02),
+            ("EVAP", bytes[2], 0x04),
+            ("Secondary Air", bytes[2], 0x08),
+            ("O2 Sensor", bytes[2], 0x20),
+            ("O2 Heater", bytes[2], 0x40),
+            ("EGR", bytes[2], 0x80),
+        ]
+
+        for (name, byte, mask) in monitors {
+            let supported = (bytes[1] & mask) != 0 || (bytes[2] & mask) != 0
+            if supported {
+                let complete = (bytes[3] & mask) == 0
+                extendedInfo.monitorStatus[name] = complete ? "Completo" : "Incompleto"
+            }
+        }
+    }
+
+    private func readAdditionalData() async {
+        // PID 0x31 - Distancia desde borrado de DTCs
+        do {
+            let dist = try await connectionManager.readDistanceSinceDTCClear()
+            if dist > 0 {
+                extendedInfo.distanceSinceDTCClear = dist
+            }
+        } catch {}
+
+        // PID 0x21 - Distancia con MIL encendido
+        do {
+            let response = try await connectionManager.sendCommand("0121", timeout: 3.0)
+            if !response.contains("NO DATA") {
+                let bytes = connectionManager.parseHexResponse(response)
+                if bytes.count >= 2 {
+                    let dist = Int(bytes[0]) * 256 + Int(bytes[1])
+                    if dist > 0 {
+                        extendedInfo.distanceWithMIL = dist
+                    }
+                }
+            }
+        } catch {}
+
+        // PID 0x4E - Tiempo desde borrado de DTCs
+        do {
+            let response = try await connectionManager.sendCommand("014E", timeout: 3.0)
+            if !response.contains("NO DATA") {
+                let bytes = connectionManager.parseHexResponse(response)
+                if bytes.count >= 2 {
+                    let minutes = Int(bytes[0]) * 256 + Int(bytes[1])
+                    extendedInfo.timeSinceDTCClear = minutes
+                }
+            }
+        } catch {}
+
+        // PID 0x7F - Runtime total ECU
+        do {
+            let response = try await connectionManager.sendCommand("017F", timeout: 3.0)
+            if !response.contains("NO DATA") {
+                let bytes = connectionManager.parseHexResponse(response)
+                if bytes.count >= 4 {
+                    let seconds = Int(bytes[0]) * 16777216 + Int(bytes[1]) * 65536 + Int(bytes[2]) * 256 + Int(bytes[3])
+                    extendedInfo.totalRuntime = seconds / 60
+                }
+            }
+        } catch {}
+    }
+
+    private func readCalibrationId() async {
+        // Mode 09 PID 04 - Calibration ID
+        do {
+            let response = try await connectionManager.sendCommand("0904", timeout: 5.0)
+            if !response.contains("NO DATA") && !response.contains("ERROR") {
+                let bytes = connectionManager.parseHexResponse(response)
+                if bytes.count > 1 {
+                    // Los primeros bytes pueden ser contadores, buscar ASCII
+                    let asciiBytes = bytes.filter { $0 >= 0x20 && $0 <= 0x7E }
+                    if let calId = String(bytes: asciiBytes.prefix(16), encoding: .ascii) {
+                        let cleaned = calId.trimmingCharacters(in: .whitespaces)
+                        if !cleaned.isEmpty {
+                            extendedInfo.calibrationId = cleaned
+                        }
+                    }
+                }
+            }
+        } catch {}
+    }
+}
+
+// Estructura para datos extendidos del vehículo
+struct ExtendedVehicleInfo {
+    var vin: String?
+    var calibrationId: String?
+    var odometerKm: Int?
+    var odometerSource: String?
+    var distanceSinceDTCClear: Int?
+    var distanceWithMIL: Int?
+    var timeSinceDTCClear: Int? // minutos
+    var totalRuntime: Int? // minutos
+    var milStatus: Bool?
+    var dtcCount: Int?
+    var monitorStatus: [String: String] = [:]
+}
+
+struct VINRow: View {
+    let vin: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("VIN")
+                .font(.caption)
+                .foregroundColor(.gray)
+            Text(vin)
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(.orange)
+                .textSelection(.enabled)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct InfoRowWithStatus: View {
+    let label: String
+    let value: String
+    let status: InfoStatus
+
+    enum InfoStatus {
+        case ok, warning, error
+    }
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .foregroundColor(.gray)
+            Spacer()
+            HStack(spacing: 4) {
+                Text(value)
+                    .foregroundColor(status == .ok ? .white : (status == .warning ? .orange : .red))
+                Image(systemName: status == .ok ? "checkmark.circle" : (status == .warning ? "exclamationmark.triangle" : "xmark.circle"))
+                    .foregroundColor(status == .ok ? .green : (status == .warning ? .orange : .red))
+                    .font(.caption)
+            }
+        }
+    }
+}
+
+struct InfoRowWithSource: View {
+    let label: String
+    let value: String
+    let source: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(label)
+                    .foregroundColor(.gray)
+                Spacer()
+                Text(value)
+                    .foregroundColor(.white)
+            }
+            HStack {
+                Spacer()
+                Text(source)
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+            }
         }
     }
 }

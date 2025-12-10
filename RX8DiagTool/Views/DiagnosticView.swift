@@ -318,6 +318,7 @@ struct MobileDiagnosticView: View {
     @Binding var showFreezeFrame: Bool
     @Binding var showProcedures: Bool
     @Binding var showBlackBox: Bool
+    @State private var showActuatorTools = false
     let clearDTCsAction: () -> Void
 
     var body: some View {
@@ -347,12 +348,17 @@ struct MobileDiagnosticView: View {
                         )
 
                         RX8SpecificDiagnosticsCard()
+
+                        ActuatorToolsCard(showActuatorTools: $showActuatorTools)
                     }
                 }
                 .padding()
             }
             .background(Color.black)
             .navigationTitle("Diagnóstico")
+            .sheet(isPresented: $showActuatorTools) {
+                ActuatorToolsSheet()
+            }
         }
     }
 }
@@ -486,6 +492,546 @@ struct RX8DiagButton: View {
             .cornerRadius(12)
         }
         .disabled(!isEnabled)
+    }
+}
+
+// MARK: - Herramientas de Actuadores (Motor Apagado)
+
+struct ActuatorToolsCard: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    @Binding var showActuatorTools: Bool
+
+    var isConnected: Bool {
+        connectionManager.connectionState == .connectedToVehicle
+    }
+
+    var engineIsOff: Bool {
+        engineMonitor.currentState.rpm < 100
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "wrench.and.screwdriver.fill")
+                    .foregroundColor(.cyan)
+                Text("Herramientas de Actuadores")
+                    .font(.headline)
+                    .foregroundColor(.white)
+
+                Spacer()
+
+                // Estado del motor
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(engineIsOff ? Color.green : Color.red)
+                        .frame(width: 8, height: 8)
+                    Text(engineIsOff ? "Motor OFF" : "Motor ON")
+                        .font(.caption2)
+                        .foregroundColor(engineIsOff ? .green : .red)
+                }
+            }
+
+            Text("Tests de actuadores Mazda (requiere motor apagado, contacto ON)")
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            Button(action: { showActuatorTools = true }) {
+                HStack {
+                    Image(systemName: "gearshape.2.fill")
+                    Text("Abrir Herramientas")
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background((isConnected && engineIsOff) ? Color.cyan.opacity(0.3) : Color.gray.opacity(0.2))
+                .foregroundColor((isConnected && engineIsOff) ? .cyan : .gray)
+                .cornerRadius(12)
+            }
+            .disabled(!isConnected || !engineIsOff)
+
+            if !engineIsOff && isConnected {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    Text("Apaga el motor para usar estas herramientas")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6).opacity(0.3))
+        .cornerRadius(16)
+    }
+}
+
+struct ActuatorToolsSheet: View {
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @EnvironmentObject var engineMonitor: EngineMonitor
+    @Environment(\.dismiss) var dismiss
+    @State private var activeTest: ActuatorTest?
+    @State private var isRunningTest = false
+    @State private var testResult: String?
+    @State private var testSuccess = false
+    @State private var showSafetyAlert = false
+
+    var engineIsOff: Bool {
+        engineMonitor.currentState.rpm < 100
+    }
+
+    var batteryOK: Bool {
+        engineMonitor.currentState.batteryVoltage >= 11.5
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Advertencia de seguridad
+                    SafetyWarningCard()
+
+                    // Estado del sistema
+                    SystemStatusCard(engineOff: engineIsOff, batteryOK: batteryOK)
+
+                    if engineIsOff && batteryOK {
+                        // Tests disponibles
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Tests Disponibles")
+                                .font(.headline)
+                                .foregroundColor(.white)
+
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                                ActuatorTestButton(
+                                    test: .throttleBody,
+                                    isRunning: activeTest == .throttleBody && isRunningTest
+                                ) {
+                                    runTest(.throttleBody)
+                                }
+
+                                ActuatorTestButton(
+                                    test: .ssv,
+                                    isRunning: activeTest == .ssv && isRunningTest
+                                ) {
+                                    runTest(.ssv)
+                                }
+
+                                ActuatorTestButton(
+                                    test: .coolingFan,
+                                    isRunning: activeTest == .coolingFan && isRunningTest
+                                ) {
+                                    runTest(.coolingFan)
+                                }
+
+                                ActuatorTestButton(
+                                    test: .acFan,
+                                    isRunning: activeTest == .acFan && isRunningTest
+                                ) {
+                                    runTest(.acFan)
+                                }
+
+                                ActuatorTestButton(
+                                    test: .fuelPump,
+                                    isRunning: activeTest == .fuelPump && isRunningTest
+                                ) {
+                                    runTest(.fuelPump)
+                                }
+
+                                ActuatorTestButton(
+                                    test: .purgeValve,
+                                    isRunning: activeTest == .purgeValve && isRunningTest
+                                ) {
+                                    runTest(.purgeValve)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6).opacity(0.3))
+                        .cornerRadius(16)
+
+                        // Resultado del test
+                        if let result = testResult {
+                            TestResultCard(result: result, success: testSuccess)
+                        }
+
+                        // Información adicional
+                        ActuatorInfoCard()
+                    } else {
+                        // Requisitos no cumplidos
+                        RequirementsNotMetCard(engineOff: engineIsOff, batteryOK: batteryOK)
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black)
+            .navigationTitle("Herramientas Actuadores")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+            .alert("Confirmar Test", isPresented: $showSafetyAlert) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Ejecutar") {
+                    if let test = activeTest {
+                        executeTest(test)
+                    }
+                }
+            } message: {
+                Text("¿Ejecutar test de \(activeTest?.title ?? "")? Asegúrate de que el área esté despejada.")
+            }
+        }
+    }
+
+    private func runTest(_ test: ActuatorTest) {
+        activeTest = test
+        showSafetyAlert = true
+    }
+
+    private func executeTest(_ test: ActuatorTest) {
+        isRunningTest = true
+        testResult = nil
+
+        Task {
+            do {
+                // Verificar que el motor sigue apagado
+                let rpm = try await connectionManager.readRPM()
+                guard rpm < 100 else {
+                    await MainActor.run {
+                        testResult = "Test cancelado: el motor se ha encendido"
+                        testSuccess = false
+                        isRunningTest = false
+                    }
+                    return
+                }
+
+                // Ejecutar comando de actuador
+                let response = try await connectionManager.sendCommand(test.command, timeout: 5.0)
+
+                await MainActor.run {
+                    if response.contains("OK") || !response.contains("ERROR") && !response.contains("NO DATA") {
+                        testResult = "Test \(test.title) ejecutado correctamente"
+                        testSuccess = true
+                    } else {
+                        testResult = "Test \(test.title) - Respuesta: \(response)"
+                        testSuccess = false
+                    }
+                    isRunningTest = false
+                }
+
+                // Esperar duración del test
+                try await Task.sleep(nanoseconds: UInt64(test.duration) * 1_000_000_000)
+
+                // Enviar comando de parada si es necesario
+                if let stopCmd = test.stopCommand {
+                    _ = try? await connectionManager.sendCommand(stopCmd, timeout: 2.0)
+                }
+
+            } catch {
+                await MainActor.run {
+                    testResult = "Error: \(error.localizedDescription)"
+                    testSuccess = false
+                    isRunningTest = false
+                }
+            }
+        }
+    }
+}
+
+enum ActuatorTest: String, CaseIterable {
+    case throttleBody = "throttle"
+    case ssv = "ssv"
+    case coolingFan = "cooling_fan"
+    case acFan = "ac_fan"
+    case fuelPump = "fuel_pump"
+    case purgeValve = "purge"
+
+    var title: String {
+        switch self {
+        case .throttleBody: return "Cuerpo Mariposa"
+        case .ssv: return "SSV (Mariposa Secundaria)"
+        case .coolingFan: return "Ventilador Motor"
+        case .acFan: return "Ventilador A/C"
+        case .fuelPump: return "Bomba Combustible"
+        case .purgeValve: return "Válvula Purga EVAP"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .throttleBody: return "arrow.left.and.right"
+        case .ssv: return "rectangle.split.2x1"
+        case .coolingFan: return "fan"
+        case .acFan: return "snowflake"
+        case .fuelPump: return "fuelpump"
+        case .purgeValve: return "bubble.left.and.bubble.right"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .throttleBody: return .orange
+        case .ssv: return .purple
+        case .coolingFan: return .blue
+        case .acFan: return .cyan
+        case .fuelPump: return .green
+        case .purgeValve: return .teal
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .throttleBody: return "Abre y cierra el cuerpo de mariposa"
+        case .ssv: return "Activa la mariposa de admisión secundaria"
+        case .coolingFan: return "Activa el ventilador del radiador"
+        case .acFan: return "Activa el ventilador del condensador A/C"
+        case .fuelPump: return "Activa la bomba de combustible"
+        case .purgeValve: return "Activa la válvula de purga EVAP"
+        }
+    }
+
+    // Comandos Mazda Mode 08 / Mode 22 específicos
+    // Estos son comandos típicos - pueden variar según ECU
+    var command: String {
+        switch self {
+        case .throttleBody: return "0801" // Mode 08 TID 01
+        case .ssv: return "0802"          // Mode 08 TID 02
+        case .coolingFan: return "0803"   // Mode 08 TID 03
+        case .acFan: return "0804"        // Mode 08 TID 04
+        case .fuelPump: return "0805"     // Mode 08 TID 05
+        case .purgeValve: return "0806"   // Mode 08 TID 06
+        }
+    }
+
+    var stopCommand: String? {
+        // Algunos tests necesitan comando de parada
+        switch self {
+        case .throttleBody: return "0800"
+        case .ssv: return "0800"
+        default: return nil
+        }
+    }
+
+    var duration: Int {
+        // Duración en segundos
+        switch self {
+        case .throttleBody: return 3
+        case .ssv: return 3
+        case .coolingFan: return 5
+        case .acFan: return 5
+        case .fuelPump: return 3
+        case .purgeValve: return 2
+        }
+    }
+}
+
+struct ActuatorTestButton: View {
+    let test: ActuatorTest
+    let isRunning: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Image(systemName: test.icon)
+                        .font(.title2)
+                        .foregroundColor(test.color)
+
+                    if isRunning {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+
+                Text(test.title)
+                    .font(.caption)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, minHeight: 90)
+            .background(test.color.opacity(0.2))
+            .cornerRadius(12)
+        }
+        .disabled(isRunning)
+    }
+}
+
+struct SafetyWarningCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("ADVERTENCIA DE SEGURIDAD")
+                    .font(.headline)
+                    .foregroundColor(.orange)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("• El motor debe estar APAGADO")
+                Text("• Contacto en posición ON (sin arrancar)")
+                Text("• Freno de mano activado")
+                Text("• Área alrededor del motor despejada")
+                Text("• No tocar piezas móviles durante los tests")
+            }
+            .font(.caption)
+            .foregroundColor(.white)
+        }
+        .padding()
+        .background(Color.orange.opacity(0.2))
+        .cornerRadius(16)
+    }
+}
+
+struct SystemStatusCard: View {
+    let engineOff: Bool
+    let batteryOK: Bool
+
+    var body: some View {
+        HStack(spacing: 16) {
+            StatusIndicatorItem(
+                title: "Motor",
+                isOK: engineOff,
+                okText: "Apagado",
+                notOKText: "Encendido"
+            )
+
+            StatusIndicatorItem(
+                title: "Batería",
+                isOK: batteryOK,
+                okText: "> 11.5V",
+                notOKText: "Baja"
+            )
+
+            StatusIndicatorItem(
+                title: "Conexión",
+                isOK: true,
+                okText: "OK",
+                notOKText: "Error"
+            )
+        }
+        .padding()
+        .background(Color(.systemGray6).opacity(0.3))
+        .cornerRadius(16)
+    }
+}
+
+struct StatusIndicatorItem: View {
+    let title: String
+    let isOK: Bool
+    let okText: String
+    let notOKText: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: isOK ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundColor(isOK ? .green : .red)
+                .font(.title2)
+
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.gray)
+
+            Text(isOK ? okText : notOKText)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(isOK ? .green : .red)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct TestResultCard: View {
+    let result: String
+    let success: Bool
+
+    var body: some View {
+        HStack {
+            Image(systemName: success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundColor(success ? .green : .red)
+                .font(.title2)
+
+            Text(result)
+                .font(.subheadline)
+                .foregroundColor(.white)
+
+            Spacer()
+        }
+        .padding()
+        .background((success ? Color.green : Color.red).opacity(0.2))
+        .cornerRadius(12)
+    }
+}
+
+struct RequirementsNotMetCard: View {
+    let engineOff: Bool
+    let batteryOK: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.octagon.fill")
+                    .foregroundColor(.red)
+                Text("Requisitos No Cumplidos")
+                    .font(.headline)
+                    .foregroundColor(.red)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                if !engineOff {
+                    HStack {
+                        Image(systemName: "xmark.circle")
+                            .foregroundColor(.red)
+                        Text("El motor debe estar apagado (RPM = 0)")
+                            .foregroundColor(.white)
+                    }
+                }
+
+                if !batteryOK {
+                    HStack {
+                        Image(systemName: "xmark.circle")
+                            .foregroundColor(.red)
+                        Text("Voltaje de batería insuficiente (< 11.5V)")
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            .font(.caption)
+        }
+        .padding()
+        .background(Color.red.opacity(0.2))
+        .cornerRadius(16)
+    }
+}
+
+struct ActuatorInfoCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.blue)
+                Text("Información")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("• Los tests activan componentes por tiempo limitado")
+                Text("• Si un componente no responde, puede indicar fallo")
+                Text("• El ventilador puede tardar en detenerse tras el test")
+                Text("• La bomba de combustible hará ruido audible")
+            }
+            .font(.caption)
+            .foregroundColor(.gray)
+        }
+        .padding()
+        .background(Color.blue.opacity(0.2))
+        .cornerRadius(16)
     }
 }
 
