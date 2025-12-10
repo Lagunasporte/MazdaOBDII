@@ -279,3 +279,312 @@
 "language.restart_title" = "再起動が必要です";
 "language.restart_message" = "言語の変更を適用するにはアプリを再起動してください。";
 "language.restart_note" = "一部の変更はアプリの再起動が必要です。";
+
+// MARK: - App
+"app.title" = "Renesis Monitor";
+
+// MARK: - Alert Banners
+"alert.critical_title" = "緊急警告！";
+"alert.warning_title" = "警告";
+
+// MARK: - Dashboard Extended
+"dashboard.coolant_short" = "水温";
+"dashboard.oil_short" = "油温";
+"dashboard.intake_short" = "吸気";
+"dashboard.voltage" = "電圧";
+"dashboard.alerts_count" = "%d件の警告";
+"dashboard.temperatures" = "温度";
+"dashboard.intake" = "吸気温度";
+"dashboard.catalyst" = "触媒";
+"dashboard.engine_status" = "エンジン状態";
+"dashboard.timing" = "点火時期";
+"dashboard.omp" = "OMP";
+"dashboard.connect_obd2" = "Bluetooth OBD2アダプターを接続してRX-8の診断を開始";
+"dashboard.search_adapter" = "アダプターを検索";
+"dashboard.compatible_hardware" = "互換性のあるハードウェア:";
+"dashboard.recommended" = "(推奨)";
+
+// MARK: - Connection Extended
+"connection.title" = "OBD2接続";
+"connection.status" = "状態";
+"connection.connection" = "接続";
+"connection.search_devices" = "デバイスを検索";
+"connection.searching" = "検索中...";
+"connection.devices_found" = "デバイスが見つかりました";
+"connection.signal" = "信号:";
+"connection.connect" = "接続";
+"connection.adapter" = "アダプター";
+"connection.protocol" = "プロトコル";
+"connection.adapter_saved" = "アダプター保存済み";
+"connection.connect_to_save" = "保存するにはアダプターを接続";
+"connection.auto_connect_desc" = "起動時に保存されたアダプターに自動接続を試みます";
+
+// MARK: - Diagnostics Extended
+"diagnostics.title" = "診断";
+"diagnostics.tap_to_diagnose" = "タップして診断";
+"diagnostics.rotary_tests" = "13B-MSP Renesisエンジン専用テスト";
+"diagnostics.trailing_coil_warning" = "トレーリングコイルは静かに故障し、触媒を損傷させます";
+"diagnostics.coil_replacement" = "常に4つのコイルを同時に交換してください";
+"diagnostics.mazda_pid_test" = "Mazda PIDテスト";
+"diagnostics.mazda_pid_desc" = "Mazda固有のPIDをテストして互換性を確認";
+"diagnostics.results" = "結果";
+"diagnostics.custom_command" = "カスタムコマンド";
+"diagnostics.send" = "送信";
+"diagnostics.response" = "応答:";
+"diagnostics.actuator_desc" = "Mazdaアクチュエーターテスト（エンジン停止、イグニッションON必要）";
+"diagnostics.open_tools" = "ツールを開く";
+"diagnostics.turn_off_engine" = "これらのツールを使用するにはエンジンを停止";
+"diagnostics.available_tests" = "利用可能なテスト";
+"diagnostics.safety_warning" = "安全警告";
+"diagnostics.safety_1" = "エンジンを停止してください";
+"diagnostics.safety_2" = "イグニッションをON（始動しない）";
+"diagnostics.safety_3" = "パーキングブレーキを作動";
+"diagnostics.safety_4" = "エンジン周辺を確保";
+"diagnostics.safety_5" = "テスト中は可動部品に触れない";
+"diagnostics.requirements_not_met" = "要件が満たされていません";
+"diagnostics.engine_must_be_off" = "エンジンを停止してください（RPM = 0）";
+"diagnostics.battery_insufficient" = "バッテリー電圧不足（< 11.5V）";
+"diagnostics.info" = "情報";
+"diagnostics.test_info_1" = "テストは限られた時間コンポーネントを作動させます";
+"diagnostics.test_info_2" = "コンポーネントが反応しない場合は故障の可能性があります";
+"diagnostics.test_info_3" = "ファンはテスト後も回り続ける場合があります";
+"diagnostics.test_info_4" = "燃料ポンプは音が聞こえます";
+"diagnostics.adapter_limitations" = "アダプターの制限";
+"diagnostics.clear_dtcs_title" = "DTCを消去";
+"diagnostics.clear_dtcs_confirm" = "すべてのコードを消去しますか？エンジン警告灯が消えます。";
+"diagnostics.result_title" = "結果";
+"diagnostics.confirm_test" = "テストを確認";
+
+// MARK: - Ignition System
+"ignition.verifying" = "点火システムを確認中...";
+"ignition.diagnostic_checks" = "この診断で確認する項目:";
+"ignition.spark_plug_config" = "RX-8スパークプラグ構成:";
+"ignition.leading_plug" = "リーディング: NGK RE7C-L（ギャップ1.1mm）";
+"ignition.trailing_plug" = "トレーリング: NGK RE9B-T（ギャップ1.1mm）";
+"ignition.change_interval" = "最大30,000kmごとに交換";
+"ignition.start_verification" = "確認を開始";
+"ignition.system_title" = "点火システム";
+"ignition.coil_codes" = "コイルコード:";
+"ignition.misfire_codes" = "ミスファイアコード:";
+"ignition.recommendations" = "推奨事項:";
+"ignition.replace_coils" = "4つの点火コイルをすべて交換";
+"ignition.replace_plugs" = "4つのプラグをすべて交換（NGK RE7C-L / RE9B-T）";
+"ignition.check_wires" = "点火ケーブルを確認";
+"ignition.trailing_fail_silently" = "トレーリングコイルは静かに故障することが多い";
+
+// MARK: - Catalyst
+"catalyst.verification" = "触媒の確認";
+"catalyst.rx8_info" = "RX-8では、ミスファイア（特にトレーリングコイルから）が触媒を急速に損傷させます。";
+"catalyst.title" = "触媒";
+"catalyst.p0420_detected" = "コードP0420を検出";
+"catalyst.recommended_actions" = "推奨アクション:";
+"catalyst.action_1" = "まず: コイルを確認して交換";
+"catalyst.action_2" = "故障したコイルは触媒を損傷させます";
+"catalyst.action_3" = "コイル修理後にのみ触媒を交換";
+"catalyst.action_4" = "O2センサーを確認";
+"catalyst.misfire_warning" = "ミスファイアコードを検出";
+"catalyst.misfire_damage" = "ミスファイアが触媒を積極的に損傷中。至急修理が必要です。";
+
+// MARK: - OMP System
+"omp.title" = "OMPシステム";
+"omp.description" = "OMPはアペックスシールを潤滑するために燃焼室にオイルを噴射します...";
+"omp.related_codes" = "関連コード:";
+"omp.code_p1520" = "P1520: OMP位置センサー";
+"omp.code_p0661" = "P0661: OMPソレノイド回路低";
+"omp.code_p0662" = "P0662: OMPソレノイド回路高";
+"omp.warning" = "注意: OMPシステムに問題";
+"omp.action_required" = "必要なアクション:";
+"omp.do_not_drive" = "修理まで走行しないでください";
+"omp.lubrication_compromised" = "エンジンの潤滑が危険な状態です";
+"omp.add_premix" = "一時的な対策として燃料にプレミックス（2Tオイル）を追加";
+"omp.check_sensor" = "OMPセンサーとソレノイドを確認";
+"omp.preventive" = "予防的推奨:";
+"omp.premix_info" = "多くのオーナーがプレミックスを追加しています（タンクあたり60-120mlの2Tオイル）...";
+
+// MARK: - Compression Test
+"compression.title" = "圧縮テスト";
+"compression.description" = "アペックスシールの状態とロータリーエンジンの全体的な健康状態を評価";
+"compression.start_test" = "圧縮テストを開始";
+"compression.reference_values" = "参照値（エンジン暖機後）:";
+"compression.engine_temp" = "エンジン温度";
+"compression.cold_engine" = "エンジン冷間";
+"compression.analyze" = "圧縮を分析";
+"compression.procedure" = "手順";
+"compression.chamber" = "チャンバー";
+
+// MARK: - Diagnostic Report
+"report.start_full" = "完全な診断を開始";
+"report.findings" = "結果";
+"report.recommendations" = "推奨事項:";
+"report.quick_diagnostics" = "クイック診断";
+"report.title" = "レポート";
+"report.reading_codes" = "コードを読み取り中...";
+"report.no_fault_codes" = "故障コードなし";
+
+// MARK: - O2 Sensor
+"o2.title" = "O2センサー";
+"o2.min" = "最小";
+"o2.max" = "最大";
+"o2.cycles" = "サイクル";
+"o2.reference_values" = "参照値:";
+"o2.lean_mixture" = "< 0.2V = リーン混合気";
+"o2.normal_range" = "0.2-0.8V = 正常";
+"o2.rich_mixture" = "> 0.8V = リッチ混合気";
+
+// MARK: - Vehicle Info Extended
+"vehicle.loading" = "車両データを読み取り中...";
+"vehicle.check_engine" = "エンジン警告灯（MIL）";
+"vehicle.freeze_frame" = "フリーズフレーム";
+"vehicle.reading_freeze" = "フリーズフレームを読み取り中...";
+"vehicle.no_freeze_data" = "フリーズフレームデータなし";
+
+// MARK: - Settings Extended
+"settings.units_section" = "単位";
+"settings.alerts_section" = "警告";
+"settings.alerts_active" = "警告有効";
+"settings.alerts_description" = "温度または電圧が範囲外の場合に警告します";
+"settings.vibration" = "振動";
+"settings.screen" = "画面";
+"settings.screen_description" = "アプリ使用中に画面が自動的にオフになるのを防ぎます";
+"settings.obd_performance" = "OBDパフォーマンス";
+"settings.obd_performance_desc" = "安価なアダプターはエッセンシャルモード（5 PID）が必要です。Carista/OBDLinkはフルモード（9+ PID）を使用できます。";
+"settings.unit_system" = "単位システム";
+"settings.data_volume" = "データ量";
+"settings.frequency" = "頻度";
+"settings.active_logging" = "アクティブな記録";
+"settings.pids_per_cycle" = "サイクルあたりのPID";
+"settings.reading_interval" = "読み取り間隔";
+"settings.fast" = "高速";
+"settings.stable" = "安定";
+"settings.adapter_speed_test" = "アダプター速度テスト";
+"settings.recommended_interval" = "推奨間隔:";
+"settings.response_time" = "応答時間:";
+"settings.errors" = "エラー:";
+"settings.slow_adapter" = "低速アダプター - エッセンシャルモード推奨";
+"settings.connecting" = "接続中...";
+"settings.adapter_diagnostics" = "アダプター診断";
+"settings.data_section" = "データ";
+"settings.about_app" = "RX-8 Diagについて";
+"settings.community" = "RX-8コミュニティ";
+"settings.technical_resources" = "技術リソース";
+"settings.information" = "情報";
+"settings.vehicle_info" = "車両情報";
+"settings.alert_thresholds" = "警告しきい値";
+"settings.data_logging_section" = "データ記録";
+"settings.export_data_section" = "データをエクスポート";
+
+// MARK: - Radar Extended
+"radar.speed" = "速度";
+"radar.nearby" = "付近";
+"radar.safe_zone" = "安全ゾーン";
+"radar.passing" = "通過中！";
+"radar.exceeded" = "超過";
+"radar.disabled" = "無効";
+"radar.nearby_radars" = "付近の速度取締機";
+"radar.no_nearby" = "付近に速度取締機なし";
+"radar.speed_limit" = "制限:";
+"radar.country" = "国:";
+"radar.nearby_area" = "近隣エリアのみ（50km）";
+"radar.data_from" = "データ元:";
+"radar.loaded_count" = "読み込まれた速度取締機";
+"radar.clear_cache" = "速度取締機キャッシュをクリア";
+"radar.osm_disclaimer" = "速度取締機データはOpenStreetMapからのもので、不完全な場合があります。常に制限速度を守ってください。";
+"radar.alert_sound" = "警告音";
+"radar.active" = "有効";
+"radar.inactive" = "無効";
+"radar.settings_title" = "速度取締機設定";
+
+// MARK: - Black Box Extended
+"blackbox.sessions" = "セッション（%d/%d）";
+"blackbox.ai_analysis_section" = "AI分析";
+"blackbox.no_sessions" = "記録されたセッションなし";
+"blackbox.auto_start" = "エンジン始動時に自動的に記録を開始（RPM > 400）";
+"blackbox.recording_status" = "記録中";
+"blackbox.manual" = "（手動）";
+"blackbox.samples" = "サンプル";
+"blackbox.engine_running" = "エンジン稼働中";
+"blackbox.waiting_engine" = "エンジン待機中...";
+"blackbox.no_obd" = "OBD接続なし";
+"blackbox.see_sessions" = "以前のセッションは下記を参照";
+"blackbox.stop" = "停止";
+"blackbox.manual_record" = "手動記録";
+"blackbox.engine_on" = "エンジンON";
+"blackbox.engine_off" = "エンジンOFF";
+"blackbox.configure_api" = "Anthropic APIキーを設定";
+"blackbox.api_configured" = "APIキー設定済み";
+"blackbox.change" = "変更";
+"blackbox.add_note" = "メモを追加";
+"blackbox.export_pdf" = "PDFレポートをエクスポート";
+"blackbox.generating_pdf" = "PDF生成中...";
+"blackbox.analyzing" = "分析中...";
+"blackbox.max_temp" = "最高温度:";
+"blackbox.coolant" = "水温:";
+"blackbox.oil" = "油温:";
+"blackbox.notes" = "メモ";
+"blackbox.duration" = "時間:";
+"blackbox.analyzed" = "分析済み";
+"blackbox.engine_stats" = "エンジン統計";
+"blackbox.session" = "セッション";
+"blackbox.configuration" = "設定";
+
+// MARK: - Adapter Diagnostics
+"adapter.status" = "状態";
+"adapter.connection_status" = "接続状態";
+"adapter.diagnostics" = "診断";
+"adapter.command_console" = "コマンドコンソール";
+"adapter.quick_commands" = "クイックコマンド";
+"adapter.ble_diagnostics" = "BLE診断";
+"adapter.debug" = "デバッグ";
+"adapter.compatible_adapters" = "互換性のあるアダプター";
+"adapter.detected_type" = "検出されたタイプ";
+"adapter.running_diagnostics" = "診断実行中...";
+"adapter.run_full_diagnostics" = "完全な診断を実行";
+"adapter.diagnostics_description" = "診断はアダプターと車両との通信をテストします";
+"adapter.send_command" = "コマンドを送信";
+"adapter.send_at_commands" = "テスト用にATコマンドを直接アダプターに送信";
+"adapter.reset" = "アダプターをリセット";
+"adapter.info" = "アダプター情報";
+"adapter.battery_voltage" = "バッテリー電圧";
+"adapter.current_protocol" = "現在のプロトコル";
+"adapter.supported_pids" = "サポートされているPID";
+"adapter.coolant_temp" = "冷却水温度";
+"adapter.view_ble" = "BLE特性を表示";
+"adapter.rediscover_ble" = "BLEサービスを再検出";
+"adapter.ble_help" = "応答がない場合はBLEサービスを再検出してください";
+"adapter.view_debug" = "デバッグログを表示";
+"adapter.entries" = "エントリ";
+"adapter.clear_log" = "ログをクリア";
+"adapter.verbose_mode" = "詳細モード";
+"adapter.stn_info" = "STN1110または正規のELM327チップを搭載したアダプターはより良い互換性を提供します";
+"adapter.title" = "アダプター診断";
+"adapter.debug_log" = "デバッグログ";
+"adapter.ble_features" = "BLE特性";
+
+// MARK: - Procedures
+"procedures.title" = "手順";
+"procedures.search" = "手順を検索...";
+"procedures.all" = "すべて";
+
+// MARK: - Consumption Extended
+"consumption.current_trip" = "現在のトリップ";
+"consumption.distance" = "距離";
+"consumption.mode" = "モード";
+"consumption.type" = "タイプ";
+"consumption.left_only" = "左のみ";
+"consumption.right_only" = "右のみ";
+"consumption.both_average" = "両方（平均）";
+"consumption.standard_obd" = "標準OBD";
+"consumption.reset_partial" = "部分をリセット？";
+"consumption.fuel_probes" = "燃料プローブ";
+"consumption.configuration" = "設定";
+
+// MARK: - DTC Categories
+"dtc.category.powertrain" = "パワートレイン";
+"dtc.category.chassis" = "シャシー";
+"dtc.category.body" = "ボディ";
+"dtc.category.network" = "ネットワーク";
+"dtc.category.generic" = "汎用";
+"dtc.category.manufacturer" = "メーカー固有";
+"dtc.pending" = "保留中";
+"dtc.stored" = "保存済み";
+"dtc.permanent" = "永続";

@@ -81,49 +81,49 @@ struct MainTabView: View {
             // Tab 1: Dashboard
             DashboardView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "gauge.with.dots.needle.bottom.50percent")
+                    Label("tabs.dashboard".localized, systemImage: "gauge.with.dots.needle.bottom.50percent")
                 }
                 .tag(0)
 
             // Tab 2: Diagnóstico
             DiagnosticView()
                 .tabItem {
-                    Label("Diagnóstico", systemImage: "stethoscope")
+                    Label("tabs.diagnostics".localized, systemImage: "stethoscope")
                 }
                 .tag(1)
 
             // Tab 3: DTCs
             DTCView()
                 .tabItem {
-                    Label("Códigos", systemImage: "exclamationmark.triangle")
+                    Label("tabs.dtcs".localized, systemImage: "exclamationmark.triangle")
                 }
                 .tag(2)
 
             // Tab 4: Consumo
             FuelConsumptionView()
                 .tabItem {
-                    Label("Consumo", systemImage: "fuelpump")
+                    Label("tabs.consumption".localized, systemImage: "fuelpump")
                 }
                 .tag(3)
 
             // Tab 5: Avisador Radares
             RadarView()
                 .tabItem {
-                    Label("Radares", systemImage: "antenna.radiowaves.left.and.right")
+                    Label("tabs.radar".localized, systemImage: "antenna.radiowaves.left.and.right")
                 }
                 .tag(4)
 
             // Tab 6: Caja Negra
             BlackBoxView()
                 .tabItem {
-                    Label("Caja Negra", systemImage: "externaldrive.fill")
+                    Label("tabs.blackbox".localized, systemImage: "externaldrive.fill")
                 }
                 .tag(5)
 
             // Tab 7: Configuración
             SettingsView()
                 .tabItem {
-                    Label("Ajustes", systemImage: "gearshape")
+                    Label("tabs.settings".localized, systemImage: "gearshape")
                 }
                 .tag(6)
             }
@@ -179,7 +179,7 @@ struct AlertBannerView: View {
 
                 // Mensaje
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(severity == .critical ? "¡ALERTA CRÍTICA!" : "ALERTA")
+                    Text(severity == .critical ? "alert.critical_title".localized : "alert.warning_title".localized)
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.white.opacity(0.9))
@@ -288,7 +288,7 @@ struct CarPlayDashboardView: View {
             HStack(spacing: 12) {
                 // Columna izquierda: RPM grande
                 VStack(spacing: 4) {
-                    Text("RPM")
+                    Text("dashboard.rpm".localized)
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.gray)
@@ -321,7 +321,7 @@ struct CarPlayDashboardView: View {
                         Text(String(format: "%.0f", engineMonitor.currentState.vehicleSpeed))
                             .font(.system(size: 48, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
-                        Text("km/h")
+                        Text("units.kmh".localized)
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
@@ -330,9 +330,9 @@ struct CarPlayDashboardView: View {
 
                     // Temperaturas en fila
                     HStack(spacing: 16) {
-                        CarPlayTempItem(icon: "thermometer.medium", label: "Refr", value: engineMonitor.currentState.coolantTemperature, color: coolantColor)
-                        CarPlayTempItem(icon: "drop.fill", label: "Aceite", value: engineMonitor.currentState.oilTemperature, color: oilColor, showDash: engineMonitor.currentState.oilTemperature < 50)
-                        CarPlayTempItem(icon: "wind", label: "Adm", value: engineMonitor.currentState.intakeAirTemperature, color: .cyan)
+                        CarPlayTempItem(icon: "thermometer.medium", label: "dashboard.coolant_short".localized, value: engineMonitor.currentState.coolantTemperature, color: coolantColor)
+                        CarPlayTempItem(icon: "drop.fill", label: "dashboard.oil_short".localized, value: engineMonitor.currentState.oilTemperature, color: oilColor, showDash: engineMonitor.currentState.oilTemperature < 50)
+                        CarPlayTempItem(icon: "wind", label: "dashboard.intake_short".localized, value: engineMonitor.currentState.intakeAirTemperature, color: .cyan)
                     }
                 }
                 .frame(width: geometry.size.width * 0.35)
@@ -341,8 +341,8 @@ struct CarPlayDashboardView: View {
                 VStack(spacing: 6) {
                     // Voltaje y throttle
                     HStack(spacing: 12) {
-                        CarPlayStatBox(label: "Voltaje", value: String(format: "%.1f", engineMonitor.currentState.batteryVoltage), unit: "V", color: engineMonitor.currentState.batteryVoltage > 13.5 ? .green : .orange)
-                        CarPlayStatBox(label: "Carga", value: String(format: "%.0f", engineMonitor.currentState.throttlePosition), unit: "%", color: .blue)
+                        CarPlayStatBox(label: "dashboard.voltage".localized, value: String(format: "%.1f", engineMonitor.currentState.batteryVoltage), unit: "V", color: engineMonitor.currentState.batteryVoltage > 13.5 ? .green : .orange)
+                        CarPlayStatBox(label: "dashboard.load".localized, value: String(format: "%.0f", engineMonitor.currentState.throttlePosition), unit: "%", color: .blue)
                     }
 
                     // Fuel trims
@@ -357,7 +357,7 @@ struct CarPlayDashboardView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.orange)
                                 .font(.caption)
-                            Text("\(engineMonitor.activeAlerts.count) alertas")
+                            Text("dashboard.alerts_count".localized(with: engineMonitor.activeAlerts.count))
                                 .font(.caption)
                                 .foregroundColor(.orange)
                         }
@@ -372,7 +372,7 @@ struct CarPlayDashboardView: View {
                         Circle()
                             .fill(Color.green)
                             .frame(width: 8, height: 8)
-                        Text("Conectado")
+                        Text("dashboard.connected".localized)
                             .font(.caption2)
                             .foregroundColor(.gray)
                     }
@@ -386,13 +386,13 @@ struct CarPlayDashboardView: View {
                 Image(systemName: "car.side")
                     .font(.system(size: 50))
                     .foregroundColor(.gray)
-                Text("No conectado")
+                Text("dashboard.not_connected".localized)
                     .font(.title3)
                     .foregroundColor(.white)
                 Button(action: { showConnectionSheet = true }) {
                     HStack {
                         Image(systemName: "antenna.radiowaves.left.and.right")
-                        Text("Conectar")
+                        Text("connection.connect".localized)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
@@ -511,7 +511,7 @@ struct MobileDashboardView: View {
                 .padding()
             }
             .background(Color.black)
-            .navigationTitle("Renesis Monitor")
+            .navigationTitle("app.title".localized)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

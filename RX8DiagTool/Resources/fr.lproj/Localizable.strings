@@ -279,3 +279,312 @@
 "language.restart_title" = "Redémarrage requis";
 "language.restart_message" = "Veuillez redémarrer l'application pour appliquer le changement de langue.";
 "language.restart_note" = "Certains changements nécessitent un redémarrage de l'application.";
+
+// MARK: - App
+"app.title" = "Renesis Monitor";
+
+// MARK: - Alert Banners
+"alert.critical_title" = "ALERTE CRITIQUE !";
+"alert.warning_title" = "ALERTE";
+
+// MARK: - Dashboard Extended
+"dashboard.coolant_short" = "Refr";
+"dashboard.oil_short" = "Huile";
+"dashboard.intake_short" = "Adm";
+"dashboard.voltage" = "Tension";
+"dashboard.alerts_count" = "%d alertes";
+"dashboard.temperatures" = "Températures";
+"dashboard.intake" = "Admission";
+"dashboard.catalyst" = "Catalyseur";
+"dashboard.engine_status" = "État du moteur";
+"dashboard.timing" = "Allumage";
+"dashboard.omp" = "OMP";
+"dashboard.connect_obd2" = "Connectez un adaptateur OBD2 Bluetooth pour commencer le diagnostic de votre RX-8";
+"dashboard.search_adapter" = "Rechercher adaptateur";
+"dashboard.compatible_hardware" = "Matériel compatible :";
+"dashboard.recommended" = "(recommandé)";
+
+// MARK: - Connection Extended
+"connection.title" = "Connexion OBD2";
+"connection.status" = "État";
+"connection.connection" = "Connexion";
+"connection.search_devices" = "Rechercher appareils";
+"connection.searching" = "Recherche...";
+"connection.devices_found" = "Appareils trouvés";
+"connection.signal" = "Signal :";
+"connection.connect" = "Connecter";
+"connection.adapter" = "Adaptateur";
+"connection.protocol" = "Protocole";
+"connection.adapter_saved" = "Adaptateur enregistré";
+"connection.connect_to_save" = "Connecter un adaptateur pour enregistrer";
+"connection.auto_connect_desc" = "L'app tentera de se connecter automatiquement à l'adaptateur enregistré au démarrage";
+
+// MARK: - Diagnostics Extended
+"diagnostics.title" = "Diagnostic";
+"diagnostics.tap_to_diagnose" = "Appuyer pour diagnostiquer";
+"diagnostics.rotary_tests" = "Tests spécifiques pour le moteur 13B-MSP Renesis";
+"diagnostics.trailing_coil_warning" = "Les bobines trailing tombent en panne silencieusement et endommagent le catalyseur";
+"diagnostics.coil_replacement" = "Toujours remplacer les 4 bobines ensemble";
+"diagnostics.mazda_pid_test" = "Test PIDs Mazda";
+"diagnostics.mazda_pid_desc" = "Testez les PIDs spécifiques Mazda pour vérifier la compatibilité";
+"diagnostics.results" = "Résultats";
+"diagnostics.custom_command" = "Commande personnalisée";
+"diagnostics.send" = "Envoyer";
+"diagnostics.response" = "Réponse :";
+"diagnostics.actuator_desc" = "Tests actuateurs Mazda (moteur éteint, contact ON requis)";
+"diagnostics.open_tools" = "Ouvrir les outils";
+"diagnostics.turn_off_engine" = "Éteignez le moteur pour utiliser ces outils";
+"diagnostics.available_tests" = "Tests disponibles";
+"diagnostics.safety_warning" = "AVERTISSEMENT DE SÉCURITÉ";
+"diagnostics.safety_1" = "Le moteur doit être ÉTEINT";
+"diagnostics.safety_2" = "Contact en position ON (sans démarrer)";
+"diagnostics.safety_3" = "Frein à main serré";
+"diagnostics.safety_4" = "Zone autour du moteur dégagée";
+"diagnostics.safety_5" = "Ne pas toucher les pièces mobiles pendant les tests";
+"diagnostics.requirements_not_met" = "Conditions non remplies";
+"diagnostics.engine_must_be_off" = "Le moteur doit être éteint (RPM = 0)";
+"diagnostics.battery_insufficient" = "Tension batterie insuffisante (< 11,5V)";
+"diagnostics.info" = "Information";
+"diagnostics.test_info_1" = "Les tests activent les composants pour une durée limitée";
+"diagnostics.test_info_2" = "Si un composant ne répond pas, cela peut indiquer une panne";
+"diagnostics.test_info_3" = "Le ventilateur peut continuer à tourner après le test";
+"diagnostics.test_info_4" = "La pompe à carburant fera un bruit audible";
+"diagnostics.adapter_limitations" = "Limitations de l'adaptateur";
+"diagnostics.clear_dtcs_title" = "Effacer les DTCs";
+"diagnostics.clear_dtcs_confirm" = "Effacer tous les codes ? Le voyant moteur s'éteindra.";
+"diagnostics.result_title" = "Résultat";
+"diagnostics.confirm_test" = "Confirmer le test";
+
+// MARK: - Ignition System
+"ignition.verifying" = "Vérification du système d'allumage...";
+"ignition.diagnostic_checks" = "Ce diagnostic vérifie :";
+"ignition.spark_plug_config" = "Configuration des bougies RX-8 :";
+"ignition.leading_plug" = "Leading : NGK RE7C-L (écart 1,1mm)";
+"ignition.trailing_plug" = "Trailing : NGK RE9B-T (écart 1,1mm)";
+"ignition.change_interval" = "Changer tous les 30 000 km maximum";
+"ignition.start_verification" = "Démarrer la vérification";
+"ignition.system_title" = "Système d'allumage";
+"ignition.coil_codes" = "Codes bobines :";
+"ignition.misfire_codes" = "Codes ratés :";
+"ignition.recommendations" = "Recommandations :";
+"ignition.replace_coils" = "Remplacer les 4 bobines d'allumage";
+"ignition.replace_plugs" = "Changer les 4 bougies (NGK RE7C-L / RE9B-T)";
+"ignition.check_wires" = "Vérifier les câbles d'allumage";
+"ignition.trailing_fail_silently" = "Les bobines trailing tombent souvent en panne silencieusement";
+
+// MARK: - Catalyst
+"catalyst.verification" = "Vérification du catalyseur";
+"catalyst.rx8_info" = "Sur le RX-8, les ratés d'allumage (surtout des bobines trailing) détruisent rapidement le catalyseur.";
+"catalyst.title" = "Catalyseur";
+"catalyst.p0420_detected" = "Code P0420 détecté";
+"catalyst.recommended_actions" = "Actions recommandées :";
+"catalyst.action_1" = "D'ABORD : Vérifier et remplacer les bobines";
+"catalyst.action_2" = "Les bobines défaillantes endommagent le catalyseur";
+"catalyst.action_3" = "Ne remplacer le catalyseur qu'après réparation des bobines";
+"catalyst.action_4" = "Vérifier les sondes O2";
+"catalyst.misfire_warning" = "Codes de ratés détectés";
+"catalyst.misfire_damage" = "Les ratés endommagent activement le catalyseur. Réparer d'urgence.";
+
+// MARK: - OMP System
+"omp.title" = "Système OMP";
+"omp.description" = "L'OMP injecte de l'huile dans les chambres de combustion pour lubrifier les apex seals...";
+"omp.related_codes" = "Codes associés :";
+"omp.code_p1520" = "P1520 : Capteur de position OMP";
+"omp.code_p0661" = "P0661 : Circuit bas solénoïde OMP";
+"omp.code_p0662" = "P0662 : Circuit haut solénoïde OMP";
+"omp.warning" = "ATTENTION : Problème système OMP";
+"omp.action_required" = "ACTION REQUISE :";
+"omp.do_not_drive" = "NE PAS conduire avant réparation";
+"omp.lubrication_compromised" = "La lubrification du moteur est compromise";
+"omp.add_premix" = "Ajouter du prémélange (huile 2T) au carburant comme mesure temporaire";
+"omp.check_sensor" = "Vérifier le capteur et solénoïde OMP";
+"omp.preventive" = "Recommandation préventive :";
+"omp.premix_info" = "Beaucoup de propriétaires ajoutent du prémélange (60-120ml d'huile 2T par plein)...";
+
+// MARK: - Compression Test
+"compression.title" = "Test de compression";
+"compression.description" = "Évalue l'état des apex seals et la santé générale du moteur rotatif";
+"compression.start_test" = "Démarrer le test de compression";
+"compression.reference_values" = "Valeurs de référence (moteur chaud) :";
+"compression.engine_temp" = "Température moteur";
+"compression.cold_engine" = "Moteur froid";
+"compression.analyze" = "Analyser la compression";
+"compression.procedure" = "Procédure";
+"compression.chamber" = "Chambre";
+
+// MARK: - Diagnostic Report
+"report.start_full" = "Lancer un diagnostic complet";
+"report.findings" = "Résultats";
+"report.recommendations" = "Recommandations :";
+"report.quick_diagnostics" = "Diagnostics rapides";
+"report.title" = "Rapport";
+"report.reading_codes" = "Lecture des codes...";
+"report.no_fault_codes" = "Aucun code défaut";
+
+// MARK: - O2 Sensor
+"o2.title" = "Sonde O2";
+"o2.min" = "Min";
+"o2.max" = "Max";
+"o2.cycles" = "Cycles";
+"o2.reference_values" = "Valeurs de référence :";
+"o2.lean_mixture" = "< 0,2V = Mélange pauvre";
+"o2.normal_range" = "0,2-0,8V = Normal";
+"o2.rich_mixture" = "> 0,8V = Mélange riche";
+
+// MARK: - Vehicle Info Extended
+"vehicle.loading" = "Lecture des données véhicule...";
+"vehicle.check_engine" = "Voyant moteur (MIL)";
+"vehicle.freeze_frame" = "Données figées";
+"vehicle.reading_freeze" = "Lecture des données figées...";
+"vehicle.no_freeze_data" = "Pas de données figées";
+
+// MARK: - Settings Extended
+"settings.units_section" = "Unités";
+"settings.alerts_section" = "Alertes";
+"settings.alerts_active" = "Alertes actives";
+"settings.alerts_description" = "Les alertes vous avertiront si la température ou la tension sont hors limites";
+"settings.vibration" = "Vibration";
+"settings.screen" = "Écran";
+"settings.screen_description" = "Empêche l'écran de s'éteindre automatiquement pendant l'utilisation de l'app";
+"settings.obd_performance" = "Performance OBD";
+"settings.obd_performance_desc" = "Les adaptateurs bon marché nécessitent le mode Essentiel (5 PIDs). Carista/OBDLink peuvent utiliser le mode Complet (9+ PIDs).";
+"settings.unit_system" = "Système d'unités";
+"settings.data_volume" = "Volume de données";
+"settings.frequency" = "Fréquence";
+"settings.active_logging" = "Enregistrement actif";
+"settings.pids_per_cycle" = "PIDs par cycle";
+"settings.reading_interval" = "Intervalle de lecture";
+"settings.fast" = "Rapide";
+"settings.stable" = "Stable";
+"settings.adapter_speed_test" = "Test de vitesse adaptateur";
+"settings.recommended_interval" = "Intervalle recommandé :";
+"settings.response_time" = "Temps de réponse :";
+"settings.errors" = "Erreurs :";
+"settings.slow_adapter" = "Adaptateur lent - Mode Essentiel recommandé";
+"settings.connecting" = "Connexion...";
+"settings.adapter_diagnostics" = "Diagnostic adaptateur";
+"settings.data_section" = "Données";
+"settings.about_app" = "À propos de RX-8 Diag";
+"settings.community" = "Communauté RX-8";
+"settings.technical_resources" = "Ressources techniques";
+"settings.information" = "Information";
+"settings.vehicle_info" = "Informations véhicule";
+"settings.alert_thresholds" = "Seuils d'alerte";
+"settings.data_logging_section" = "Enregistrement des données";
+"settings.export_data_section" = "Exporter les données";
+
+// MARK: - Radar Extended
+"radar.speed" = "VITESSE";
+"radar.nearby" = "À PROXIMITÉ";
+"radar.safe_zone" = "Zone sûre";
+"radar.passing" = "PASSAGE !";
+"radar.exceeded" = "Dépassé";
+"radar.disabled" = "Désactivé";
+"radar.nearby_radars" = "Radars à proximité";
+"radar.no_nearby" = "Pas de radars à proximité";
+"radar.speed_limit" = "Limite :";
+"radar.country" = "Pays :";
+"radar.nearby_area" = "Zone proche uniquement (50km)";
+"radar.data_from" = "Données de :";
+"radar.loaded_count" = "Radars chargés";
+"radar.clear_cache" = "Vider le cache radars";
+"radar.osm_disclaimer" = "Les données radars proviennent d'OpenStreetMap et peuvent être incomplètes. Respectez toujours les limitations de vitesse.";
+"radar.alert_sound" = "Son d'alerte";
+"radar.active" = "Actif";
+"radar.inactive" = "Inactif";
+"radar.settings_title" = "Paramètres radars";
+
+// MARK: - Black Box Extended
+"blackbox.sessions" = "Sessions (%d/%d)";
+"blackbox.ai_analysis_section" = "Analyse IA";
+"blackbox.no_sessions" = "Aucune session enregistrée";
+"blackbox.auto_start" = "L'enregistrement démarre automatiquement quand le moteur tourne (RPM > 400)";
+"blackbox.recording_status" = "ENREGISTREMENT";
+"blackbox.manual" = "(MANUEL)";
+"blackbox.samples" = "échantillons";
+"blackbox.engine_running" = "Moteur en marche";
+"blackbox.waiting_engine" = "En attente du moteur...";
+"blackbox.no_obd" = "Pas de connexion OBD";
+"blackbox.see_sessions" = "Consultez les sessions précédentes ci-dessous";
+"blackbox.stop" = "ARRÊTER";
+"blackbox.manual_record" = "ENREGISTREMENT MANUEL";
+"blackbox.engine_on" = "Moteur ON";
+"blackbox.engine_off" = "Moteur OFF";
+"blackbox.configure_api" = "Configurer la clé API Anthropic";
+"blackbox.api_configured" = "Clé API configurée";
+"blackbox.change" = "Modifier";
+"blackbox.add_note" = "Ajouter une note";
+"blackbox.export_pdf" = "Exporter rapport PDF";
+"blackbox.generating_pdf" = "Génération du PDF...";
+"blackbox.analyzing" = "Analyse...";
+"blackbox.max_temp" = "Temp. max :";
+"blackbox.coolant" = "Refr :";
+"blackbox.oil" = "Huile :";
+"blackbox.notes" = "Notes";
+"blackbox.duration" = "Durée :";
+"blackbox.analyzed" = "Analysé";
+"blackbox.engine_stats" = "Statistiques moteur";
+"blackbox.session" = "Session";
+"blackbox.configuration" = "Configuration";
+
+// MARK: - Adapter Diagnostics
+"adapter.status" = "État";
+"adapter.connection_status" = "État de connexion";
+"adapter.diagnostics" = "Diagnostic";
+"adapter.command_console" = "Console de commandes";
+"adapter.quick_commands" = "Commandes rapides";
+"adapter.ble_diagnostics" = "Diagnostic BLE";
+"adapter.debug" = "Debug";
+"adapter.compatible_adapters" = "Adaptateurs compatibles";
+"adapter.detected_type" = "Type détecté";
+"adapter.running_diagnostics" = "Diagnostic en cours...";
+"adapter.run_full_diagnostics" = "Lancer le diagnostic complet";
+"adapter.diagnostics_description" = "Le diagnostic teste la communication avec l'adaptateur et le véhicule";
+"adapter.send_command" = "Envoyer commande";
+"adapter.send_at_commands" = "Envoyer des commandes AT directement à l'adaptateur pour test";
+"adapter.reset" = "Réinitialiser adaptateur";
+"adapter.info" = "Info adaptateur";
+"adapter.battery_voltage" = "Tension batterie";
+"adapter.current_protocol" = "Protocole actuel";
+"adapter.supported_pids" = "PIDs supportés";
+"adapter.coolant_temp" = "Temp. liquide refroid.";
+"adapter.view_ble" = "Voir caractéristiques BLE";
+"adapter.rediscover_ble" = "Redécouvrir services BLE";
+"adapter.ble_help" = "Si pas de réponse, essayez de redécouvrir les services BLE";
+"adapter.view_debug" = "Voir le log debug";
+"adapter.entries" = "entrées";
+"adapter.clear_log" = "Effacer le log";
+"adapter.verbose_mode" = "Mode verbeux";
+"adapter.stn_info" = "Les adaptateurs avec puce STN1110 ou ELM327 authentique offrent une meilleure compatibilité";
+"adapter.title" = "Diagnostic adaptateur";
+"adapter.debug_log" = "Log debug";
+"adapter.ble_features" = "Caractéristiques BLE";
+
+// MARK: - Procedures
+"procedures.title" = "Procédures";
+"procedures.search" = "Rechercher procédures...";
+"procedures.all" = "Toutes";
+
+// MARK: - Consumption Extended
+"consumption.current_trip" = "TRAJET ACTUEL";
+"consumption.distance" = "Dist";
+"consumption.mode" = "Mode";
+"consumption.type" = "Type";
+"consumption.left_only" = "Gauche uniquement";
+"consumption.right_only" = "Droite uniquement";
+"consumption.both_average" = "Les deux (Moyenne)";
+"consumption.standard_obd" = "OBD Standard";
+"consumption.reset_partial" = "Réinitialiser partiel ?";
+"consumption.fuel_probes" = "Sondes de carburant";
+"consumption.configuration" = "Configuration";
+
+// MARK: - DTC Categories
+"dtc.category.powertrain" = "Groupe motopropulseur";
+"dtc.category.chassis" = "Châssis";
+"dtc.category.body" = "Carrosserie";
+"dtc.category.network" = "Réseau";
+"dtc.category.generic" = "Générique";
+"dtc.category.manufacturer" = "Spécifique constructeur";
+"dtc.pending" = "En attente";
+"dtc.stored" = "Mémorisé";
+"dtc.permanent" = "Permanent";

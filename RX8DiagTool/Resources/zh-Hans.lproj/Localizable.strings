@@ -279,3 +279,312 @@
 "language.restart_title" = "需要重启";
 "language.restart_message" = "请重启应用以应用语言更改。";
 "language.restart_note" = "部分更改需要重启应用才能生效。";
+
+// MARK: - App
+"app.title" = "Renesis Monitor";
+
+// MARK: - Alert Banners
+"alert.critical_title" = "紧急警报！";
+"alert.warning_title" = "警报";
+
+// MARK: - Dashboard Extended
+"dashboard.coolant_short" = "水温";
+"dashboard.oil_short" = "油温";
+"dashboard.intake_short" = "进气";
+"dashboard.voltage" = "电压";
+"dashboard.alerts_count" = "%d个警报";
+"dashboard.temperatures" = "温度";
+"dashboard.intake" = "进气温度";
+"dashboard.catalyst" = "催化器";
+"dashboard.engine_status" = "发动机状态";
+"dashboard.timing" = "点火正时";
+"dashboard.omp" = "OMP";
+"dashboard.connect_obd2" = "连接蓝牙OBD2适配器开始RX-8诊断";
+"dashboard.search_adapter" = "搜索适配器";
+"dashboard.compatible_hardware" = "兼容硬件:";
+"dashboard.recommended" = "(推荐)";
+
+// MARK: - Connection Extended
+"connection.title" = "OBD2连接";
+"connection.status" = "状态";
+"connection.connection" = "连接";
+"connection.search_devices" = "搜索设备";
+"connection.searching" = "搜索中...";
+"connection.devices_found" = "已找到设备";
+"connection.signal" = "信号:";
+"connection.connect" = "连接";
+"connection.adapter" = "适配器";
+"connection.protocol" = "协议";
+"connection.adapter_saved" = "适配器已保存";
+"connection.connect_to_save" = "连接适配器以保存";
+"connection.auto_connect_desc" = "应用启动时将尝试自动连接已保存的适配器";
+
+// MARK: - Diagnostics Extended
+"diagnostics.title" = "诊断";
+"diagnostics.tap_to_diagnose" = "点击诊断";
+"diagnostics.rotary_tests" = "13B-MSP Renesis发动机专用测试";
+"diagnostics.trailing_coil_warning" = "后点火线圈会无声故障并损坏催化器";
+"diagnostics.coil_replacement" = "建议同时更换全部4个点火线圈";
+"diagnostics.mazda_pid_test" = "马自达PID测试";
+"diagnostics.mazda_pid_desc" = "测试马自达专用PID以验证兼容性";
+"diagnostics.results" = "结果";
+"diagnostics.custom_command" = "自定义命令";
+"diagnostics.send" = "发送";
+"diagnostics.response" = "响应:";
+"diagnostics.actuator_desc" = "马自达执行器测试（需发动机关闭，钥匙ON）";
+"diagnostics.open_tools" = "打开工具";
+"diagnostics.turn_off_engine" = "关闭发动机以使用这些工具";
+"diagnostics.available_tests" = "可用测试";
+"diagnostics.safety_warning" = "安全警告";
+"diagnostics.safety_1" = "发动机必须关闭";
+"diagnostics.safety_2" = "钥匙处于ON位置（不启动）";
+"diagnostics.safety_3" = "拉起手刹";
+"diagnostics.safety_4" = "确保发动机周围区域安全";
+"diagnostics.safety_5" = "测试期间不要触碰移动部件";
+"diagnostics.requirements_not_met" = "未满足要求";
+"diagnostics.engine_must_be_off" = "发动机必须关闭（RPM = 0）";
+"diagnostics.battery_insufficient" = "电瓶电压不足（< 11.5V）";
+"diagnostics.info" = "信息";
+"diagnostics.test_info_1" = "测试会在有限时间内激活组件";
+"diagnostics.test_info_2" = "如果组件没有响应，可能表示故障";
+"diagnostics.test_info_3" = "风扇可能在测试后继续运转";
+"diagnostics.test_info_4" = "燃油泵会发出声音";
+"diagnostics.adapter_limitations" = "适配器限制";
+"diagnostics.clear_dtcs_title" = "清除故障码";
+"diagnostics.clear_dtcs_confirm" = "清除所有故障码？发动机故障灯将熄灭。";
+"diagnostics.result_title" = "结果";
+"diagnostics.confirm_test" = "确认测试";
+
+// MARK: - Ignition System
+"ignition.verifying" = "正在验证点火系统...";
+"ignition.diagnostic_checks" = "此诊断检查:";
+"ignition.spark_plug_config" = "RX-8火花塞配置:";
+"ignition.leading_plug" = "前点火: NGK RE7C-L（间隙1.1mm）";
+"ignition.trailing_plug" = "后点火: NGK RE9B-T（间隙1.1mm）";
+"ignition.change_interval" = "最长30,000公里更换一次";
+"ignition.start_verification" = "开始验证";
+"ignition.system_title" = "点火系统";
+"ignition.coil_codes" = "线圈故障码:";
+"ignition.misfire_codes" = "失火故障码:";
+"ignition.recommendations" = "建议:";
+"ignition.replace_coils" = "更换全部4个点火线圈";
+"ignition.replace_plugs" = "更换全部4个火花塞（NGK RE7C-L / RE9B-T）";
+"ignition.check_wires" = "检查点火线";
+"ignition.trailing_fail_silently" = "后点火线圈通常会无声故障";
+
+// MARK: - Catalyst
+"catalyst.verification" = "催化器验证";
+"catalyst.rx8_info" = "在RX-8上，失火（尤其是后点火线圈引起的）会迅速损坏催化器。";
+"catalyst.title" = "催化器";
+"catalyst.p0420_detected" = "检测到P0420故障码";
+"catalyst.recommended_actions" = "建议操作:";
+"catalyst.action_1" = "首先: 检查并更换线圈";
+"catalyst.action_2" = "故障线圈会损坏催化器";
+"catalyst.action_3" = "仅在修复线圈后更换催化器";
+"catalyst.action_4" = "检查氧传感器";
+"catalyst.misfire_warning" = "检测到失火故障码";
+"catalyst.misfire_damage" = "失火正在积极损坏催化器。请紧急修复。";
+
+// MARK: - OMP System
+"omp.title" = "OMP系统";
+"omp.description" = "OMP向燃烧室喷射机油以润滑顶部密封条...";
+"omp.related_codes" = "相关故障码:";
+"omp.code_p1520" = "P1520: OMP位置传感器";
+"omp.code_p0661" = "P0661: OMP电磁阀电路低";
+"omp.code_p0662" = "P0662: OMP电磁阀电路高";
+"omp.warning" = "注意: OMP系统问题";
+"omp.action_required" = "需要采取行动:";
+"omp.do_not_drive" = "修复前请勿驾驶";
+"omp.lubrication_compromised" = "发动机润滑已受损";
+"omp.add_premix" = "临时措施：向燃油中添加预混油（2T机油）";
+"omp.check_sensor" = "检查OMP传感器和电磁阀";
+"omp.preventive" = "预防性建议:";
+"omp.premix_info" = "许多车主会添加预混油（每箱60-120ml 2T机油）...";
+
+// MARK: - Compression Test
+"compression.title" = "压缩测试";
+"compression.description" = "评估顶部密封条状态和转子发动机整体健康状况";
+"compression.start_test" = "开始压缩测试";
+"compression.reference_values" = "参考值（发动机热机后）:";
+"compression.engine_temp" = "发动机温度";
+"compression.cold_engine" = "发动机冷机";
+"compression.analyze" = "分析压缩";
+"compression.procedure" = "程序";
+"compression.chamber" = "燃烧室";
+
+// MARK: - Diagnostic Report
+"report.start_full" = "开始完整诊断";
+"report.findings" = "发现";
+"report.recommendations" = "建议:";
+"report.quick_diagnostics" = "快速诊断";
+"report.title" = "报告";
+"report.reading_codes" = "正在读取故障码...";
+"report.no_fault_codes" = "无故障码";
+
+// MARK: - O2 Sensor
+"o2.title" = "氧传感器";
+"o2.min" = "最小";
+"o2.max" = "最大";
+"o2.cycles" = "周期";
+"o2.reference_values" = "参考值:";
+"o2.lean_mixture" = "< 0.2V = 稀混合气";
+"o2.normal_range" = "0.2-0.8V = 正常";
+"o2.rich_mixture" = "> 0.8V = 浓混合气";
+
+// MARK: - Vehicle Info Extended
+"vehicle.loading" = "正在读取车辆数据...";
+"vehicle.check_engine" = "发动机故障灯（MIL）";
+"vehicle.freeze_frame" = "冻结帧";
+"vehicle.reading_freeze" = "正在读取冻结帧...";
+"vehicle.no_freeze_data" = "无冻结帧数据";
+
+// MARK: - Settings Extended
+"settings.units_section" = "单位";
+"settings.alerts_section" = "警报";
+"settings.alerts_active" = "警报已启用";
+"settings.alerts_description" = "当温度或电压超出范围时会发出警报";
+"settings.vibration" = "振动";
+"settings.screen" = "屏幕";
+"settings.screen_description" = "防止应用使用期间屏幕自动关闭";
+"settings.obd_performance" = "OBD性能";
+"settings.obd_performance_desc" = "便宜的适配器需要基础模式（5个PID）。Carista/OBDLink可以使用完整模式（9+个PID）。";
+"settings.unit_system" = "单位系统";
+"settings.data_volume" = "数据量";
+"settings.frequency" = "频率";
+"settings.active_logging" = "活动记录";
+"settings.pids_per_cycle" = "每周期PID数";
+"settings.reading_interval" = "读取间隔";
+"settings.fast" = "快速";
+"settings.stable" = "稳定";
+"settings.adapter_speed_test" = "适配器速度测试";
+"settings.recommended_interval" = "推荐间隔:";
+"settings.response_time" = "响应时间:";
+"settings.errors" = "错误:";
+"settings.slow_adapter" = "慢速适配器 - 建议使用基础模式";
+"settings.connecting" = "连接中...";
+"settings.adapter_diagnostics" = "适配器诊断";
+"settings.data_section" = "数据";
+"settings.about_app" = "关于RX-8 Diag";
+"settings.community" = "RX-8社区";
+"settings.technical_resources" = "技术资源";
+"settings.information" = "信息";
+"settings.vehicle_info" = "车辆信息";
+"settings.alert_thresholds" = "警报阈值";
+"settings.data_logging_section" = "数据记录";
+"settings.export_data_section" = "导出数据";
+
+// MARK: - Radar Extended
+"radar.speed" = "速度";
+"radar.nearby" = "附近";
+"radar.safe_zone" = "安全区";
+"radar.passing" = "通过中！";
+"radar.exceeded" = "超速";
+"radar.disabled" = "已禁用";
+"radar.nearby_radars" = "附近的测速摄像头";
+"radar.no_nearby" = "附近无测速摄像头";
+"radar.speed_limit" = "限速:";
+"radar.country" = "国家:";
+"radar.nearby_area" = "仅附近区域（50公里）";
+"radar.data_from" = "数据来源:";
+"radar.loaded_count" = "已加载的测速摄像头";
+"radar.clear_cache" = "清除测速摄像头缓存";
+"radar.osm_disclaimer" = "测速摄像头数据来自OpenStreetMap，可能不完整。请始终遵守限速规定。";
+"radar.alert_sound" = "警报声音";
+"radar.active" = "启用";
+"radar.inactive" = "禁用";
+"radar.settings_title" = "测速摄像头设置";
+
+// MARK: - Black Box Extended
+"blackbox.sessions" = "会话（%d/%d）";
+"blackbox.ai_analysis_section" = "AI分析";
+"blackbox.no_sessions" = "无已记录的会话";
+"blackbox.auto_start" = "发动机启动时自动开始记录（RPM > 400）";
+"blackbox.recording_status" = "记录中";
+"blackbox.manual" = "（手动）";
+"blackbox.samples" = "样本";
+"blackbox.engine_running" = "发动机运行中";
+"blackbox.waiting_engine" = "等待发动机...";
+"blackbox.no_obd" = "无OBD连接";
+"blackbox.see_sessions" = "查看下方之前的会话";
+"blackbox.stop" = "停止";
+"blackbox.manual_record" = "手动记录";
+"blackbox.engine_on" = "发动机开";
+"blackbox.engine_off" = "发动机关";
+"blackbox.configure_api" = "配置Anthropic API密钥";
+"blackbox.api_configured" = "API密钥已配置";
+"blackbox.change" = "更改";
+"blackbox.add_note" = "添加备注";
+"blackbox.export_pdf" = "导出PDF报告";
+"blackbox.generating_pdf" = "正在生成PDF...";
+"blackbox.analyzing" = "分析中...";
+"blackbox.max_temp" = "最高温度:";
+"blackbox.coolant" = "水温:";
+"blackbox.oil" = "油温:";
+"blackbox.notes" = "备注";
+"blackbox.duration" = "时长:";
+"blackbox.analyzed" = "已分析";
+"blackbox.engine_stats" = "发动机统计";
+"blackbox.session" = "会话";
+"blackbox.configuration" = "配置";
+
+// MARK: - Adapter Diagnostics
+"adapter.status" = "状态";
+"adapter.connection_status" = "连接状态";
+"adapter.diagnostics" = "诊断";
+"adapter.command_console" = "命令控制台";
+"adapter.quick_commands" = "快捷命令";
+"adapter.ble_diagnostics" = "BLE诊断";
+"adapter.debug" = "调试";
+"adapter.compatible_adapters" = "兼容的适配器";
+"adapter.detected_type" = "检测到的类型";
+"adapter.running_diagnostics" = "正在运行诊断...";
+"adapter.run_full_diagnostics" = "运行完整诊断";
+"adapter.diagnostics_description" = "诊断会测试与适配器和车辆的通信";
+"adapter.send_command" = "发送命令";
+"adapter.send_at_commands" = "直接向适配器发送AT命令进行测试";
+"adapter.reset" = "重置适配器";
+"adapter.info" = "适配器信息";
+"adapter.battery_voltage" = "电瓶电压";
+"adapter.current_protocol" = "当前协议";
+"adapter.supported_pids" = "支持的PID";
+"adapter.coolant_temp" = "冷却液温度";
+"adapter.view_ble" = "查看BLE特性";
+"adapter.rediscover_ble" = "重新发现BLE服务";
+"adapter.ble_help" = "如果没有收到响应，请尝试重新发现BLE服务";
+"adapter.view_debug" = "查看调试日志";
+"adapter.entries" = "条目";
+"adapter.clear_log" = "清除日志";
+"adapter.verbose_mode" = "详细模式";
+"adapter.stn_info" = "带有STN1110或正品ELM327芯片的适配器提供更好的兼容性";
+"adapter.title" = "适配器诊断";
+"adapter.debug_log" = "调试日志";
+"adapter.ble_features" = "BLE特性";
+
+// MARK: - Procedures
+"procedures.title" = "程序";
+"procedures.search" = "搜索程序...";
+"procedures.all" = "全部";
+
+// MARK: - Consumption Extended
+"consumption.current_trip" = "当前行程";
+"consumption.distance" = "距离";
+"consumption.mode" = "模式";
+"consumption.type" = "类型";
+"consumption.left_only" = "仅左侧";
+"consumption.right_only" = "仅右侧";
+"consumption.both_average" = "两侧（平均）";
+"consumption.standard_obd" = "标准OBD";
+"consumption.reset_partial" = "重置部分？";
+"consumption.fuel_probes" = "燃油探头";
+"consumption.configuration" = "配置";
+
+// MARK: - DTC Categories
+"dtc.category.powertrain" = "动力系统";
+"dtc.category.chassis" = "底盘";
+"dtc.category.body" = "车身";
+"dtc.category.network" = "网络";
+"dtc.category.generic" = "通用";
+"dtc.category.manufacturer" = "制造商专用";
+"dtc.pending" = "待处理";
+"dtc.stored" = "已存储";
+"dtc.permanent" = "永久";
