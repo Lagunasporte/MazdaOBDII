@@ -57,7 +57,7 @@ public class VirtualOBDAdapter: ObservableObject {
     private var randomEventTimer: Double = 0
 
     // MARK: - Virtual Device Info
-    public let virtualDeviceID = UUID(uuidString: "00000000-DEMO-RX8-0000-000000000000")!
+    public let virtualDeviceID = UUID(uuidString: "00000000-DE00-0A08-0000-000000000000")!
     public let virtualDeviceName = "RX-8 Simulator"
 
     // MARK: - Initialization
