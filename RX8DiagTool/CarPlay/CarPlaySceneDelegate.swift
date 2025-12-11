@@ -303,10 +303,9 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     private func gauge(icon: String, value: Int?, unit: String, subtitle: String? = nil, color: UIColor, size: GridSize = .large) -> CPGridButton {
         let displayValue = value != nil ? "\(value!)" : "—"
-        var title = "\(displayValue) \(unit)"
-        if let sub = subtitle {
-            title = "\(displayValue)\(unit)\n\(sub)"
-        }
+        // Valor arriba, descripción abajo
+        let description = subtitle != nil ? "\(unit) \(subtitle!)" : unit
+        let title = "\(displayValue)\n\(description)"
 
         return CPGridButton(titleVariants: [title, displayValue], image: coloredIcon(icon, color: color, size: size == .large ? 40 : 32)) { _ in }
     }
@@ -314,10 +313,9 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private func gauge(icon: String, value: Double, decimals: Int, unit: String, subtitle: String? = nil, color: UIColor, showSign: Bool = false, size: GridSize = .large) -> CPGridButton {
         let format = showSign ? "%+.\(decimals)f" : "%.\(decimals)f"
         let displayValue = String(format: format, value)
-        var title = "\(displayValue)\(unit)"
-        if let sub = subtitle {
-            title = "\(displayValue)\(unit)\n\(sub)"
-        }
+        // Valor arriba, descripción abajo
+        let description = subtitle != nil ? "\(unit) \(subtitle!)" : unit
+        let title = "\(displayValue)\n\(description)"
 
         return CPGridButton(titleVariants: [title, displayValue], image: coloredIcon(icon, color: color, size: size == .large ? 40 : 32)) { _ in }
     }
@@ -326,7 +324,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         let status = ok ? "OK" : "CHECK"
         let color = ok ? UIColor.systemGreen : UIColor.systemOrange
         let displayIcon = ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-
+        // Estado arriba, sistema abajo
         return CPGridButton(titleVariants: ["\(status)\n\(title)", status], image: coloredIcon(displayIcon, color: color, size: 40)) { _ in }
     }
 
