@@ -3791,12 +3791,24 @@ public struct RX8DTCDatabase {
 
 public struct DTCParser {
 
-    /// Parsea respuesta OBD2 Mode 03 (Read DTCs)
+    /// Parsea respuesta OBD2 Mode 03/07 (Read DTCs)
     public static func parseDTCResponse(_ data: Data) -> [String] {
         var codes: [String] = []
+        guard !data.isEmpty else { return codes }
+
+        var index = 0
+
+        // Saltar cabecera de respuesta OBD (43 para Mode 03, 47 para Mode 07)
+        // Estos bytes NO son DTCs, son identificadores de respuesta
+        if data[0] == 0x43 || data[0] == 0x47 {
+            index = 1
+            // Si el siguiente byte es 0, no hay DTCs
+            if index < data.count && data[index] == 0x00 {
+                return []
+            }
+        }
 
         // Cada DTC son 2 bytes
-        var index = 0
         while index + 1 < data.count {
             let byte1 = data[index]
             let byte2 = data[index + 1]
@@ -3807,8 +3819,18 @@ public struct DTCParser {
                 continue
             }
 
+            // Ignorar cabeceras de respuesta en multi-frame
+            if byte1 == 0x43 || byte1 == 0x47 {
+                index += 1
+                continue
+            }
+
             let code = decodeDTC(byte1: byte1, byte2: byte2)
-            codes.append(code)
+
+            // Filtrar códigos inválidos
+            if code != "P0000" && code != "C0000" && code != "B0000" && code != "U0000" {
+                codes.append(code)
+            }
             index += 2
         }
 

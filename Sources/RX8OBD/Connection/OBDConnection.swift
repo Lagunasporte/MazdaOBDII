@@ -1324,14 +1324,33 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
     private func parseDTCBytes(_ bytes: [UInt8]) -> [String] {
         var dtcs: [String] = []
+        guard !bytes.isEmpty else { return dtcs }
+
         var i = 0
+
+        // Saltar cabecera de respuesta OBD (43 para Mode 03, 47 para Mode 07)
+        // Estos bytes NO son DTCs, son identificadores de respuesta
+        if bytes[0] == 0x43 || bytes[0] == 0x47 {
+            i = 1
+            // Si el siguiente byte es el contador de DTCs y es 0, no hay errores
+            if i < bytes.count && bytes[i] == 0x00 {
+                return []
+            }
+        }
 
         while i + 1 < bytes.count {
             let byte1 = bytes[i]
             let byte2 = bytes[i + 1]
 
+            // Ignorar bytes vacíos
             if byte1 == 0 && byte2 == 0 {
                 i += 2
+                continue
+            }
+
+            // Ignorar si encontramos otra cabecera de respuesta (multi-frame)
+            if byte1 == 0x43 || byte1 == 0x47 {
+                i += 1
                 continue
             }
 
@@ -1350,7 +1369,8 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
             let dtc = "\(firstChar)\(String(format: "%X%X%X%X", secondDigit, thirdDigit, fourthDigit, fifthDigit))"
 
-            if dtc != "P0000" {
+            // Filtrar códigos inválidos o vacíos
+            if dtc != "P0000" && dtc != "C0000" && dtc != "B0000" && dtc != "U0000" {
                 dtcs.append(dtc)
             }
             i += 2
