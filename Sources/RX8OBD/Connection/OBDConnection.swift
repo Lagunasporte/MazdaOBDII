@@ -1,5 +1,5 @@
 import Foundation
-import CoreBluetooth
+@preconcurrency import CoreBluetooth
 import Combine
 
 // MARK: - Gestor de Conexión OBD2
@@ -88,7 +88,6 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
     // MARK: - Simulador Virtual
     @Published public var isUsingSimulator: Bool = false
-    private var virtualAdapter: VirtualOBDAdapter { VirtualOBDAdapter.shared }
 
     // MARK: - Inicialización
 
@@ -213,10 +212,10 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         lastError = nil
 
         // Agregar dispositivo simulador si está habilitado
-        if virtualAdapter.isEnabled {
+        if VirtualOBDAdapter.shared.isEnabled {
             let simulatorDevice = OBDDevice(
-                id: virtualAdapter.virtualDeviceID,
-                name: "🎮 \(virtualAdapter.virtualDeviceName)",
+                id: VirtualOBDAdapter.shared.virtualDeviceID,
+                name: "🎮 \(VirtualOBDAdapter.shared.virtualDeviceName)",
                 rssi: -30, // Señal excelente (es virtual)
                 peripheral: nil
             )
@@ -225,7 +224,7 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
         guard let central = centralManager, central.state == .poweredOn else {
             // Si no hay Bluetooth pero hay simulador, permitir continuar
-            if virtualAdapter.isEnabled && !discoveredDevices.isEmpty {
+            if VirtualOBDAdapter.shared.isEnabled && !discoveredDevices.isEmpty {
                 isScanning = false
                 return
             }
@@ -253,7 +252,7 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
     public func connect(to device: OBDDevice) {
         // Verificar si es el dispositivo simulador
-        if device.id == virtualAdapter.virtualDeviceID {
+        if device.id == VirtualOBDAdapter.shared.virtualDeviceID {
             connectToSimulator()
             return
         }
@@ -295,14 +294,14 @@ public class OBDConnectionManager: NSObject, ObservableObject {
                     // Configurar info del adaptador simulado
                     self.adapterInfo = OBDAdapterInfo(version: "ELM327 v2.1 [SIMULATOR]")
                     self.detectedAdapterType = .elm327
-                    self.vehicleProtocol = .can500Kbps11Bit
+                    self.vehicleProtocol = .iso15765_4_can_11bit_500k
 
                     // Iniciar simulación
-                    self.virtualAdapter.startSimulation()
+                    VirtualOBDAdapter.shared.startSimulation()
 
                     self.connectionState = .connectedToVehicle
                     self.log("Simulador: Conectado al vehículo virtual RX-8")
-                    self.log("Simulador: Modo de conducción: \(self.virtualAdapter.drivingMode.rawValue)")
+                    self.log("Simulador: Modo de conducción: \(VirtualOBDAdapter.shared.drivingMode.rawValue)")
                 }
             }
         }
@@ -311,7 +310,7 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     public func disconnect() {
         // Desconectar simulador si está activo
         if isUsingSimulator {
-            virtualAdapter.stopSimulation()
+            VirtualOBDAdapter.shared.stopSimulation()
             isUsingSimulator = false
         }
 
@@ -586,7 +585,7 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     public func sendCommand(_ command: String, timeout: TimeInterval = 3.0) async throws -> String {
         // Si estamos usando el simulador, enrutar al adaptador virtual
         if isUsingSimulator {
-            return virtualAdapter.simulateCommand(command)
+            return VirtualOBDAdapter.shared.simulateCommand(command)
         }
 
         return try await withCheckedThrowingContinuation { continuation in
