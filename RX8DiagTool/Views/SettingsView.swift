@@ -347,7 +347,7 @@ struct SettingsView: View {
                 }
 
                 // Modo Simulador
-                SimulatorSettingsSection()
+                SimulatorSettingsSection(connectionManager: connectionManager)
 
                 // Datos
                 Section {
@@ -1481,7 +1481,7 @@ struct SubscriptionStatusRow: View {
 
 struct SimulatorSettingsSection: View {
     @ObservedObject private var simulator = VirtualOBDAdapter.shared
-    @EnvironmentObject var connectionManager: OBDConnectionManager
+    @ObservedObject var connectionManager: OBDConnectionManager
 
     var body: some View {
         Section {
