@@ -13,6 +13,7 @@ public class BlackBoxRecorder: ObservableObject {
     @Published public var snapshotCount: Int = 0
     @Published public var lastAlert: BlackBoxAlert?
     @Published public var isManualMode = false // Control manual activado
+    @Published public var isSimulatorMode = false // Modo simulador activo
     @Published public var engineRunning = false // Estado real del motor
 
     // MARK: - Private Properties
@@ -34,6 +35,26 @@ public class BlackBoxRecorder: ObservableObject {
         loadSessions()
     }
 
+    // MARK: - Simulator Mode
+
+    /// Activa el modo simulador - graba automáticamente mientras el simulador esté activo
+    public func enableSimulatorMode() {
+        isSimulatorMode = true
+        if !isRecording {
+            startRecording()
+            print("BlackBox: Modo simulador activado - grabación iniciada")
+        }
+    }
+
+    /// Desactiva el modo simulador
+    public func disableSimulatorMode() {
+        isSimulatorMode = false
+        if isRecording && !isManualMode && !engineWasRunning {
+            stopRecording()
+        }
+        print("BlackBox: Modo simulador desactivado")
+    }
+
     // MARK: - Manual Control
 
     /// Inicia grabación manual (ignora estado del motor)
@@ -48,7 +69,7 @@ public class BlackBoxRecorder: ObservableObject {
     /// Detiene grabación manual
     public func manualStop() {
         isManualMode = false
-        if isRecording {
+        if isRecording && !isSimulatorMode {
             stopRecording()
         }
         print("BlackBox: Grabación detenida manualmente")
@@ -72,6 +93,15 @@ public class BlackBoxRecorder: ObservableObject {
 
         // Actualizar estado visible del motor
         engineRunning = rpm >= minRPMToStart
+
+        // En modo simulador, siempre consideramos que hay actividad si hay cualquier dato
+        if isSimulatorMode {
+            lastRPMTime = now
+            if !isRecording {
+                startRecording()
+            }
+            return // No aplicar lógica de parada automática en simulador
+        }
 
         // Si voltaje = 0 y no hay RPM, probablemente desconectado del OBD
         // No parar automáticamente en este caso si está en modo manual

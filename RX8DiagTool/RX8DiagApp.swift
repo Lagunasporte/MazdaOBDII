@@ -1175,6 +1175,11 @@ public class EngineMonitor: ObservableObject {
         monitoringTask?.cancel()
         monitoringTask = nil
 
+        // Desactivar modo simulador en la caja negra si estaba activo
+        if let recorder = blackBoxRecorder, recorder.isSimulatorMode {
+            recorder.disableSimulatorMode()
+        }
+
         // Permitir que la pantalla se apague cuando no monitoreamos
         UIApplication.shared.isIdleTimerDisabled = false
     }
@@ -1492,6 +1497,11 @@ public class EngineMonitor: ObservableObject {
     private func readFromSimulator() async {
         let simulator = VirtualOBDAdapter.shared
 
+        // Activar modo simulador en la caja negra (solo la primera vez)
+        if let recorder = blackBoxRecorder, !recorder.isSimulatorMode {
+            recorder.enableSimulatorMode()
+        }
+
         // Obtener estado directamente del simulador (muy rápido)
         currentState = simulator.getCurrentState()
 
@@ -1507,7 +1517,7 @@ public class EngineMonitor: ObservableObject {
         }
 
         // Calcular tasa de actualización
-        updateRate = 10.0 // 10 Hz en simulador
+        updateRate = 5.0 // 5 Hz en simulador (200ms)
         lastUpdateTime = Date()
 
         // Enviar datos a la caja negra
