@@ -12,6 +12,11 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var updateTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
+    // MARK: - Localization Helper
+    private func L(_ key: String) -> String {
+        return key.localized
+    }
+
     // MARK: - Lifecycle
 
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
@@ -61,14 +66,14 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
             gauge(
                 icon: "gauge.with.needle.fill",
                 value: dashboard.rpm,
-                unit: "RPM",
+                unit: L("carplay.rpm"),
                 color: rpmColor,
                 size: .large
             ),
             gauge(
                 icon: "speedometer",
                 value: Int(dashboard.speed),
-                unit: "km/h",
+                unit: L("units.kmh"),
                 color: .systemBlue,
                 size: .large
             ),
@@ -76,7 +81,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "thermometer.sun.fill",
                 value: Int(dashboard.coolantTemp),
                 unit: "°C",
-                subtitle: "REFRIG",
+                subtitle: L("carplay.coolant").uppercased(),
                 color: coolantColor,
                 size: .large
             ),
@@ -85,7 +90,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "drop.fill",
                 value: dashboard.oilTemp > 50 ? Int(dashboard.oilTemp) : nil,
                 unit: "°C",
-                subtitle: "ACEITE",
+                subtitle: L("carplay.oil").uppercased(),
                 color: oilColor,
                 size: .large
             ),
@@ -101,13 +106,13 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "fuelpump.circle.fill",
                 value: Int(dashboard.fuelLevel),
                 unit: "%",
-                subtitle: "FUEL",
+                subtitle: L("carplay.fuel").uppercased(),
                 color: fuelColor,
                 size: .large
             )
         ])
 
-        template.tabTitle = "Dashboard"
+        template.tabTitle = L("tabs.dashboard")
         template.tabImage = UIImage(systemName: "gauge.with.dots.needle.bottom.50percent.badge.plus")
         return template
     }
@@ -116,13 +121,13 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     // Datos específicos del motor rotativo
 
     private func createEngineDashboard() -> CPGridTemplate {
-        let template = CPGridTemplate(title: "MOTOR ROTATIVO", gridButtons: [
+        let template = CPGridTemplate(title: L("carplay.tab.engine").uppercased(), gridButtons: [
             // Fila 1: Temperaturas
             gauge(
                 icon: "thermometer.high",
                 value: Int(dashboard.coolantTemp),
                 unit: "°C",
-                subtitle: "COOLANT",
+                subtitle: L("carplay.coolant").uppercased(),
                 color: coolantColor,
                 size: .large
             ),
@@ -130,7 +135,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "drop.triangle.fill",
                 value: dashboard.oilTemp > 50 ? Int(dashboard.oilTemp) : nil,
                 unit: "°C",
-                subtitle: "OIL",
+                subtitle: L("carplay.oil").uppercased(),
                 color: oilColor,
                 size: .large
             ),
@@ -138,7 +143,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "wind",
                 value: Int(dashboard.intakeTemp),
                 unit: "°C",
-                subtitle: "INTAKE",
+                subtitle: L("dashboard.intake_short").uppercased(),
                 color: .systemCyan,
                 size: .large
             ),
@@ -167,13 +172,13 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "engine.combustion.fill",
                 value: Int(dashboard.engineLoad),
                 unit: "%",
-                subtitle: "CARGA",
+                subtitle: L("dashboard.load").uppercased(),
                 color: loadColor,
                 size: .large
             )
         ])
 
-        template.tabTitle = "Motor"
+        template.tabTitle = L("carplay.tab.engine")
         template.tabImage = UIImage(systemName: "engine.combustion.fill")
         return template
     }
@@ -186,13 +191,13 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         let consumptionUnit: String
         if dashboard.speed > 5 {
             consumptionDisplay = String(format: "%.1f", dashboard.consumption)
-            consumptionUnit = "L/100"
+            consumptionUnit = L("units.lper100km")
         } else {
             consumptionDisplay = String(format: "%.1f", dashboard.consumptionPerHour)
             consumptionUnit = "L/h"
         }
 
-        let template = CPGridTemplate(title: "CONSUMO", gridButtons: [
+        let template = CPGridTemplate(title: L("carplay.tab.fuel").uppercased(), gridButtons: [
             // Fila 1: Consumo actual
             CPGridButton(
                 titleVariants: ["\(consumptionDisplay)\n\(consumptionUnit)"],
@@ -203,16 +208,16 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "chart.xyaxis.line",
                 value: dashboard.avgConsumption,
                 decimals: 1,
-                unit: "L/100",
-                subtitle: "MEDIA",
+                unit: L("units.lper100km"),
+                subtitle: L("consumption.average").uppercased(),
                 color: .systemBlue,
                 size: .large
             ),
             gauge(
                 icon: "road.lanes.curved.right",
                 value: Int(dashboard.range),
-                unit: "km",
-                subtitle: "AUTONOMÍA",
+                unit: L("units.km"),
+                subtitle: L("carplay.range").uppercased(),
                 color: rangeColor,
                 size: .large
             ),
@@ -221,7 +226,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 icon: "fuelpump.circle.fill",
                 value: Int(dashboard.fuelLevel),
                 unit: "%",
-                subtitle: "NIVEL",
+                subtitle: L("carplay.fuel_level").uppercased(),
                 color: fuelColor,
                 size: .large
             ),
@@ -230,7 +235,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 value: dashboard.fuelLiters,
                 decimals: 1,
                 unit: "L",
-                subtitle: "QUEDAN",
+                subtitle: L("carplay.fuel_remaining").uppercased(),
                 color: .systemTeal,
                 size: .large
             ),
@@ -239,13 +244,13 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
                 value: dashboard.batteryVoltage,
                 decimals: 2,
                 unit: "V",
-                subtitle: "BATERÍA",
+                subtitle: L("carplay.voltage").uppercased(),
                 color: voltageColor,
                 size: .large
             )
         ])
 
-        template.tabTitle = "Consumo"
+        template.tabTitle = L("carplay.tab.fuel")
         template.tabImage = UIImage(systemName: "fuelpump.fill")
         return template
     }
@@ -255,37 +260,38 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     private func createStatusDashboard() -> CPGridTemplate {
         let hasAlerts = !dashboard.alerts.isEmpty
+        let alertsTitle = hasAlerts ? "⚠ " + L("carplay.tab.alerts").uppercased() : "✓ " + L("carplay.all_systems_ok").uppercased()
 
-        let template = CPGridTemplate(title: hasAlerts ? "⚠ ALERTAS" : "✓ SISTEMA OK", gridButtons: [
+        let template = CPGridTemplate(title: alertsTitle, gridButtons: [
             // Estado de cada sistema
             statusGauge(
-                title: "MOTOR",
+                title: L("carplay.status.engine").uppercased(),
                 icon: "engine.combustion.fill",
                 ok: dashboard.coolantTemp < 100 && dashboard.oilTemp < 120
             ),
             statusGauge(
-                title: "ELÉCTRICO",
+                title: L("carplay.status.electrical").uppercased(),
                 icon: "bolt.batteryblock.fill",
                 ok: dashboard.batteryVoltage >= 12.0 || dashboard.batteryVoltage == 0
             ),
             statusGauge(
-                title: "FUEL SYS",
+                title: L("carplay.status.fuel_system").uppercased(),
                 icon: "fuelpump.arrowtriangle.right.fill",
                 ok: abs(dashboard.stft) < 15 && abs(dashboard.ltft) < 10
             ),
             statusGauge(
-                title: "DEPÓSITO",
+                title: L("carplay.fuel").uppercased(),
                 icon: "fuelpump.circle.fill",
                 ok: dashboard.fuelLevel > 15
             ),
             statusGauge(
-                title: "RPM",
+                title: L("carplay.rpm").uppercased(),
                 icon: "gauge.with.needle.fill",
                 ok: dashboard.rpm < 8000
             ),
             // Resumen general
             CPGridButton(
-                titleVariants: [hasAlerts ? "\(dashboard.alerts.count) ALERTA\(dashboard.alerts.count > 1 ? "S" : "")" : "TODO OK"],
+                titleVariants: [hasAlerts ? "\(dashboard.alerts.count)\n" + L("carplay.tab.alerts").uppercased() : L("carplay.all_systems_ok").uppercased()],
                 image: coloredIcon(
                     hasAlerts ? "exclamationmark.shield.fill" : "checkmark.shield.fill",
                     color: hasAlerts ? .systemOrange : .systemGreen,
@@ -546,35 +552,35 @@ class RX8CarPlayDashboard {
         var newAlerts: [Alert] = []
 
         if state.coolantTemperature > 108 {
-            newAlerts.append(Alert(severity: .critical, message: "Refrigerante crítico"))
+            newAlerts.append(Alert(severity: .critical, message: "alerts.coolant_critical".localized))
         } else if state.coolantTemperature > 100 {
-            newAlerts.append(Alert(severity: .warning, message: "Refrigerante alto"))
+            newAlerts.append(Alert(severity: .warning, message: "alerts.coolant_high".localized))
         }
 
         if state.oilTemperature > 135 {
-            newAlerts.append(Alert(severity: .critical, message: "Aceite crítico"))
+            newAlerts.append(Alert(severity: .critical, message: "alerts.oil_temp_critical".localized))
         } else if state.oilTemperature > 120 {
-            newAlerts.append(Alert(severity: .warning, message: "Aceite caliente"))
+            newAlerts.append(Alert(severity: .warning, message: "alerts.oil_temp_high".localized))
         }
 
         if state.batteryVoltage > 0 && state.batteryVoltage < 11.5 {
-            newAlerts.append(Alert(severity: .critical, message: "Batería crítica"))
+            newAlerts.append(Alert(severity: .critical, message: "alerts.battery_low".localized))
         }
 
         if state.rpm > 8500 {
-            newAlerts.append(Alert(severity: .warning, message: "RPM alto"))
+            newAlerts.append(Alert(severity: .warning, message: "alerts.rpm_high".localized))
         }
 
         if state.rpm > 800 && abs(state.shortTermFuelTrim) > 25 {
-            newAlerts.append(Alert(severity: .warning, message: "STFT anormal"))
+            newAlerts.append(Alert(severity: .warning, message: "carplay.alert.stft_high".localized))
         }
 
         if state.rpm > 800 && abs(state.longTermFuelTrim) > 15 {
-            newAlerts.append(Alert(severity: .warning, message: "LTFT anormal"))
+            newAlerts.append(Alert(severity: .warning, message: "carplay.alert.ltft_high".localized))
         }
 
         if fuelLevel > 0 && fuelLevel < 10 {
-            newAlerts.append(Alert(severity: .warning, message: "Combustible bajo"))
+            newAlerts.append(Alert(severity: .warning, message: "carplay.alert.fuel_low".localized))
         }
 
         alerts = newAlerts
