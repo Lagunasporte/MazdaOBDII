@@ -86,6 +86,10 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     private var autoConnectAttempts = 0
     private let maxAutoConnectAttempts = 3
 
+    // MARK: - Simulador Virtual
+    @Published public var isUsingSimulator: Bool = false
+    private var virtualAdapter: VirtualOBDAdapter { VirtualOBDAdapter.shared }
+
     // MARK: - Inicialización
 
     public override init() {
@@ -204,14 +208,31 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     // MARK: - Escaneo de Dispositivos
 
     public func startScanning() {
-        guard let central = centralManager, central.state == .poweredOn else {
-            lastError = .bluetoothNotAvailable
-            return
-        }
-
         isScanning = true
         discoveredDevices.removeAll()
         lastError = nil
+
+        // Agregar dispositivo simulador si está habilitado
+        if virtualAdapter.isEnabled {
+            let simulatorDevice = OBDDevice(
+                id: virtualAdapter.virtualDeviceID,
+                name: "🎮 \(virtualAdapter.virtualDeviceName)",
+                rssi: -30, // Señal excelente (es virtual)
+                peripheral: nil
+            )
+            discoveredDevices.append(simulatorDevice)
+        }
+
+        guard let central = centralManager, central.state == .poweredOn else {
+            // Si no hay Bluetooth pero hay simulador, permitir continuar
+            if virtualAdapter.isEnabled && !discoveredDevices.isEmpty {
+                isScanning = false
+                return
+            }
+            lastError = .bluetoothNotAvailable
+            isScanning = false
+            return
+        }
 
         central.scanForPeripherals(
             withServices: nil,
@@ -231,6 +252,12 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     // MARK: - Conexión
 
     public func connect(to device: OBDDevice) {
+        // Verificar si es el dispositivo simulador
+        if device.id == virtualAdapter.virtualDeviceID {
+            connectToSimulator()
+            return
+        }
+
         guard let peripheral = device.peripheral else {
             lastError = .deviceNotFound
             return
@@ -242,7 +269,52 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         centralManager?.connect(peripheral, options: nil)
     }
 
+    // MARK: - Conexión al Simulador
+
+    private func connectToSimulator() {
+        stopScanning()
+        isUsingSimulator = true
+        connectionState = .connecting
+        lastError = nil
+
+        log("Conectando al simulador RX-8...")
+
+        // Simular proceso de conexión
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+
+            self.connectionState = .connectedToAdapter
+            self.log("Simulador: Conectado al adaptador virtual")
+
+            // Simular inicialización
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.connectionState = .initializing
+                self.log("Simulador: Inicializando...")
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // Configurar info del adaptador simulado
+                    self.adapterInfo = OBDAdapterInfo(version: "ELM327 v2.1 [SIMULATOR]")
+                    self.detectedAdapterType = .elm327
+                    self.vehicleProtocol = .can500Kbps11Bit
+
+                    // Iniciar simulación
+                    self.virtualAdapter.startSimulation()
+
+                    self.connectionState = .connectedToVehicle
+                    self.log("Simulador: Conectado al vehículo virtual RX-8")
+                    self.log("Simulador: Modo de conducción: \(self.virtualAdapter.drivingMode.rawValue)")
+                }
+            }
+        }
+    }
+
     public func disconnect() {
+        // Desconectar simulador si está activo
+        if isUsingSimulator {
+            virtualAdapter.stopSimulation()
+            isUsingSimulator = false
+        }
+
         if let peripheral = connectedPeripheral {
             centralManager?.cancelPeripheralConnection(peripheral)
         }
@@ -263,6 +335,7 @@ public class OBDConnectionManager: NSObject, ObservableObject {
         adapterInfo = nil
         vehicleProtocol = nil
         detectedAdapterType = .unknown
+        isUsingSimulator = false
     }
 
     // MARK: - Logging para Debug
@@ -511,6 +584,11 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     // MARK: - Envío de Comandos
 
     public func sendCommand(_ command: String, timeout: TimeInterval = 3.0) async throws -> String {
+        // Si estamos usando el simulador, enrutar al adaptador virtual
+        if isUsingSimulator {
+            return virtualAdapter.simulateCommand(command)
+        }
+
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.main.async { [weak self] in
                 self?.sendCommandInternal(command, timeout: timeout) { result in
@@ -1872,6 +1950,13 @@ public struct OBDDevice: Identifiable, Sendable {
     public let name: String
     public let rssi: Int
     public let peripheral: CBPeripheral?
+
+    public init(id: UUID, name: String, rssi: Int, peripheral: CBPeripheral?) {
+        self.id = id
+        self.name = name
+        self.rssi = rssi
+        self.peripheral = peripheral
+    }
 
     public var signalStrength: SignalStrength {
         if rssi >= -50 { return .excellent }

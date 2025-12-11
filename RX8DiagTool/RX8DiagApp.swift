@@ -1186,6 +1186,12 @@ public class EngineMonitor: ObservableObject {
 
         let startTime = Date()
 
+        // Si estamos en modo simulador, leer directamente del simulador
+        if cm.isUsingSimulator {
+            await readFromSimulator()
+            return
+        }
+
         // Obtener modo de datos configurado
         let dataModeStr = UserDefaults.standard.string(forKey: "dataMode") ?? "normal"
         let dataMode = dataModeStr // essential, normal, full
@@ -1478,6 +1484,40 @@ public class EngineMonitor: ObservableObject {
                 fuelLevel: tracker.fuelLevel
             )
         }
+    }
+
+    // MARK: - Lectura desde Simulador
+
+    @MainActor
+    private func readFromSimulator() async {
+        let simulator = VirtualOBDAdapter.shared
+
+        // Obtener estado directamente del simulador (muy rápido)
+        currentState = simulator.getCurrentState()
+
+        // Actualizar fuel tracker con datos simulados
+        if let tracker = fuelTracker {
+            // Calcular consumo basado en MAF simulado
+            _ = tracker.calculateInstantConsumption(
+                mafGramsPerSecond: simulator.mafAirFlow,
+                speedKmh: simulator.speed,
+                rpm: simulator.rpm
+            )
+            tracker.updateFuelLevel(simulator.fuelLevel)
+        }
+
+        // Calcular tasa de actualización
+        updateRate = 10.0 // 10 Hz en simulador
+        lastUpdateTime = Date()
+
+        // Enviar datos a la caja negra
+        recordToBlackBox()
+
+        // Actualizar datos para CarPlay
+        updateCarPlayData()
+
+        // Verificar alertas
+        checkAlerts()
     }
 
     // MARK: - Sistema de Alertas

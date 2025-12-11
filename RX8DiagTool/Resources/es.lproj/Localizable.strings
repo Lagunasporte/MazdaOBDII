@@ -778,3 +778,25 @@
 "carplay.alert.ltft_high" = "LTFT anormal: %+.1f%%";
 "carplay.alert.fuel_low" = "Combustible bajo!";
 "carplay.alert.oil_pressure_low" = "¡CRÍTICO: Presión Aceite %.1f bar!";
+
+// MARK: - Simulator Mode
+"simulator.title" = "Modo Demo";
+"simulator.subtitle" = "Simula un RX-8 en marcha";
+"simulator.enabled" = "Simulador activo";
+"simulator.search_hint" = "Busca dispositivos para ver el simulador";
+"simulator.device_name" = "RX-8 Simulator";
+"simulator.footer_enabled" = "El adaptador virtual aparecerá al buscar dispositivos. Perfecto para demos y presentaciones.";
+"simulator.footer_disabled" = "Activa el modo demo para probar la app sin un adaptador OBD real";
+"simulator.driving_mode" = "Modo de conducción";
+"simulator.mode.warmup" = "Calentamiento";
+"simulator.mode.city" = "Ciudad";
+"simulator.mode.highway" = "Autopista";
+"simulator.mode.cruising" = "Carretera";
+"simulator.mode.spirited" = "Deportivo";
+"simulator.mode.idle" = "Ralentí";
+"simulator.mode.warmup_desc" = "Motor calentándose";
+"simulator.mode.city_desc" = "Tráfico urbano";
+"simulator.mode.highway_desc" = "Autopista a velocidad constante";
+"simulator.mode.cruising_desc" = "Carretera convencional";
+"simulator.mode.spirited_desc" = "Conducción deportiva";
+"simulator.mode.idle_desc" = "Motor en ralentí";

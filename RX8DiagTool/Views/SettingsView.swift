@@ -346,6 +346,9 @@ struct SettingsView: View {
                     Text("La app intentará conectar automáticamente al adaptador guardado al iniciar")
                 }
 
+                // Modo Simulador
+                SimulatorSettingsSection()
+
                 // Datos
                 Section {
                     NavigationLink {
@@ -1471,5 +1474,161 @@ struct SubscriptionStatusRow: View {
         case .unknown:
             return "common.loading".localized
         }
+    }
+}
+
+// MARK: - Simulator Settings Section
+
+struct SimulatorSettingsSection: View {
+    @ObservedObject private var simulator = VirtualOBDAdapter.shared
+    @EnvironmentObject var connectionManager: OBDConnectionManager
+
+    var body: some View {
+        Section {
+            // Toggle principal
+            Toggle(isOn: $simulator.isEnabled) {
+                HStack {
+                    Image(systemName: "gamecontroller.fill")
+                        .foregroundColor(.purple)
+                        .frame(width: 30)
+                    VStack(alignment: .leading) {
+                        Text("Modo Demo")
+                            .foregroundColor(.white)
+                        Text("Simula un RX-8 en marcha")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .tint(.purple)
+
+            // Estado del simulador
+            if simulator.isEnabled {
+                if connectionManager.isUsingSimulator && simulator.isRunning {
+                    // Conectado al simulador
+                    HStack {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 10, height: 10)
+                        Text("Simulador activo")
+                            .foregroundColor(.green)
+                        Spacer()
+                        Text("\(simulator.rpm) RPM")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .monospacedDigit()
+                    }
+
+                    // Selector de modo de conducción
+                    Picker("Modo de conducción", selection: $simulator.drivingMode) {
+                        ForEach(VirtualOBDAdapter.DrivingMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .onChange(of: simulator.drivingMode) { _, newMode in
+                        simulator.setDrivingMode(newMode)
+                    }
+
+                    // Info del modo actual
+                    HStack(spacing: 8) {
+                        Image(systemName: modeIcon)
+                            .foregroundColor(modeColor)
+                            .frame(width: 20)
+                        Text(simulator.drivingMode.description)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.vertical, 2)
+
+                    // Datos en tiempo real
+                    VStack(spacing: 8) {
+                        HStack {
+                            SimulatorStatView(label: "Velocidad", value: String(format: "%.0f", simulator.speed), unit: "km/h")
+                            SimulatorStatView(label: "RPM", value: "\(simulator.rpm)", unit: "")
+                        }
+                        HStack {
+                            SimulatorStatView(label: "Refrig.", value: String(format: "%.0f", simulator.coolantTemp), unit: "°C")
+                            SimulatorStatView(label: "Aceite", value: String(format: "%.0f", simulator.oilTemp), unit: "°C")
+                        }
+                        HStack {
+                            SimulatorStatView(label: "Combust.", value: String(format: "%.0f", simulator.fuelLevel), unit: "%")
+                            SimulatorStatView(label: "Batería", value: String(format: "%.1f", simulator.batteryVoltage), unit: "V")
+                        }
+                    }
+                    .padding(.vertical, 4)
+
+                } else {
+                    // Simulador habilitado pero no conectado
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                        Text("Busca dispositivos para ver el simulador")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Text("Modo Demo")
+                Image(systemName: "sparkles")
+                    .foregroundColor(.purple)
+                    .font(.caption)
+            }
+        } footer: {
+            if simulator.isEnabled {
+                Text("El adaptador virtual aparecerá como '\(simulator.virtualDeviceName)' al buscar dispositivos. Perfecto para demos y presentaciones.")
+            } else {
+                Text("Activa el modo demo para probar la app sin un adaptador OBD real")
+            }
+        }
+    }
+
+    private var modeIcon: String {
+        switch simulator.drivingMode {
+        case .idle: return "pause.circle"
+        case .warmup: return "thermometer.low"
+        case .city: return "building.2"
+        case .cruising: return "road.lanes"
+        case .highway: return "car.side"
+        case .spirited: return "flame"
+        }
+    }
+
+    private var modeColor: Color {
+        switch simulator.drivingMode {
+        case .idle: return .gray
+        case .warmup: return .blue
+        case .city: return .yellow
+        case .cruising: return .green
+        case .highway: return .cyan
+        case .spirited: return .orange
+        }
+    }
+}
+
+struct SimulatorStatView: View {
+    let label: String
+    let value: String
+    let unit: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.gray)
+                .frame(width: 55, alignment: .leading)
+            Spacer()
+            Text(value)
+                .font(.system(.caption, design: .monospaced))
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            if !unit.isEmpty {
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
