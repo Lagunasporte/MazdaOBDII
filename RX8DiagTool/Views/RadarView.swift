@@ -219,7 +219,7 @@ struct MainRadarStatusCard: View {
                     .foregroundColor(.gray)
             }
 
-            // Estado GPS
+            // Estado GPS y Background
             HStack(spacing: 8) {
                 Image(systemName: radarManager.currentLocation != nil ? "location.fill" : "location.slash")
                     .foregroundColor(radarManager.currentLocation != nil ? .green : .red)
@@ -227,6 +227,13 @@ struct MainRadarStatusCard: View {
                 Text(radarManager.currentLocation != nil ? "GPS conectado" : "Esperando GPS...")
                     .font(.caption)
                     .foregroundColor(.gray)
+
+                // Indicador de modo background
+                if radarManager.backgroundEnabled && radarManager.locationPermissionStatus == .authorizedAlways {
+                    Image(systemName: "moon.fill")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
 
                 Spacer()
 
@@ -238,6 +245,24 @@ struct MainRadarStatusCard: View {
                 Text(radarManager.isEnabled ? "Activo" : "Inactivo")
                     .font(.caption)
                     .foregroundColor(radarManager.isEnabled ? .green : .gray)
+            }
+
+            // Aviso si background no está disponible
+            if radarManager.isEnabled && radarManager.backgroundEnabled && radarManager.locationPermissionStatus == .authorizedWhenInUse {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                    Text("Solo funciona en primer plano")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+
+                    Button("Activar") {
+                        radarManager.requestAlwaysPermission()
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.blue)
+                }
             }
         }
         .padding(24)
@@ -750,6 +775,50 @@ struct RadarSettingsView: View {
                     Toggle("Vibración", isOn: $radarManager.vibrationEnabled)
                 }
 
+                Section("Segundo plano") {
+                    Toggle("Funcionar en segundo plano", isOn: $radarManager.backgroundEnabled)
+                        .onChange(of: radarManager.backgroundEnabled) { _, newValue in
+                            radarManager.updateBackgroundMode()
+                            if newValue && radarManager.locationPermissionStatus == .authorizedWhenInUse {
+                                radarManager.requestAlwaysPermission()
+                            }
+                        }
+
+                    // Estado del permiso
+                    HStack {
+                        Text("Permiso de ubicación")
+                        Spacer()
+                        Text(permissionStatusText)
+                            .font(.caption)
+                            .foregroundColor(permissionStatusColor)
+                    }
+
+                    if radarManager.backgroundEnabled && radarManager.locationPermissionStatus == .authorizedWhenInUse {
+                        Button(action: {
+                            radarManager.requestAlwaysPermission()
+                        }) {
+                            HStack {
+                                Image(systemName: "location.fill")
+                                Text("Permitir ubicación siempre")
+                            }
+                        }
+
+                        Text("Para alertas en segundo plano, permite el acceso a la ubicación 'Siempre' en Ajustes > Privacidad > Ubicación.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+
+                    if radarManager.locationPermissionStatus == .authorizedAlways && radarManager.backgroundEnabled {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("Alertas en segundo plano activas")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        }
+                    }
+                }
+
                 Section("Datos") {
                     HStack {
                         Text("Radares cargados")
@@ -787,6 +856,34 @@ struct RadarSettingsView: View {
             .onAppear {
                 alertDistanceValue = radarManager.alertDistance
             }
+        }
+    }
+
+    var permissionStatusText: String {
+        switch radarManager.locationPermissionStatus {
+        case .authorizedAlways:
+            return "Siempre"
+        case .authorizedWhenInUse:
+            return "Solo en uso"
+        case .denied:
+            return "Denegado"
+        case .restricted:
+            return "Restringido"
+        case .notDetermined:
+            return "No determinado"
+        @unknown default:
+            return "Desconocido"
+        }
+    }
+
+    var permissionStatusColor: Color {
+        switch radarManager.locationPermissionStatus {
+        case .authorizedAlways:
+            return .green
+        case .authorizedWhenInUse:
+            return .orange
+        default:
+            return .red
         }
     }
 }

@@ -106,6 +106,7 @@ public class SpeedCameraManager: NSObject, ObservableObject {
     @AppStorage("radarAlertDistance") public var alertDistance: Double = 500  // metros
     @AppStorage("radarSoundEnabled") public var soundEnabled: Bool = true
     @AppStorage("radarVibrationEnabled") public var vibrationEnabled: Bool = true
+    @AppStorage("radarBackgroundEnabled") public var backgroundEnabled: Bool = true  // Funcionar en segundo plano
 
     // MARK: - Private Properties
 
@@ -156,8 +157,10 @@ public class SpeedCameraManager: NSObject, ObservableObject {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         locationManager.distanceFilter = 10  // Actualizar cada 10 metros
-        locationManager.allowsBackgroundLocationUpdates = false
         locationManager.pausesLocationUpdatesAutomatically = false
+
+        // Configurar modo background si está habilitado
+        updateBackgroundMode()
 
         loadCachedCameras()
         loadCacheMeta()
@@ -168,19 +171,56 @@ public class SpeedCameraManager: NSObject, ObservableObject {
         }
     }
 
+    /// Actualiza la configuración de modo background
+    public func updateBackgroundMode() {
+        locationManager.allowsBackgroundLocationUpdates = backgroundEnabled
+        if backgroundEnabled {
+            locationManager.showsBackgroundLocationIndicator = true
+        }
+    }
+
     // MARK: - Public Methods
 
     public func requestLocationPermission() {
-        locationManager.requestWhenInUseAuthorization()
+        let status = locationManager.authorizationStatus
+
+        if status == .notDetermined {
+            // Primero pedir "When In Use", luego podemos pedir "Always"
+            locationManager.requestWhenInUseAuthorization()
+        } else if status == .authorizedWhenInUse && backgroundEnabled {
+            // Si ya tiene When In Use y queremos background, pedir Always
+            locationManager.requestAlwaysAuthorization()
+        }
+    }
+
+    /// Solicita permiso "Siempre" para funcionamiento en segundo plano
+    public func requestAlwaysPermission() {
+        let status = locationManager.authorizationStatus
+        if status == .authorizedWhenInUse {
+            locationManager.requestAlwaysAuthorization()
+        } else if status == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+        }
     }
 
     public func startMonitoring() {
         let status = locationManager.authorizationStatus
         locationPermissionStatus = status
 
+        // Actualizar modo background
+        updateBackgroundMode()
+
         switch status {
-        case .authorizedWhenInUse, .authorizedAlways:
+        case .authorizedAlways:
+            // Permiso completo - funciona en segundo plano
             locationManager.startUpdatingLocation()
+        case .authorizedWhenInUse:
+            // Permiso parcial - solo funciona en primer plano
+            locationManager.startUpdatingLocation()
+            // Si background está habilitado, sugerir pedir Always
+            if backgroundEnabled {
+                print("Radar: Funcionando solo en primer plano. Para segundo plano, se necesita permiso 'Siempre'")
+            }
         case .notDetermined:
             requestLocationPermission()
         case .denied, .restricted:
