@@ -151,6 +151,7 @@ struct AlertBannerView: View {
     let onDismiss: () -> Void
 
     @State private var timeRemaining: Int = 15
+    @State private var countdownTimer: Timer?
 
     var backgroundColor: Color {
         switch severity {
@@ -233,10 +234,17 @@ struct AlertBannerView: View {
         .onAppear {
             startCountdown()
         }
+        .onDisappear {
+            // Performance fix: Properly invalidate timer to prevent leaks
+            countdownTimer?.invalidate()
+            countdownTimer = nil
+        }
     }
 
     private func startCountdown() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        // Cancel any existing timer first
+        countdownTimer?.invalidate()
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
             if timeRemaining > 0 {
                 timeRemaining -= 1
             } else {
@@ -1111,6 +1119,10 @@ public class EngineMonitor: ObservableObject {
     private var previousAlertKeys: Set<String> = []
     private var bannerDismissTask: Task<Void, Never>?
 
+    // Performance fix: Rate limit alert sounds to prevent audio queue overflow
+    private var lastAlertSoundTime: Date = .distantPast
+    private let alertSoundCooldown: TimeInterval = 2.0 // Minimum 2 seconds between sounds
+
     public init() {}
 
     // MARK: - Configuración
@@ -1671,15 +1683,18 @@ public class EngineMonitor: ObservableObject {
     // MARK: - Sistema de Alertas Visuales y Sonoras
 
     private func playAlertSound(severity: AlertSeverity) {
-        DispatchQueue.main.async {
+        // Performance fix: Rate limit sounds to prevent audio queue overflow
+        let now = Date()
+        guard now.timeIntervalSince(lastAlertSoundTime) >= alertSoundCooldown else { return }
+        lastAlertSoundTime = now
+
+        DispatchQueue.main.async { [self] in
             switch severity {
             case .critical:
-                // Sonido de alerta crítica (3 beeps)
+                // Sonido de alerta crítica (3 beeps) - simplified to avoid nested asyncAfter
                 AudioServicesPlaySystemSound(1521) // Notificación de alerta
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    AudioServicesPlaySystemSound(1521)
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                // Single follow-up beep after delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     AudioServicesPlaySystemSound(1521)
                 }
             case .warning:

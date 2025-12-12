@@ -12,6 +12,11 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var updateTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
+    // MARK: - Template Caching (Performance Fix)
+    // Cache last known state to avoid recreating 24 buttons every second
+    private var lastDashboardHash: Int = 0
+    private var cachedTemplates: [CPGridTemplate]?
+
     // MARK: - Localization Helper
     private func L(_ key: String) -> String {
         return key.localized
@@ -447,12 +452,19 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
         guard let controller = interfaceController,
               let tabBar = controller.rootTemplate as? CPTabBarTemplate else { return }
 
-        tabBar.updateTemplates([
+        // Performance: Only recreate templates if data actually changed
+        let currentHash = dashboard.stateHash
+        guard currentHash != lastDashboardHash else { return }
+        lastDashboardHash = currentHash
+
+        let newTemplates = [
             createMainDashboard(),
             createEngineDashboard(),
             createFuelDashboard(),
             createStatusDashboard()
-        ])
+        ]
+        cachedTemplates = newTemplates
+        tabBar.updateTemplates(newTemplates)
     }
 }
 
@@ -518,6 +530,26 @@ class RX8CarPlayDashboard {
     var stft: Double = 0
     var ltft: Double = 0
     var alerts: [Alert] = []
+
+    /// Performance: Hash of visible state to detect changes
+    /// Only rebuild CarPlay templates when this changes
+    var stateHash: Int {
+        var hasher = Hasher()
+        hasher.combine(rpm)
+        hasher.combine(Int(speed))
+        hasher.combine(Int(coolantTemp))
+        hasher.combine(Int(oilTemp))
+        hasher.combine(Int(batteryVoltage * 10)) // 0.1V precision
+        hasher.combine(Int(intakeTemp))
+        hasher.combine(Int(fuelLevel))
+        hasher.combine(Int(consumption * 10))
+        hasher.combine(Int(range))
+        hasher.combine(Int(engineLoad))
+        hasher.combine(Int(stft * 10))
+        hasher.combine(Int(ltft * 10))
+        hasher.combine(alerts.count)
+        return hasher.finalize()
+    }
 
     struct Alert {
         let severity: Severity

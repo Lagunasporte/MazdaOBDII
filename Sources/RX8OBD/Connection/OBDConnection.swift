@@ -78,6 +78,12 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     private var responseCompletion: ((Result<String, OBDError>) -> Void)?
     private var responseTimer: Timer?
 
+    // Performance fix: Serial queue for thread-safe access to buffer and command queue
+    private let commandSerialQueue = DispatchQueue(label: "com.rx8diag.obd.commands")
+
+    // Performance fix: Maximum command queue size to prevent memory buildup
+    private let maxCommandQueueSize = 50
+
     // MARK: - Auto-conexión
     private let savedAdapterUUIDKey = "SavedOBDAdapterUUID"
     private let savedAdapterNameKey = "SavedOBDAdapterName"
@@ -278,32 +284,37 @@ public class OBDConnectionManager: NSObject, ObservableObject {
 
         log("Conectando al simulador RX-8...")
 
-        // Simular proceso de conexión
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        // Performance fix: Use Task instead of nested asyncAfter to prevent callback pyramid
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
 
+            // Paso 1: Conectar al adaptador
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s
+            guard self.isUsingSimulator else { return } // Check if cancelled
             self.connectionState = .connectedToAdapter
             self.log("Simulador: Conectado al adaptador virtual")
 
-            // Simular inicialización
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.connectionState = .initializing
-                self.log("Simulador: Inicializando...")
+            // Paso 2: Inicializar
+            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2s
+            guard self.isUsingSimulator else { return }
+            self.connectionState = .initializing
+            self.log("Simulador: Inicializando...")
 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    // Configurar info del adaptador simulado
-                    self.adapterInfo = OBDAdapterInfo(version: "ELM327 v2.1 [SIMULATOR]")
-                    self.detectedAdapterType = .elm327
-                    self.vehicleProtocol = .iso15765_4_can_11bit_500k
+            // Paso 3: Conectar al vehículo
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s
+            guard self.isUsingSimulator else { return }
 
-                    // Iniciar simulación
-                    VirtualOBDAdapter.shared.startSimulation()
+            // Configurar info del adaptador simulado
+            self.adapterInfo = OBDAdapterInfo(version: "ELM327 v2.1 [SIMULATOR]")
+            self.detectedAdapterType = .elm327
+            self.vehicleProtocol = .iso15765_4_can_11bit_500k
 
-                    self.connectionState = .connectedToVehicle
-                    self.log("Simulador: Conectado al vehículo virtual RX-8")
-                    self.log("Simulador: Modo de conducción: \(VirtualOBDAdapter.shared.drivingMode.rawValue)")
-                }
-            }
+            // Iniciar simulación
+            VirtualOBDAdapter.shared.startSimulation()
+
+            self.connectionState = .connectedToVehicle
+            self.log("Simulador: Conectado al vehículo virtual RX-8")
+            self.log("Simulador: Modo de conducción: \(VirtualOBDAdapter.shared.drivingMode.rawValue)")
         }
     }
 
@@ -598,6 +609,15 @@ public class OBDConnectionManager: NSObject, ObservableObject {
     }
 
     private func sendCommandInternal(_ command: String, timeout: TimeInterval, completion: @escaping (Result<String, OBDError>) -> Void) {
+        // Performance fix: Prevent unbounded queue growth
+        if commandQueue.count >= maxCommandQueueSize {
+            log("Command queue full (\(maxCommandQueueSize)), dropping oldest commands")
+            // Remove oldest commands to make room
+            while commandQueue.count >= maxCommandQueueSize {
+                let dropped = commandQueue.removeFirst()
+                dropped.completion(.failure(.timeout))
+            }
+        }
         commandQueue.append((command, completion))
         processNextCommand(timeout: timeout)
     }
